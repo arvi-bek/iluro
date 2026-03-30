@@ -1,0 +1,151 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+    <div class="dashboard-shell">
+        <aside class="sidebar">
+            <a class="sidebar-brand" href="{% url 'index' %}">ILURO</a>
+
+            <nav class="sidebar-nav">
+                <a class="is-active" href="{% url 'dashboard' %}">Bosh sahifa</a>
+                <a href="{% url 'subject-selection' %}">Fanlar</a>
+                <a href="{% url 'tests' %}">Testlar / Mashqlar</a>
+                <a href="{% url 'books' %}">Kitoblar</a>
+                {% if request.user.is_superuser %}
+                <a href="{% url 'ranking' %}">Reyting</a>
+                {% endif %}
+                <a href="#ai-lab">AI laboratoriya</a>
+                <a href="#writing">Insho maydoni</a>
+                <a href="#progress">Progress</a>
+            </nav>
+
+            <div class="sidebar-user">
+                <strong>{{ profile.full_name|default:request.user.username }}</strong>
+                <span>{{ level_info.label }}</span>
+                <a href="{% url 'logout' %}">Chiqish</a>
+            </div>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="tiny-label">Dashboard</p>
+                    <h1>{{ profile.full_name|default:request.user.username }}, tayyorlovingizni davom ettiramiz.</h1>
+                </div>
+                <a class="topbar-link" href="{% url 'index' %}">Landing page</a>
+            </header>
+
+            <section class="hero-panel">
+                <div class="hero-copy">
+                    <p class="tiny-label">Bugungi fokus</p>
+                    <h2>Milliy sertifikat tayyorlovini test, tahlil va AI yordami bilan birlashtiring.</h2>
+                    <p>
+                        Tarix va matematika uchun nazoratli mashqlar, ona tili va adabiyot uchun esa
+                        insho ustida ishlash, matnni yaxshilash va fikrni to'g'ri tuzish oqimi bitta joyda bo'ladi.
+                    </p>
+                </div>
+                <div class="hero-badge">
+                    <span>AI mutaxassis yordamchisi</span>
+                    <strong>Insho va tahlil</strong>
+                </div>
+            </section>
+
+            <section class="stats-grid" id="progress">
+                {% for stat in stats %}
+                <article class="stat-card">
+                    <p>{{ stat.label }}</p>
+                    <strong>{{ stat.value }}</strong>
+                    <span>{{ stat.hint }}</span>
+                </article>
+                {% endfor %}
+            </section>
+
+            <section class="subject-panel" id="subjects">
+                <div class="section-head">
+                    <div>
+                        <p class="tiny-label">Tanlangan yo'nalishlar</p>
+                        <h3>Har bir fan uchun alohida ritm va tayyorlov bloki.</h3>
+                    </div>
+                    <a href="{% url 'subject-selection' %}" class="inline-link">Fan tanlash sahifasi</a>
+                </div>
+
+                <div class="subject-grid">
+                    {% for subject in subjects %}
+                    <article class="subject-card">
+                        <span>{{ subject.status }}</span>
+                        <h4>{{ subject.name }}</h4>
+                        <p>{{ subject.meta }}</p>
+                        <small>{{ subject.test_count }} ta test mavjud</small>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="subject-panel" id="hub">
+                <div class="section-head">
+                    <div>
+                        <p class="tiny-label">Asosiy bo'limlar</p>
+                        <h3>Dashboard endi yo'naltiruvchi markaz. Har bir modul alohida sahifada ishlaydi.</h3>
+                    </div>
+                </div>
+
+                <div class="practice-grid">
+                    {% for item in hub_cards %}
+                    <article class="practice-card">
+                        <span>{{ item.meta }}</span>
+                        <h4>{{ item.title }}</h4>
+                        <p>{{ item.description }}</p>
+                        {% if item.href == "ranking" and not request.user.is_superuser %}
+                        <a class="card-link disabled" href="#">Faqat admin</a>
+                        {% else %}
+                        <a class="card-link" href="{% url item.href %}">Ochish</a>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="double-grid">
+                <article class="info-card" id="ai-lab">
+                    <p class="tiny-label">AI laboratoriya</p>
+                    <h3>Matnni tahlil qilish, fikrni tozalash va javob sifati ustida ishlash.</h3>
+                    <p>
+                        AI yordamchisi keyinchalik mavzu bo'yicha yo'nalish, xatolarni ko'rsatish
+                        va insho tuzilmasini yaxshilash uchun ishlaydi.
+                    </p>
+                </article>
+
+                <article class="info-card" id="writing">
+                    <p class="tiny-label">Ona tili va adabiyot</p>
+                    <h3>Insho bilan ishlash uchun alohida amaliy maydon.</h3>
+                    <p>
+                        Reja tuzish, kirish va xulosa sifatini ko'rish, jumla ravonligini yaxshilash
+                        va mavzudan chiqib ketmaslik bo'yicha yordamchi oqim qo'shiladi.
+                    </p>
+                </article>
+            </section>
+
+            <section class="action-panel">
+                <div>
+                    <p class="tiny-label">Tezkor amallar</p>
+                    <h3>Daraja tizimi endi avtomatik. Keyingi bosqichlarni shu dashboard ustiga ulaymiz.</h3>
+                </div>
+                <div class="action-list">
+                    {% for action in quick_actions %}
+                    <span>{{ action }}</span>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

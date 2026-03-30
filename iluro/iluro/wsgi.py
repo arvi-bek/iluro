@@ -1,5 +1,5 @@
 """
-WSGI config for iluro project.
+WSGI config for iluro iluro.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

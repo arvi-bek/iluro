@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Milliy Sertifikat Tayyorlov</title>
+    <meta name="description" content="Milliy sertifikat uchun fanlarni o'zingiz tanlaydigan va testlarni real formatda ishlaydigan platforma.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="site-header">
+            <a class="brand" href="/">ILURO</a>
+            <nav class="site-nav">
+                <a href="#subjects">Fanlar</a>
+                <a href="#process">Jarayon</a>
+                <a href="#cta">Boshlash</a>
+            </nav>
+            <div class="header-actions">
+                {% if request.user.is_authenticated %}
+                    <span class="welcome-chip">{{ request.user.first_name|default:request.user.username }}</span>
+                    <a class="header-link filled" href="{% url 'logout' %}">Chiqish</a>
+                {% else %}
+                    <a class="header-link" href="{% url 'login' %}">Kirish</a>
+                    <a class="header-link filled" href="{% url 'register' %}">Ro'yxatdan o'tish</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <main>
+            <section class="hero">
+                <div class="hero-copy">
+                    <p class="eyebrow">Milliy sertifikat va aqlli tayyorlov platformasi</p>
+                    <h1>Milliy sertifikatga tayyorlaning, AI yordamida fikrlash va yozishni kuchaytiring.</h1>
+                    <p class="hero-text">
+                        Iluro tarix, matematika hamda ona tili va adabiyot bo'yicha tayyorlovni
+                        bitta tartibli tizimga yig'adi. Platforma test ishlash, progressni ko'rish
+                        va AI yordamida insho ustida ishlash imkoniyatini bitta joyda beradi.
+                    </p>
+                    <div class="hero-actions">
+                        {% if request.user.is_authenticated %}
+                        <a class="primary-link" href="{% url 'dashboard' %}">Dashboardga o'tish</a>
+                        {% else %}
+                        <a class="primary-link" href="{% url 'register' %}">Bepul boshlash</a>
+                        {% endif %}
+                        <a class="secondary-link" href="#process">Qanday ishlashini ko'rish</a>
+                    </div>
+                    <ul class="hero-points">
+                        {% for item in highlights %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="orb orb-one"></div>
+                    <div class="orb orb-two"></div>
+                    <div class="visual-grid"></div>
+                    <div class="focus-panel">
+                        <span class="focus-label">Asosiy yo'nalish</span>
+                        <strong>Milliy sertifikat tayyorlovini AI bilan boyitilgan bir tizimga jamlash</strong>
+                        <p>Tarix, Matematika va Ona tili fanlari bilan birga insho yozish sifati ustida ishlash uchun ham qulay muhit.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="features-section" id="about">
+                <div class="section-heading">
+                    <p class="eyebrow">Nima uchun Iluro</p>
+                    <h2>Faqat test platformasi emas, chuqurroq o'qish va yozish muhiti.</h2>
+                </div>
+                <div class="features-list">
+                    {% for feature in features %}
+                    <article class="feature-block">
+                        <h3>{{ feature.title }}</h3>
+                        <p>{{ feature.text }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="subjects-section" id="subjects">
+                <div class="section-heading">
+                    <p class="eyebrow">Moslashuvchan yo'nalish</p>
+                    <h2>Bir xil yo'l emas, o'zingiz tanlagan fanlar asosida shaxsiy tayyorlov.</h2>
+                </div>
+                <div class="subjects-list">
+                    {% for subject in subjects %}
+                    <article class="subject-block">
+                        <p class="subject-number">0{{ forloop.counter }}</p>
+                        <h3>{{ subject.name }}</h3>
+                        <p>{{ subject.accent }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="process-section" id="process">
+                <div class="section-heading">
+                    <p class="eyebrow">Soddalashtirilgan oqim</p>
+                    <h2>Odamga qulay, chalg'itmaydigan va amaliy uch bosqich.</h2>
+                </div>
+                <div class="process-list">
+                    {% for step in steps %}
+                    <article class="process-item">
+                        <span>{{ step.number }}</span>
+                        <h3>{{ step.title }}</h3>
+                        <p>{{ step.description }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="cta-section" id="cta">
+                <p class="eyebrow">Endi boshlash mumkin</p>
+                <h2>Hisob yarating, dashboardga kiring va fanlar bilan ishlashni keyingi bosqichga olib chiqing.</h2>
+                {% if request.user.is_authenticated %}
+                <a class="primary-link" href="{% url 'dashboard' %}">Dashboardga o'tish</a>
+                {% else %}
+                <a class="primary-link" href="{% url 'register' %}">Ro'yxatdan o'tish</a>
+                {% endif %}
+            </section>
+        </main>
+    </div>
+</body>
+</html>

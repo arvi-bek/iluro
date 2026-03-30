@@ -1,0 +1,61 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Fan tanlash</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/subjects.css' %}">
+</head>
+<body>
+    <div class="subjects-shell">
+        <header class="subjects-header">
+            <div>
+                <p class="eyebrow">Fan tanlash</p>
+                <h1>Har bir fan uchun oylik obuna `30 000 so'm`.</h1>
+                <p class="lead">
+                    Foydalanuvchi fanlarni shu yerdan ko'radi. Obuna berish esa admin paneldagi
+                    `Subscription` bo'limi orqali xohlagan userga qo'lda biriktiriladi.
+                </p>
+            </div>
+            <a class="header-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
+        </header>
+
+        <section class="summary-panel">
+            <div>
+                <span>Faol obunalar</span>
+                <strong>{{ active_count }} ta</strong>
+            </div>
+            <div>
+                <span>Narx</span>
+                <strong>30 000 so'm / oy</strong>
+            </div>
+            <div>
+                <span>Aktivlash</span>
+                <strong>Admin panel orqali</strong>
+            </div>
+        </section>
+
+        <section class="subjects-grid">
+            {% for subject in subject_cards %}
+            <article class="subject-card {% if subject.is_active %}is-active{% endif %}">
+                <div class="card-top">
+                    <span>{% if subject.is_active %}Faol obuna{% else %}Obuna mavjud{% endif %}</span>
+                    <strong>{{ subject.price }} so'm</strong>
+                </div>
+                <h2>{{ subject.name }}</h2>
+                <p>{{ subject.test_count }} ta test mavjud.</p>
+                {% if subject.is_active %}
+                <div class="status-chip">Bu fan sizga aktiv qilingan</div>
+                {% else %}
+                <div class="status-chip muted">Admin paneldan userga obuna biriktiriladi</div>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </section>
+    </div>
+</body>
+</html>

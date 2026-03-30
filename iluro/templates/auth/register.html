@@ -1,0 +1,37 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Iluro | Register{% endblock %}
+
+{% block content %}
+    <div class="panel-head">
+        <p class="panel-kicker">Yangi hisob</p>
+        <h2>Ro'yxatdan o'tish</h2>
+        <p class="panel-text">Shaxsiy kabinet, fan tanlash va AI bilan boyitilgan tayyorlov oqimi uchun hisob yarating.</p>
+    </div>
+
+    <form class="auth-form" method="post">
+        {% csrf_token %}
+        <label>
+            <span>To'liq ism</span>
+            <input type="text" name="full_name" placeholder="Masalan, Shohinur Karimov" required>
+        </label>
+        <label>
+            <span>Username</span>
+            <input type="text" name="username" placeholder="Masalan, shohinur01" required>
+        </label>
+        <label>
+            <span>Parol</span>
+            <input type="password" name="password" placeholder="Parolingizni kiriting" required>
+        </label>
+        <label>
+            <span>Parolni tasdiqlang</span>
+            <input type="password" name="password2" placeholder="Parolni qayta kiriting" required>
+        </label>
+        <button type="submit" class="submit-btn">Hisob yaratish</button>
+    </form>
+
+    <p class="auth-switch">
+        Hisobingiz bormi?
+        <a href="{% url 'login' %}">Tizimga kirish</a>
+    </p>
+{% endblock %}

@@ -1,5 +1,5 @@
 """
-ASGI config for iluro project.
+ASGI config for iluro iluro.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

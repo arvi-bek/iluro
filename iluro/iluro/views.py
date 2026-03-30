@@ -1,5 +1,53 @@
-from django.http import HttpResponse,HttpRequest
+from django.http import HttpRequest
+from django.shortcuts import render
 
 
 def index(request: HttpRequest):
-    return HttpResponse("Hello, world.")
+    subjects = [
+        {"name": "Tarix", "accent": "Milliy sertifikat savollari uchun tarixiy tafakkur va tezkor tahlil"},
+        {"name": "Matematika", "accent": "Masala, formulalar va vaqtni boshqarish bo'yicha qat'iy mashq"},
+        {"name": "Ona tili va adabiyot", "accent": "Matn, grammatika va AI yordamida insho ustida ishlash"},
+    ]
+    highlights = [
+        "Fanlarni foydalanuvchi o'zi tanlaydi",
+        "Milliy sertifikat formatiga mos test oqimi",
+        "Natija, urinishlar va AI tavsiyalari bo'yicha shaffof kuzatuv",
+    ]
+    features = [
+        {
+            "title": "Milliy sertifikatga mos oqim",
+            "text": "Platforma tayyorlovni fan tanlash, mashq va natija kuzatuvi kabi aniq bosqichlarga ajratadi.",
+        },
+        {
+            "title": "AI mutaxassis yo'nalishi",
+            "text": "AI bilan ishlash ko'nikmalarini rivojlantirish uchun tahliliy fikrlash va mustaqil ishlash muhiti yaratiladi.",
+        },
+        {
+            "title": "Insho ustida ishlash",
+            "text": "Ona tili va adabiyot fanida mavzu, tuzilma va ifodani yaxshilash uchun AI yordamchi oqimi qo'shiladi.",
+        },
+    ]
+    steps = [
+        {
+            "number": "01",
+            "title": "Fanlaringizni tanlang",
+            "description": "Kerakli yo'nalishlarni belgilang va o'zingizga mos tayyorlov yo'lini boshlang.",
+        },
+        {
+            "number": "02",
+            "title": "Testni real formatda ishlang",
+            "description": "Savollar, vaqt va bosqichlar haqiqiy imtihon ritmiga yaqin bo'ladi.",
+        },
+        {
+            "number": "03",
+            "title": "Natijani chuqur ko'ring",
+            "description": "Qaysi bo'limlar kuchli, qaysi joylar ustida ishlash kerakligini darrov biling.",
+        },
+    ]
+    context = {
+        "subjects": subjects,
+        "highlights": highlights,
+        "features": features,
+        "steps": steps,
+    }
+    return render(request, "index.html", context)

@@ -1,0 +1,29 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Iluro | Login{% endblock %}
+
+{% block content %}
+    <div class="panel-head">
+        <p class="panel-kicker">Qaytgan foydalanuvchi</p>
+        <h2>Tizimga kirish</h2>
+        <p class="panel-text">Profilingizga kiring va fanlar, testlar hamda insho ustidagi ishni davom ettiring.</p>
+    </div>
+
+    <form class="auth-form" method="post">
+        {% csrf_token %}
+        <label>
+            <span>Username</span>
+            <input type="text" name="username" placeholder="Username kiriting" required>
+        </label>
+        <label>
+            <span>Parol</span>
+            <input type="password" name="password" placeholder="Parol kiriting" required>
+        </label>
+        <button type="submit" class="submit-btn">Kirish</button>
+    </form>
+
+    <p class="auth-switch">
+        Hali hisob yo'qmi?
+        <a href="{% url 'register' %}">Ro'yxatdan o'tish</a>
+    </p>
+{% endblock %}
