@@ -28,6 +28,7 @@
                         <th>Foydalanuvchi</th>
                         <th>Username</th>
                         <th>Ball</th>
+                        <th>XP</th>
                         <th>Daraja</th>
                         <th>Testlar</th>
                     </tr>
@@ -39,12 +40,13 @@
                         <td>{{ row.name }}</td>
                         <td>{{ row.username }}</td>
                         <td>{{ row.best_score }}</td>
+                        <td>{{ row.xp }}</td>
                         <td>{{ row.level }}</td>
                         <td>{{ row.tests }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6">Hali foydalanuvchi natijalari mavjud emas.</td>
+                        <td colspan="7">Hali foydalanuvchi natijalari mavjud emas.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

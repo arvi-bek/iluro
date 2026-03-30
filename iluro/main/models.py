@@ -37,14 +37,6 @@ class Question(models.Model):
     text = models.TextField()
     difficulty = models.CharField(max_length=50)
 
-    correct_choice = models.ForeignKey(
-        'Choice',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='correct_for_questions',
-    )
-
     def __str__(self):
         return self.text[:50]
 
@@ -53,6 +45,7 @@ class Choice(models.Model):
     id = models.AutoField(primary_key=True)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, db_index=True)
     text = models.CharField(max_length=255)
+    is_correct = models.BooleanField(default=False)
 
     def __str__(self):
         return self.text
@@ -95,7 +88,8 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     full_name = models.CharField(max_length=150)
-    level = models.CharField(max_length=20, default='Beginner')
+    level = models.CharField(max_length=20, default='S')
+    xp = models.IntegerField(default=0)
 
     photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
 

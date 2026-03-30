@@ -46,21 +46,27 @@ class ChoiceInline(admin.TabularInline):
 # ---------------- QUESTION ----------------
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ("id", "short_text", "test", "difficulty", "correct_choice")
+    list_display = ("id", "short_text", "test", "difficulty", "correct_answer_preview")
     list_filter = ("difficulty", "test__subject")
     search_fields = ("text",)
-    autocomplete_fields = ("test", "correct_choice")
+    autocomplete_fields = ("test",)
     inlines = [ChoiceInline]
 
     def short_text(self, obj):
         return obj.text[:50]
     short_text.short_description = "Question"
 
+    def correct_answer_preview(self, obj):
+        correct_choice = obj.choice_set.filter(is_correct=True).first()
+        return correct_choice.text if correct_choice else "-"
+    correct_answer_preview.short_description = "Correct Choice"
+
 
 # ---------------- CHOICE ----------------
 @admin.register(Choice)
 class ChoiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "text", "question")
+    list_display = ("id", "text", "question", "is_correct")
+    list_filter = ("is_correct", "question__test__subject")
     search_fields = ("text",)
     autocomplete_fields = ("question",)
 

@@ -30,7 +30,7 @@
                     {% if book.description %} {{ book.description|truncatechars:140 }}{% endif %}
                 </p>
                 {% if book.pdf_url %}
-                <a class="open-link" href="{{ book.pdf_url }}" target="_blank">PDFni ochish</a>
+                <a class="open-link" href="{% url 'book-read' book.id %}">Read online</a>
                 {% else %}
                 <span class="muted-note">PDF hali yuklanmagan</span>
                 {% endif %}

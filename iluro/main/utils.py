@@ -1,37 +1,57 @@
-LEVEL_MAX_SCORE = 50
+XP_PER_TEST = 1
 
-LEVEL_RULES = [
-    {"label": "S", "min": 0, "max": 8},
-    {"label": "S+", "min": 9, "max": 16},
-    {"label": "B", "min": 17, "max": 24},
-    {"label": "B+", "min": 25, "max": 32},
-    {"label": "A", "min": 33, "max": 40},
-    {"label": "A+", "min": 41, "max": LEVEL_MAX_SCORE},
+XP_LEVEL_RULES = [
+    {"label": "S", "min_xp": 0, "max_xp": 99},
+    {"label": "S+", "min_xp": 100, "max_xp": 249},
+    {"label": "B", "min_xp": 250, "max_xp": 499},
+    {"label": "B+", "min_xp": 500, "max_xp": 799},
+    {"label": "A", "min_xp": 800, "max_xp": 1199},
+    {"label": "A+", "min_xp": 1200, "max_xp": None},
 ]
 
 
-def clamp_score(score: int | None, max_score: int = LEVEL_MAX_SCORE) -> int:
-    if score is None:
+def clamp_xp(xp: int | None) -> int:
+    if xp is None:
         return 0
-    return max(0, min(score, max_score))
+    return max(0, xp)
 
 
-def get_level_info(score: int | None, max_score: int = LEVEL_MAX_SCORE) -> dict:
-    normalized_score = clamp_score(score, max_score)
+def get_level_info(xp: int | None) -> dict:
+    normalized_xp = clamp_xp(xp)
 
-    for rule in LEVEL_RULES:
-        if rule["min"] <= normalized_score <= rule["max"]:
+    for index, rule in enumerate(XP_LEVEL_RULES):
+        max_xp = rule["max_xp"]
+        if max_xp is None or rule["min_xp"] <= normalized_xp <= max_xp:
+            next_rule = XP_LEVEL_RULES[index + 1] if index + 1 < len(XP_LEVEL_RULES) else None
+            next_threshold = next_rule["min_xp"] if next_rule else None
+            if next_threshold is None:
+                progress_percent = 100
+                xp_to_next = 0
+            else:
+                span = max(1, next_threshold - rule["min_xp"])
+                progress_percent = int(((normalized_xp - rule["min_xp"]) / span) * 100)
+                xp_to_next = max(0, next_threshold - normalized_xp)
+
+            range_text = (
+                f'{rule["min_xp"]}+ XP'
+                if max_xp is None
+                else f'{rule["min_xp"]}-{max_xp} XP'
+            )
             return {
                 "label": rule["label"],
-                "score": normalized_score,
-                "max_score": max_score,
-                "range_text": f'{rule["min"]}-{rule["max"]} ball',
+                "xp": normalized_xp,
+                "range_text": range_text,
+                "next_threshold": next_threshold,
+                "xp_to_next": xp_to_next,
+                "progress_percent": max(0, min(progress_percent, 100)),
             }
 
-    fallback = LEVEL_RULES[-1]
+    fallback = XP_LEVEL_RULES[-1]
     return {
         "label": fallback["label"],
-        "score": normalized_score,
-        "max_score": max_score,
-        "range_text": f'{fallback["min"]}-{fallback["max"]} ball',
+        "xp": normalized_xp,
+        "range_text": f'{fallback["min_xp"]}+ XP',
+        "next_threshold": None,
+        "xp_to_next": 0,
+        "progress_percent": 100,
     }

@@ -65,6 +65,12 @@ body {
     color: #fff8f0;
 }
 
+.secondary-link {
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--accent-strong);
+    border: 1px solid var(--line);
+}
+
 .card-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -122,6 +128,29 @@ body {
     padding: 16px;
     border-radius: 28px;
     overflow-x: auto;
+}
+
+.reader-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.reader-panel {
+    margin-top: 24px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    border-radius: 28px;
+    padding: 16px;
+}
+
+.reader-panel iframe {
+    width: 100%;
+    height: 78vh;
+    border: 0;
+    border-radius: 18px;
+    background: white;
 }
 
 .ranking-table {

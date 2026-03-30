@@ -25,7 +25,8 @@
             <article class="content-card">
                 <span>{{ test.subject }}</span>
                 <h2>{{ test.title }}</h2>
-                <p>{{ test.difficulty }} daraja, {{ test.duration }} daqiqa</p>
+                <p>{{ test.difficulty }} daraja, {{ test.duration }} daqiqa, {{ test.question_count }} ta savol</p>
+                <a class="open-link" href="{% url 'test-start' test.id %}">Boshlash</a>
             </article>
             {% empty %}
             <article class="content-card empty-card">
