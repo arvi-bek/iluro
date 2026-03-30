@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Natija</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+</head>
+<body>
+    <div class="flow-shell">
+        <section class="flow-panel">
+            <p class="eyebrow">Test natijasi</p>
+            <h1>{{ test.title }}</h1>
+            <div class="result-grid">
+                <article>
+                    <span>Ball</span>
+                    <strong>{{ user_test.score }}/50</strong>
+                </article>
+                <article>
+                    <span>To'g'ri javob</span>
+                    <strong>{{ user_test.correct_count }}/{{ total_questions }}</strong>
+                </article>
+                <article>
+                    <span>Daraja</span>
+                    <strong>{{ level_info.label }}</strong>
+                </article>
+                <article>
+                    <span>XP</span>
+                    <strong>+{{ xp_awarded }}</strong>
+                </article>
+            </div>
+            <p class="lead">
+                Natija `UserTest` ga yozildi. Endi daraja score bilan emas, yig'ilgan XP orqali o'sadi.
+                {% if xp_awarded %}
+                Hozir umumiy XP: {{ level_info.xp }}. Bu test to'liq to'g'ri ishlangani uchun sizga +{{ xp_awarded }} XP berildi.
+                {% else %}
+                Hozir umumiy XP: {{ level_info.xp }}. XP faqat barcha savollar to'g'ri bo'lsa qo'shiladi.
+                {% endif %}
+            </p>
+            <div class="result-actions">
+                <a class="primary-btn link-btn" href="{% url 'tests' %}">Yana test ko'rish</a>
+                <a class="back-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
+            </div>
+        </section>
+
+        <section class="review-list">
+            {% for item in answer_review %}
+            <article class="review-card {% if item.is_correct %}correct{% else %}wrong{% endif %}">
+                <p class="question-index">Savol {{ forloop.counter }}</p>
+                <h2>{{ item.question }}</h2>
+                <div class="review-meta">
+                    <p><strong>Sizning javob:</strong> {{ item.selected }}</p>
+                    <p><strong>To'g'ri javob:</strong> {{ item.correct }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </section>
+    </div>
+</body>
+</html>

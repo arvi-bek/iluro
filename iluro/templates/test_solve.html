@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Testni ishlash</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+</head>
+<body>
+    <div class="flow-shell">
+        <header class="solve-header">
+            <div>
+                <p class="eyebrow">Test ishlash</p>
+                <h1>{{ test.title }}</h1>
+            </div>
+            <div class="meta-list solve-meta">
+                <span>{{ test.subject.name }}</span>
+                <span>{{ test.duration }} daqiqa</span>
+                <span>{{ questions|length }} ta savol</span>
+                <span id="timer" data-seconds="{{ test.duration|add:'0' }}">Vaqt: --:--</span>
+            </div>
+        </header>
+
+        <div class="progress-wrap">
+            <div class="progress-head">
+                <span>Javob berilgan savollar</span>
+                <strong id="progressText">0 / {{ questions|length }}</strong>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <form method="post" class="solve-form">
+            {% csrf_token %}
+            {% for question in questions %}
+            <section class="question-card">
+                <p class="question-index">Savol {{ forloop.counter }}</p>
+                <h2>{{ question.text }}</h2>
+                <div class="choices">
+                    {% for choice in question.choice_set.all %}
+                    <label class="choice-option">
+                        <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}">
+                        <span>{{ choice.text }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+            <button class="primary-btn" type="submit">Natijani ko'rish</button>
+        </form>
+    </div>
+    <script>
+        (function () {
+            const timerEl = document.getElementById("timer");
+            const progressText = document.getElementById("progressText");
+            const progressFill = document.getElementById("progressFill");
+            const radioInputs = Array.from(document.querySelectorAll('input[type="radio"]'));
+            const totalQuestions = {{ questions|length }};
+            let remainingSeconds = Number(timerEl.dataset.seconds || 0) * 60;
+
+            function updateProgress() {
+                const answered = new Set(
+                    radioInputs.filter((input) => input.checked).map((input) => input.name)
+                ).size;
+                progressText.textContent = `${answered} / ${totalQuestions}`;
+                progressFill.style.width = `${totalQuestions ? (answered / totalQuestions) * 100 : 0}%`;
+            }
+
+            function updateTimer() {
+                const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
+                const seconds = String(remainingSeconds % 60).padStart(2, "0");
+                timerEl.textContent = `Vaqt: ${minutes}:${seconds}`;
+                if (remainingSeconds > 0) {
+                    remainingSeconds -= 1;
+                }
+            }
+
+            radioInputs.forEach((input) => input.addEventListener("change", updateProgress));
+            updateProgress();
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        })();
+    </script>
+</body>
+</html>

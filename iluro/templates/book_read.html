@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Read Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}">
+</head>
+<body>
+    <div class="content-shell">
+        <header class="content-header">
+            <div>
+                <p class="eyebrow">Read online</p>
+                <h1>{{ book.title }}</h1>
+            </div>
+            <div class="reader-actions">
+                <a class="header-link" href="{% url 'books' %}">Kitoblarga qaytish</a>
+                <a class="header-link secondary-link" href="{% url 'book-pdf' book.id %}" target="_blank">PDFni alohida ochish</a>
+            </div>
+        </header>
+
+        <section class="reader-panel">
+            <iframe src="{% url 'book-pdf' book.id %}" title="{{ book.title }}"></iframe>
+        </section>
+    </div>
+</body>
+</html>

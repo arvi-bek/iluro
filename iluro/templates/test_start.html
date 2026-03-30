@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Testni boshlash</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+</head>
+<body>
+    <div class="flow-shell">
+        <section class="flow-panel compact">
+            <p class="eyebrow">Testni boshlash</p>
+            <h1>{{ test.title }}</h1>
+            <div class="meta-list">
+                <span>Fan: {{ test.subject.name }}</span>
+                <span>Qiyinlik: {{ test.difficulty }}</span>
+                <span>Davomiylik: {{ test.duration }} daqiqa</span>
+                <span>Savollar: {{ question_count }} ta</span>
+            </div>
+            <p class="lead">
+                Test boshlangach siz savollar sahifasiga o'tasiz. Hozircha bu MVP oqim:
+                barcha savollar bir sahifada yechiladi va natija darhol chiqadi.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <button class="primary-btn" type="submit">Testni boshlash</button>
+            </form>
+            <a class="back-link" href="{% url 'tests' %}">Testlar sahifasiga qaytish</a>
+        </section>
+    </div>
+</body>
+</html>
