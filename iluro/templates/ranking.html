@@ -11,47 +11,52 @@
     <link rel="stylesheet" href="{% static 'css/content_pages.css' %}">
 </head>
 <body>
-    <div class="content-shell">
-        <header class="content-header">
-            <div>
-                <p class="eyebrow">Admin reyting</p>
-                <h1>Foydalanuvchilar ro'yxati va eng yaxshi natijalar.</h1>
-            </div>
-            <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
-        </header>
+    <div class="app-layout">
+        {% include "partials/app_sidebar.html" %}
+        <main class="app-main">
+            <div class="content-shell">
+                <header class="content-header">
+                    <div>
+                        <p class="eyebrow">Admin reyting</p>
+                        <h1>Foydalanuvchilar ro'yxati va eng yaxshi natijalar.</h1>
+                    </div>
+                    <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
+                </header>
 
-        <section class="table-panel">
-            <table class="ranking-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Foydalanuvchi</th>
-                        <th>Username</th>
-                        <th>Ball</th>
-                        <th>XP</th>
-                        <th>Daraja</th>
-                        <th>Testlar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in ranking_rows %}
-                    <tr>
-                        <td>{{ row.rank }}</td>
-                        <td>{{ row.name }}</td>
-                        <td>{{ row.username }}</td>
-                        <td>{{ row.best_score }}</td>
-                        <td>{{ row.xp }}</td>
-                        <td>{{ row.level }}</td>
-                        <td>{{ row.tests }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7">Hali foydalanuvchi natijalari mavjud emas.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
+                <section class="table-panel">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Foydalanuvchi</th>
+                                <th>Username</th>
+                                <th>Foiz</th>
+                                <th>XP</th>
+                                <th>Daraja</th>
+                                <th>Testlar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in ranking_rows %}
+                            <tr>
+                                <td>{{ row.rank }}</td>
+                                <td>{{ row.name }}</td>
+                                <td>{{ row.username }}</td>
+                                <td>{{ row.best_score }}%</td>
+                                <td>{{ row.xp }}</td>
+                                <td>{{ row.level }}</td>
+                                <td>{{ row.tests }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7">Hali foydalanuvchi natijalari mavjud emas.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
     </div>
 </body>
 </html>

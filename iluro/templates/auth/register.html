@@ -17,7 +17,19 @@
         </label>
         <label>
             <span>Username</span>
-            <input type="text" name="username" placeholder="Masalan, shohinur01" required>
+            <input type="text" name="username" placeholder="Kamida 4 ta belgi" minlength="4" required>
+        </label>
+        <label>
+            <span>Email</span>
+            <input type="email" name="email" placeholder="Masalan, shohinur@gmail.com" required>
+        </label>
+        <label>
+            <span>Status</span>
+            <select name="role" required>
+                {% for item in register_role_choices %}
+                <option value="{{ item.value }}">{{ item.emoji }} {{ item.label }}</option>
+                {% endfor %}
+            </select>
         </label>
         <label>
             <span>Parol</span>

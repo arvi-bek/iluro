@@ -8,34 +8,55 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260331-4">
 </head>
 <body>
     <div class="dashboard-shell">
-        <aside class="sidebar">
-            <a class="sidebar-brand" href="{% url 'index' %}">ILURO</a>
-
-            <nav class="sidebar-nav">
-                <a class="is-active" href="{% url 'dashboard' %}">Bosh sahifa</a>
-                <a href="{% url 'subject-selection' %}">Fanlar</a>
-                <a href="{% url 'tests' %}">Testlar / Mashqlar</a>
-                <a href="{% url 'books' %}">Kitoblar</a>
-                {% if request.user.is_superuser %}
-                <a href="{% url 'ranking' %}">Reyting</a>
-                {% endif %}
-                <a href="#ai-lab">AI laboratoriya</a>
-                <a href="#writing">Insho maydoni</a>
-                <a href="#progress">Progress</a>
-            </nav>
-
-            <div class="sidebar-user">
-                <strong>{{ profile.full_name|default:request.user.username }}</strong>
-                <span>{{ level_info.label }}</span>
-                <a href="{% url 'logout' %}">Chiqish</a>
-            </div>
-        </aside>
+        {% include "partials/app_sidebar.html" %}
 
         <main class="dashboard-main">
+            <section class="subject-strip" aria-label="Fanlar navigatsiyasi">
+                <div class="subject-strip-head">
+                    <p class="tiny-label">Fanlar</p>
+                    <div class="subject-strip-status">
+                        <span>{{ profile.xp }} XP</span>
+                        <span>{{ level_info.label }}</span>
+                    </div>
+                </div>
+                <div class="xp-strip">
+                    <div class="xp-strip-head">
+                        <strong>XP progress</strong>
+                        <span>{% if level_info.next_threshold %}{{ level_info.xp_to_next }} XP qoldi{% else %}Maksimal bosqich{% endif %}</span>
+                    </div>
+                    <div class="xp-track">
+                        <div class="xp-fill" style="width: {{ level_info.progress_percent }}%;"></div>
+                    </div>
+                    <div class="xp-strip-foot">
+                        <small>{{ level_info.label }}</small>
+                        <small>{{ level_info.next_label }}</small>
+                    </div>
+                </div>
+                <div class="subject-strip-grid">
+                    {% for subject in subjects %}
+                    <a class="subject-pill {% if subject.is_owned %}is-owned{% else %}is-locked{% endif %} {% if subject.is_selected %}is-selected{% endif %}" href="{% url 'subject-workspace' subject.id %}">
+                        <strong>{{ subject.name }}</strong>
+                        <small>
+                            {% if subject.is_owned %}
+                            Sotib olingan
+                            {% else %}
+                            Sotib olinmagan
+                            {% endif %}
+                        </small>
+                    </a>
+                    {% empty %}
+                    <div class="subject-pill is-locked subject-pill-empty">
+                        <strong>Fanlar topilmadi</strong>
+                        <small>Admin paneldan fanlar qo'shilgach shu yerda chiqadi</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
             <header class="dashboard-topbar">
                 <div>
                     <p class="tiny-label">Dashboard</p>

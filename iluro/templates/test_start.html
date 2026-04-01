@@ -17,7 +17,7 @@
             <h1>{{ test.title }}</h1>
             <div class="meta-list">
                 <span>Fan: {{ test.subject.name }}</span>
-                <span>Qiyinlik: {{ test.difficulty }}</span>
+                <span>Qiyinlik: {{ test_difficulty }}</span>
                 <span>Davomiylik: {{ test.duration }} daqiqa</span>
                 <span>Savollar: {{ question_count }} ta</span>
             </div>
@@ -27,6 +27,7 @@
             </p>
             <form method="post">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next_url }}">
                 <button class="primary-btn" type="submit">Testni boshlash</button>
             </form>
             <a class="back-link" href="{% url 'tests' %}">Testlar sahifasiga qaytish</a>

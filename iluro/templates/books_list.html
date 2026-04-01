@@ -11,37 +11,42 @@
     <link rel="stylesheet" href="{% static 'css/content_pages.css' %}">
 </head>
 <body>
-    <div class="content-shell">
-        <header class="content-header">
-            <div>
-                <p class="eyebrow">Kitoblar</p>
-                <h1>Fanlar bo'yicha PDF resurslar va qo'llanmalar.</h1>
-            </div>
-            <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
-        </header>
+    <div class="app-layout">
+        {% include "partials/app_sidebar.html" %}
+        <main class="app-main">
+            <div class="content-shell">
+                <header class="content-header">
+                    <div>
+                        <p class="eyebrow">Kitoblar</p>
+                        <h1>Fanlar bo'yicha PDF resurslar va qo'llanmalar.</h1>
+                    </div>
+                    <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
+                </header>
 
-        <section class="card-grid">
-            {% for book in books %}
-            <article class="content-card">
-                <span>{{ book.subject }}</span>
-                <h2>{{ book.title }}</h2>
-                <p>
-                    {% if book.author %}Muallif: {{ book.author }}.{% endif %}
-                    {% if book.description %} {{ book.description|truncatechars:140 }}{% endif %}
-                </p>
-                {% if book.pdf_url %}
-                <a class="open-link" href="{% url 'book-read' book.id %}">Read online</a>
-                {% else %}
-                <span class="muted-note">PDF hali yuklanmagan</span>
-                {% endif %}
-            </article>
-            {% empty %}
-            <article class="content-card empty-card">
-                <h2>Kitoblar hali qo'shilmagan</h2>
-                <p>Admin paneldagi `Books` bo'limiga PDF resurslar qo'shilgach shu yerda chiqadi.</p>
-            </article>
-            {% endfor %}
-        </section>
+                <section class="card-grid">
+                    {% for book in books %}
+                    <article class="content-card">
+                        <span>{{ book.subject }}</span>
+                        <h2>{{ book.title }}</h2>
+                        <p>
+                            {% if book.author %}Muallif: {{ book.author }}.{% endif %}
+                            {% if book.description %} {{ book.description|truncatechars:140 }}{% endif %}
+                        </p>
+                        {% if book.pdf_url %}
+                        <a class="open-link" href="{% url 'book-read' book.id %}">Read online</a>
+                        {% else %}
+                        <span class="muted-note">PDF hali yuklanmagan</span>
+                        {% endif %}
+                    </article>
+                    {% empty %}
+                    <article class="content-card empty-card">
+                        <h2>Kitoblar hali qo'shilmagan</h2>
+                        <p>Admin paneldagi `Books` bo'limiga PDF resurslar qo'shilgach shu yerda chiqadi.</p>
+                    </article>
+                    {% endfor %}
+                </section>
+            </div>
+        </main>
     </div>
 </body>
 </html>

@@ -13,18 +13,38 @@
 <body>
     <div class="content-shell">
         <header class="content-header">
-            <div>
+            <div class="reader-hero-copy">
                 <p class="eyebrow">Read online</p>
                 <h1>{{ book.title }}</h1>
+                <p class="reader-subtitle">
+                    {{ book.subject.name }} fani uchun ichki reader. Kitob sayt ichida xavfsiz ko'rinishda ochiladi.
+                </p>
             </div>
             <div class="reader-actions">
                 <a class="header-link" href="{% url 'books' %}">Kitoblarga qaytish</a>
-                <a class="header-link secondary-link" href="{% url 'book-pdf' book.id %}" target="_blank">PDFni alohida ochish</a>
             </div>
         </header>
 
+        <section class="reader-meta-strip">
+            <div class="reader-meta-item">
+                <span>Fan</span>
+                <strong>{{ book.subject.name }}</strong>
+            </div>
+            <div class="reader-meta-item">
+                <span>Muallif</span>
+                <strong>{{ book.author|default:"Iluro kutubxonasi" }}</strong>
+            </div>
+            <div class="reader-meta-item">
+                <span>Holat</span>
+                <strong>Faqat ichki o'qish</strong>
+            </div>
+        </section>
+
         <section class="reader-panel">
-            <iframe src="{% url 'book-pdf' book.id %}" title="{{ book.title }}"></iframe>
+            <div class="reader-note">
+                Yuklab olish va alohida ochish yopilgan. Kitobni shu oynaning ichida o'qishingiz mumkin.
+            </div>
+            <iframe src="{% url 'book-pdf' book.id %}?token={{ reader_token }}" title="{{ book.title }}"></iframe>
         </section>
     </div>
 </body>

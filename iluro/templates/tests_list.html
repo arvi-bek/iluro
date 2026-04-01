@@ -11,30 +11,35 @@
     <link rel="stylesheet" href="{% static 'css/content_pages.css' %}">
 </head>
 <body>
-    <div class="content-shell">
-        <header class="content-header">
-            <div>
-                <p class="eyebrow">Testlar / Mashqlar</p>
-                <h1>Alohida sahifada barcha testlar va mashqlar.</h1>
-            </div>
-            <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
-        </header>
+    <div class="app-layout">
+        {% include "partials/app_sidebar.html" %}
+        <main class="app-main">
+            <div class="content-shell">
+                <header class="content-header">
+                    <div>
+                        <p class="eyebrow">Testlar / Mashqlar</p>
+                        <h1>Alohida sahifada barcha testlar va mashqlar.</h1>
+                    </div>
+                    <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
+                </header>
 
-        <section class="card-grid">
-            {% for test in tests %}
-            <article class="content-card">
-                <span>{{ test.subject }}</span>
-                <h2>{{ test.title }}</h2>
-                <p>{{ test.difficulty }} daraja, {{ test.duration }} daqiqa, {{ test.question_count }} ta savol</p>
-                <a class="open-link" href="{% url 'test-start' test.id %}">Boshlash</a>
-            </article>
-            {% empty %}
-            <article class="content-card empty-card">
-                <h2>Testlar hali qo'shilmagan</h2>
-                <p>Admin paneldagi `Tests` bo'limiga yangi testlar qo'shilgach shu yerda chiqadi.</p>
-            </article>
-            {% endfor %}
-        </section>
+                <section class="card-grid">
+                    {% for test in tests %}
+                    <article class="content-card">
+                        <span>{{ test.subject }}</span>
+                        <h2>{{ test.title }}</h2>
+                        <p>{{ test.difficulty }} daraja, {{ test.duration }} daqiqa, {{ test.question_count }} ta savol</p>
+                        <a class="open-link" href="{% url 'test-start' test.id %}">Boshlash</a>
+                    </article>
+                    {% empty %}
+                    <article class="content-card empty-card">
+                        <h2>Testlar hali qo'shilmagan</h2>
+                        <p>Admin paneldagi `Tests` bo'limiga yangi testlar qo'shilgach shu yerda chiqadi.</p>
+                    </article>
+                    {% endfor %}
+                </section>
+            </div>
+        </main>
     </div>
 </body>
 </html>

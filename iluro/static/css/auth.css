@@ -179,7 +179,8 @@ body {
     font-weight: 700;
 }
 
-.auth-form input {
+.auth-form input,
+.auth-form select {
     min-height: 54px;
     padding: 0 16px;
     border-radius: 16px;
@@ -190,7 +191,8 @@ body {
     outline: none;
 }
 
-.auth-form input:focus {
+.auth-form input:focus,
+.auth-form select:focus {
     border-color: rgba(138, 84, 37, 0.44);
     box-shadow: 0 0 0 4px rgba(138, 84, 37, 0.08);
 }

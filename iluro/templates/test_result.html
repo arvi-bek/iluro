@@ -18,7 +18,7 @@
             <div class="result-grid">
                 <article>
                     <span>Ball</span>
-                    <strong>{{ user_test.score }}/50</strong>
+                    <strong>{{ user_test.score }}%</strong>
                 </article>
                 <article>
                     <span>To'g'ri javob</span>
@@ -42,7 +42,7 @@
                 {% endif %}
             </p>
             <div class="result-actions">
-                <a class="primary-btn link-btn" href="{% url 'tests' %}">Yana test ko'rish</a>
+                <a class="primary-btn link-btn" href="{% if next_url %}{{ next_url }}{% else %}{% url 'tests' %}{% endif %}">Yana test ko'rish</a>
                 <a class="back-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
             </div>
         </section>
