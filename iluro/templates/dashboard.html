@@ -8,11 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260331-4">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260401-4">
 </head>
 <body>
     <div class="dashboard-shell">
-        {% include "partials/app_sidebar.html" %}
+        {% include "partials/app_sidebar_v2.html" %}
 
         <main class="dashboard-main">
             <section class="subject-strip" aria-label="Fanlar navigatsiyasi">
@@ -73,17 +73,30 @@
                         Tarix va matematika uchun nazoratli mashqlar, ona tili va adabiyot uchun esa
                         insho ustida ishlash, matnni yaxshilash va fikrni to'g'ri tuzish oqimi bitta joyda bo'ladi.
                     </p>
+                    <div class="hero-actions">
+                        <a class="hero-action-primary" href="{% url 'subject-selection' %}">Fanlarni ko'rish</a>
+                        <a class="hero-action-secondary" href="{% url 'statistics' %}">Statistikani ochish</a>
+                    </div>
+                    <div class="hero-highlights">
+                        <span>Testlar</span>
+                        <span>Kitoblar</span>
+                        <span>Misol / Masalalar</span>
+                    </div>
                 </div>
                 <div class="hero-badge">
                     <span>AI mutaxassis yordamchisi</span>
                     <strong>Insho va tahlil</strong>
+                    <small>Keyingi bosqichda shu yerga aqlli tavsiyalar, tekshiruv va savol-javob oqimi ulanadi.</small>
                 </div>
             </section>
 
             <section class="stats-grid" id="progress">
                 {% for stat in stats %}
                 <article class="stat-card">
-                    <p>{{ stat.label }}</p>
+                    <div class="stat-card-head">
+                        <p>{{ stat.label }}</p>
+                        <span class="stat-dot"></span>
+                    </div>
                     <strong>{{ stat.value }}</strong>
                     <span>{{ stat.hint }}</span>
                 </article>
@@ -101,11 +114,14 @@
 
                 <div class="subject-grid">
                     {% for subject in subjects %}
-                    <article class="subject-card">
-                        <span>{{ subject.status }}</span>
+                    <article class="subject-card {% if subject.is_owned %}is-owned{% else %}is-locked{% endif %}">
+                        <div class="subject-card-top">
+                            <span>{{ subject.status }}</span>
+                            <strong>{{ subject.test_count }} ta test</strong>
+                        </div>
                         <h4>{{ subject.name }}</h4>
                         <p>{{ subject.meta }}</p>
-                        <small>{{ subject.test_count }} ta test mavjud</small>
+                        <small>{% if subject.is_owned %}Ish maydoni ochiq{% else %}Obuna kerak bo'ladi{% endif %}</small>
                     </article>
                     {% endfor %}
                 </div>
@@ -122,14 +138,13 @@
                 <div class="practice-grid">
                     {% for item in hub_cards %}
                     <article class="practice-card">
-                        <span>{{ item.meta }}</span>
+                        <div class="practice-card-top">
+                            <span>{{ item.meta }}</span>
+                            <span class="card-mini-pill">Modul</span>
+                        </div>
                         <h4>{{ item.title }}</h4>
                         <p>{{ item.description }}</p>
-                        {% if item.href == "ranking" and not request.user.is_superuser %}
-                        <a class="card-link disabled" href="#">Faqat admin</a>
-                        {% else %}
                         <a class="card-link" href="{% url item.href %}">Ochish</a>
-                        {% endif %}
                     </article>
                     {% endfor %}
                 </div>
@@ -137,28 +152,31 @@
 
             <section class="double-grid">
                 <article class="info-card" id="ai-lab">
-                    <p class="tiny-label">AI laboratoriya</p>
+                    <p class="tiny-label">AI mutaxasis</p>
                     <h3>Matnni tahlil qilish, fikrni tozalash va javob sifati ustida ishlash.</h3>
                     <p>
                         AI yordamchisi keyinchalik mavzu bo'yicha yo'nalish, xatolarni ko'rsatish
                         va insho tuzilmasini yaxshilash uchun ishlaydi.
                     </p>
+                    <span class="soon-pill">Coming Soon</span>
                 </article>
 
-                <article class="info-card" id="writing">
-                    <p class="tiny-label">Ona tili va adabiyot</p>
-                    <h3>Insho bilan ishlash uchun alohida amaliy maydon.</h3>
+                <article class="info-card" id="chat-lab">
+                    <p class="tiny-label">Chat</p>
+                    <h3>Fan bo'yicha tezkor savol-javob va suhbat maydoni.</h3>
                     <p>
-                        Reja tuzish, kirish va xulosa sifatini ko'rish, jumla ravonligini yaxshilash
-                        va mavzudan chiqib ketmaslik bo'yicha yordamchi oqim qo'shiladi.
+                        Chat moduli keyinchalik foydalanuvchi bilan mavzu bo'yicha qisqa suhbat,
+                        tezkor yo'nalish va kerakli bo'limga olib borish uchun ishlaydi.
                     </p>
+                    <span class="soon-pill">Coming Soon</span>
                 </article>
             </section>
 
             <section class="action-panel">
-                <div>
+                <div class="action-panel-copy">
                     <p class="tiny-label">Tezkor amallar</p>
                     <h3>Daraja tizimi endi avtomatik. Keyingi bosqichlarni shu dashboard ustiga ulaymiz.</h3>
+                    <p>Bir necha qadamda o'zingizga kerakli fan, mashq va resursga o'tib, tayyorlovni uzluksiz davom ettiring.</p>
                 </div>
                 <div class="action-list">
                     {% for action in quick_actions %}

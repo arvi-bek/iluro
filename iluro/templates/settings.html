@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Nastroyka</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260401-3">
+</head>
+<body class="theme-{{ profile.theme }}">
+    <div class="app-layout">
+        {% include "partials/app_sidebar_v2.html" %}
+        <main class="app-main">
+            <div class="content-shell">
+                <header class="content-header">
+                    <div>
+                        <p class="eyebrow">Nastroyka</p>
+                        <h1>Profil, status, theme va darajani boshqaring.</h1>
+                    </div>
+                    <a class="header-link" href="{% url 'profile' %}">Profilga qaytish</a>
+                </header>
+
+                {% if messages %}
+                <div class="message-stack">
+                    {% for message in messages %}
+                    <p class="message {{ message.tags }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <section class="table-panel settings-panel">
+                    <form class="settings-form" method="post">
+                        {% csrf_token %}
+
+                        <div class="settings-intro">
+                            <div class="settings-current">
+                                <span>Hozirgi holat</span>
+                                <strong>{{ profile.get_role_display }}</strong>
+                                <small>{{ profile.get_theme_display }} | {{ level_info.label }}</small>
+                            </div>
+                            <p>
+                                Bu bo'limda profilingiz ko'rinishini va sotib olingan fanlar bo'yicha kerakli darajalarni moslashingiz mumkin.
+                                O'zgartirishlar profil va subject sahifalarida darhol ko'rinadi.
+                            </p>
+                        </div>
+
+                        <section class="settings-group">
+                            <div class="settings-group-head">
+                                <p class="eyebrow">Profil</p>
+                                <h2>Asosiy ma'lumotlar</h2>
+                            </div>
+                            <div class="settings-grid">
+                                <label>
+                                    <span>To'liq ism</span>
+                                    <input type="text" name="full_name" value="{{ profile.full_name }}" required>
+                                </label>
+                                <label>
+                                    <span>Status</span>
+                                    <select name="role">
+                                        {% for value, label in role_choices %}
+                                        <option value="{{ value }}" {% if profile.role == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                            </div>
+                        </section>
+
+                        <section class="settings-group">
+                            <div class="settings-group-head">
+                                <p class="eyebrow">Ko'rinish</p>
+                                <h2>Theme</h2>
+                            </div>
+                            <div class="settings-grid single-grid">
+                                <label>
+                                    <span>Theme</span>
+                                    <select name="theme">
+                                        {% for value, label in theme_choices %}
+                                        <option value="{{ value }}" {% if profile.theme == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                            </div>
+                        </section>
+
+                        <section class="settings-group">
+                            <div class="settings-group-head">
+                                <p class="eyebrow">Fan sozlamalari</p>
+                                <h2>Sotib olingan fanlar bo'yicha kerakli daraja</h2>
+                            </div>
+                            <div class="subject-preference-list">
+                                {% for item in preferred_subject_levels %}
+                                <article class="subject-preference-card">
+                                    <div>
+                                        <strong>{{ item.subject_name }}</strong>
+                                        <small>{{ item.expires_at|date:"d.m.Y" }} gacha faol</small>
+                                    </div>
+                                    <label>
+                                        <span>Kerakli daraja</span>
+                                        <select name="subject_level_{{ item.subject_id }}">
+                                            {% for value in level_choices %}
+                                            <option value="{{ value }}" {% if item.current_level == value %}selected{% endif %}>{{ value }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                </article>
+                                {% empty %}
+                                <article class="subject-preference-card empty-card">
+                                    <strong>Faol fan topilmadi</strong>
+                                    <small>Daraja tanlash uchun avval fan obunasi faol bo'lishi kerak.</small>
+                                </article>
+                                {% endfor %}
+                            </div>
+                        </section>
+
+                        <div class="settings-actions">
+                            <button type="submit" class="header-link settings-save-btn">Saqlash</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

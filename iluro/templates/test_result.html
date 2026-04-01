@@ -42,7 +42,7 @@
                 {% endif %}
             </p>
             <div class="result-actions">
-                <a class="primary-btn link-btn" href="{% if next_url %}{{ next_url }}{% else %}{% url 'tests' %}{% endif %}">Yana test ko'rish</a>
+                <a class="primary-btn link-btn" href="{% if next_url %}{{ next_url }}{% else %}{{ subject_tests_url }}{% endif %}">Yana test ko'rish</a>
                 <a class="back-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
             </div>
         </section>

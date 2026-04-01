@@ -1,0 +1,1013 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap");
+
+:root {
+    --iluro-bg: #f7f1e8;
+    --iluro-panel: #fff9f2;
+    --iluro-panel-soft: #f1e6d7;
+    --iluro-text: #21140d;
+    --iluro-muted: #8f735c;
+    --iluro-accent: #a86a33;
+    --iluro-accent-deep: #8a5425;
+    --iluro-border: rgba(138, 84, 37, 0.18);
+    --iluro-shadow: 0 18px 45px rgba(81, 49, 22, 0.10);
+    --iluro-line: rgba(33, 20, 13, 0.08);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+    font-family: "Manrope", sans-serif !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+.brand-text,
+.content-header h1 {
+    font-family: "Space Grotesk", "Manrope", sans-serif !important;
+}
+
+html body,
+body,
+body.layout-fixed,
+body:not(.login-page),
+.content-wrapper,
+.main-footer,
+.main-header,
+.wrapper,
+.main-sidebar,
+.main-sidebar::before,
+.navbar-white,
+.navbar-light,
+.sidebar-light-light,
+.sidebar,
+.content,
+.content-header,
+.content-header .container-fluid,
+.content-wrapper > .content,
+.dashboard #content-main,
+.dashboard #content-related {
+    background: var(--iluro-bg) !important;
+    color: var(--iluro-text) !important;
+}
+
+.main-header.navbar,
+.main-header,
+.main-footer,
+.content-wrapper {
+    background: rgba(255, 249, 242, 0.92) !important;
+    border-color: var(--iluro-border) !important;
+    box-shadow: 0 10px 30px rgba(81, 49, 22, 0.06);
+}
+
+.brand-link,
+.main-sidebar,
+.main-sidebar .sidebar,
+.card,
+.content-header,
+.small-box,
+.info-box,
+.jazzmin-login-page .card,
+.module,
+div.inline-group,
+#content-related .module,
+#content-main .module {
+    background: var(--iluro-panel) !important;
+}
+
+.main-sidebar {
+    border-right: 1px solid var(--iluro-border);
+    box-shadow: var(--iluro-shadow);
+}
+
+.brand-link {
+    border-bottom: 1px solid var(--iluro-border) !important;
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    padding: 0 1.35rem !important;
+}
+
+.brand-text,
+.nav-sidebar .nav-link p,
+.content-header h1,
+.card-title,
+.form-control,
+.form-check-label,
+label,
+.small,
+.text-sm,
+.main-header .nav-link,
+.user-panel,
+.table,
+.table td,
+.table th,
+.module caption,
+.module h2,
+.selector h2,
+.results th a,
+.results td,
+.recent-actions a,
+.recent-actions,
+.login-card-body,
+.login-box-msg,
+.content,
+.content-header,
+.content-header h1,
+.content-header .breadcrumb,
+.content-header .breadcrumb-item,
+.brand-link .brand-text,
+.module h2,
+.module caption,
+.dashboard .module a,
+.dashboard .module td,
+.dashboard .module th,
+.changelink,
+.addlink {
+    color: var(--iluro-text) !important;
+}
+
+.nav-sidebar .nav-link {
+    border-radius: 16px;
+    margin: 4px 10px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    color: var(--iluro-muted) !important;
+    transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nav-sidebar .nav-link:hover,
+.nav-sidebar .nav-link.active {
+    background: var(--iluro-panel-soft) !important;
+    color: var(--iluro-accent-deep) !important;
+    transform: translateX(2px);
+}
+
+.nav-sidebar .nav-icon {
+    color: var(--iluro-accent) !important;
+}
+
+.navbar-nav .nav-link,
+.navbar-nav .nav-link i,
+.main-header .form-control,
+.main-header .btn {
+    color: var(--iluro-text) !important;
+}
+
+.main-header .form-control {
+    background: #fffdf9 !important;
+}
+
+.nav-sidebar .nav-link.active .nav-icon,
+.nav-sidebar .nav-link:hover .nav-icon {
+    color: var(--iluro-accent-deep) !important;
+}
+
+.card,
+.info-box,
+.small-box,
+div.inline-group,
+.module,
+.dashboard #content-main .module,
+.dashboard #content-related .module,
+.dashboard .card,
+#content-related,
+#content-main {
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 22px !important;
+    box-shadow: var(--iluro-shadow);
+}
+
+.content-wrapper > .content {
+    padding: 1.5rem 1.35rem 2rem !important;
+}
+
+.content-header {
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 26px !important;
+    box-shadow: var(--iluro-shadow);
+    padding: 1.15rem 1.35rem !important;
+    margin-bottom: 1rem;
+}
+
+.content-header h1 {
+    font-size: clamp(1.6rem, 1.2rem + 1vw, 2.35rem);
+    letter-spacing: -0.03em;
+}
+
+.breadcrumb {
+    background: transparent !important;
+    margin-bottom: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    color: var(--iluro-muted) !important;
+}
+
+.card-header,
+.module caption,
+.module h2 {
+    background: transparent !important;
+    border-bottom: 1px solid var(--iluro-border) !important;
+    padding: 1rem 1.2rem !important;
+    font-weight: 800 !important;
+}
+
+.card-body,
+.module,
+div.inline-group {
+    padding: 1.1rem 1.2rem;
+}
+
+.btn,
+input[type="submit"],
+input[type="button"],
+.object-tools a,
+.submit-row input,
+.submit-row a {
+    border-radius: 14px !important;
+    font-weight: 700;
+    padding: 0.72rem 1rem !important;
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.btn-warning,
+.object-tools a,
+input.default[type="submit"] {
+    background: var(--iluro-accent) !important;
+    border-color: var(--iluro-accent) !important;
+    color: #fff !important;
+}
+
+.btn-warning:hover,
+.object-tools a:hover,
+input.default[type="submit"]:hover {
+    background: var(--iluro-accent-deep) !important;
+    border-color: var(--iluro-accent-deep) !important;
+    box-shadow: 0 10px 24px rgba(138, 84, 37, 0.16);
+    transform: translateY(-1px);
+}
+
+.form-control,
+select,
+textarea {
+    background: #fffdf9 !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+
+.form-control:focus,
+select:focus,
+textarea:focus {
+    border-color: rgba(168, 106, 51, 0.55) !important;
+    box-shadow: 0 0 0 4px rgba(168, 106, 51, 0.10) !important;
+}
+
+.form-group label,
+.required label,
+label {
+    font-weight: 700 !important;
+    letter-spacing: -0.01em;
+}
+
+.results,
+.results table,
+.results thead th,
+.results tbody td,
+#result_list,
+#result_list thead th,
+#result_list tbody td,
+.dashboard .module table,
+.dashboard .module tbody,
+.dashboard .module tr,
+.dashboard .module td,
+.dashboard .module th,
+.dashboard .app-auth.module,
+.dashboard .app-main.module {
+    background: transparent !important;
+}
+
+.dashboard .module table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.dashboard .module tbody tr {
+    background: rgba(255, 253, 249, 0.96) !important;
+}
+
+.dashboard .module tbody tr:nth-child(even) {
+    background: rgba(247, 241, 232, 0.9) !important;
+}
+
+.dashboard .module tbody tr:hover {
+    background: rgba(241, 230, 215, 0.72) !important;
+}
+
+.dashboard .module td,
+.dashboard .module th {
+    padding: 1rem 1.1rem !important;
+    border-bottom: 1px solid var(--iluro-line) !important;
+    vertical-align: middle;
+}
+
+.dashboard .module td a {
+    font-weight: 700;
+}
+
+.dashboard .module .addlink,
+.dashboard .module .changelink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: 42px;
+    padding: 0.55rem 0.9rem !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 999px !important;
+    background: #fffaf4 !important;
+    color: var(--iluro-accent-deep) !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+}
+
+.dashboard .module .addlink:hover,
+.dashboard .module .changelink:hover {
+    background: var(--iluro-panel-soft) !important;
+    border-color: rgba(138, 84, 37, 0.28) !important;
+}
+
+.table,
+.table thead th,
+.table td,
+.table th {
+    border-color: var(--iluro-border) !important;
+}
+
+.table thead th {
+    color: var(--iluro-muted) !important;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.table tbody tr {
+    transition: background-color 160ms ease;
+}
+
+.table tbody tr:hover {
+    background: rgba(241, 230, 215, 0.45) !important;
+}
+
+.recent-actions,
+#content-related .module {
+    background: var(--iluro-panel) !important;
+}
+
+.recent-actions h2,
+#content-related .module h2 {
+    color: var(--iluro-text) !important;
+    font-family: "Space Grotesk", "Manrope", sans-serif !important;
+    font-size: 1.05rem !important;
+    letter-spacing: -0.02em;
+}
+
+.recent-actions .actionlist li {
+    border-bottom: 1px solid var(--iluro-border);
+    padding: 0.85rem 0;
+    background: transparent !important;
+}
+
+.recent-actions .actionlist li:last-child {
+    border-bottom: none;
+}
+
+.recent-actions .mini,
+.recent-actions .quiet,
+.recent-actions time {
+    color: var(--iluro-muted) !important;
+}
+
+.recent-actions a {
+    color: var(--iluro-text) !important;
+    font-weight: 700 !important;
+}
+
+a,
+.page-link,
+.breadcrumb-item a {
+    color: var(--iluro-accent-deep) !important;
+}
+
+.page-item.active .page-link {
+    background: var(--iluro-accent) !important;
+    border-color: var(--iluro-accent) !important;
+    color: #fff !important;
+}
+
+.jazzmin-login-page {
+    background:
+        radial-gradient(circle at top right, rgba(168, 106, 51, 0.12), transparent 28%),
+        linear-gradient(180deg, #f7f1e8 0%, #f4ede4 100%) !important;
+}
+
+.jazzmin-login-page .login-box {
+    width: min(440px, calc(100vw - 2rem));
+}
+
+.jazzmin-login-page .card {
+    border-radius: 28px !important;
+    padding: 0.5rem;
+}
+
+.login-card-body,
+.login-box-msg {
+    color: var(--iluro-text) !important;
+}
+
+.main-sidebar .sidebar {
+    padding-top: 0.9rem;
+}
+
+.user-panel {
+    margin: 0.9rem 0.9rem 1rem !important;
+    padding: 1rem !important;
+    border-radius: 18px;
+    background: rgba(241, 230, 215, 0.55);
+}
+
+.user-panel .info,
+.user-panel .info a {
+    color: var(--iluro-text) !important;
+}
+
+.content-header::before {
+    content: "ILURO Admin";
+    display: inline-block;
+    margin-bottom: 0.55rem;
+    color: var(--iluro-accent);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.small-box,
+.info-box {
+    background: linear-gradient(180deg, rgba(255, 249, 242, 0.98), rgba(247, 241, 232, 0.98)) !important;
+}
+
+.main-header .form-control,
+.main-header .select2-selection,
+.main-header input[type="search"] {
+    color: var(--iluro-text) !important;
+    background: #fffdf9 !important;
+    border: 1px solid var(--iluro-border) !important;
+}
+
+.main-header .form-control::placeholder,
+.main-header input[type="search"]::placeholder {
+    color: rgba(33, 20, 13, 0.45) !important;
+}
+
+.dashboard .module {
+    overflow: hidden;
+}
+
+.dashboard .module caption a.section,
+.dashboard .module caption {
+    color: var(--iluro-text) !important;
+}
+
+.iluro-admin-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.2rem;
+    border: 1px solid var(--iluro-border);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top right, rgba(168, 106, 51, 0.10), transparent 30%),
+        linear-gradient(180deg, rgba(255, 249, 242, 0.98), rgba(247, 241, 232, 0.98));
+    box-shadow: var(--iluro-shadow);
+}
+
+.iluro-admin-kicker,
+.iluro-admin-app-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--iluro-accent);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.iluro-admin-hero h1 {
+    margin: 0;
+    color: var(--iluro-text);
+    font-family: "Space Grotesk", "Manrope", sans-serif;
+    font-size: clamp(2rem, 1.5rem + 1.4vw, 3.3rem);
+    letter-spacing: -0.04em;
+}
+
+.iluro-admin-lead {
+    max-width: 680px;
+    margin: 0.85rem 0 0;
+    color: var(--iluro-muted);
+    font-size: 1.02rem;
+    line-height: 1.8;
+}
+
+.iluro-admin-hero-badge,
+.iluro-admin-side-card {
+    border: 1px solid var(--iluro-border);
+    border-radius: 24px;
+    background: rgba(255, 250, 244, 0.95);
+    box-shadow: var(--iluro-shadow);
+}
+
+.iluro-admin-hero-badge {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.25rem;
+    text-align: center;
+}
+
+.iluro-admin-hero-badge span {
+    color: var(--iluro-muted);
+    font-size: 0.9rem;
+}
+
+.iluro-admin-hero-badge strong {
+    margin-top: 0.4rem;
+    color: var(--iluro-text);
+    font-size: 1.4rem;
+    font-family: "Space Grotesk", "Manrope", sans-serif;
+}
+
+.iluro-admin-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.2rem;
+    align-items: start;
+}
+
+.iluro-admin-main {
+    display: grid;
+    gap: 1rem;
+}
+
+.iluro-admin-app-card {
+    border: 1px solid var(--iluro-border);
+    border-radius: 28px;
+    background: rgba(255, 249, 242, 0.98);
+    box-shadow: var(--iluro-shadow);
+    overflow: hidden;
+}
+
+.iluro-admin-app-head {
+    padding: 1.2rem 1.3rem 0.95rem;
+    border-bottom: 1px solid var(--iluro-border);
+}
+
+.iluro-admin-app-head h2,
+.iluro-admin-side-card h2 {
+    margin: 0;
+    color: var(--iluro-text);
+    font-family: "Space Grotesk", "Manrope", sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+}
+
+.iluro-admin-model-list {
+    display: grid;
+}
+
+.iluro-admin-model-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--iluro-line);
+    align-items: center;
+}
+
+.iluro-admin-model-row:last-child {
+    border-bottom: none;
+}
+
+.iluro-admin-model-copy h3 {
+    margin: 0;
+    color: var(--iluro-text);
+    font-size: 1.02rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.iluro-admin-model-copy p {
+    margin: 0.35rem 0 0;
+    color: var(--iluro-muted);
+}
+
+.iluro-admin-model-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.iluro-admin-model-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 108px;
+    min-height: 42px;
+    padding: 0.6rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid rgba(168, 106, 51, 0.24);
+    background: var(--iluro-accent);
+    color: #fff !important;
+    font-weight: 800;
+    text-decoration: none;
+    transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.iluro-admin-model-actions a:hover {
+    background: var(--iluro-accent-deep);
+    border-color: var(--iluro-accent-deep);
+    transform: translateY(-1px);
+}
+
+.iluro-admin-model-actions a.is-secondary {
+    background: rgba(255, 249, 242, 0.96);
+    color: var(--iluro-accent-deep) !important;
+}
+
+.iluro-admin-side-card {
+    padding: 1.2rem;
+}
+
+.iluro-admin-log-list {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 1rem;
+}
+
+.iluro-admin-log-item {
+    padding: 1rem;
+    border: 1px solid var(--iluro-line);
+    border-radius: 18px;
+    background: #fffdf9;
+}
+
+.iluro-admin-log-item strong {
+    display: block;
+    color: var(--iluro-text);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.iluro-admin-log-item p,
+.iluro-admin-log-time {
+    color: var(--iluro-muted);
+}
+
+.iluro-admin-log-item p {
+    margin: 0.35rem 0 0;
+}
+
+.iluro-admin-log-time {
+    display: inline-block;
+    margin-bottom: 0.55rem;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 1200px) {
+    .iluro-admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .iluro-admin-hero {
+        grid-template-columns: 1fr;
+    }
+}
+
+.login-page,
+.jazzmin-login-page {
+    background:
+        radial-gradient(circle at top right, rgba(168, 106, 51, 0.12), transparent 28%),
+        linear-gradient(180deg, #f7f1e8 0%, #f4ede4 100%) !important;
+}
+
+/* Admin changelist and forms */
+.change-list .content,
+.change-form .content,
+.app-main .content {
+    background: var(--iluro-bg) !important;
+}
+
+#changelist,
+#changelist-form,
+#toolbar,
+.actions,
+.paginator,
+#changelist .results,
+.change-list .card,
+.change-form .card,
+.change-form .module,
+.inline-group {
+    border-color: var(--iluro-border) !important;
+}
+
+#toolbar,
+.actions {
+    padding: 1rem 1.1rem !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 22px !important;
+    background: rgba(255, 249, 242, 0.96) !important;
+    box-shadow: var(--iluro-shadow);
+}
+
+#toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: center;
+    margin-bottom: 1rem !important;
+}
+
+#toolbar form,
+#toolbar #searchbar,
+#changelist-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+#toolbar input[type="text"],
+#toolbar input[type="search"],
+#searchbar,
+#changelist-search input[type="text"] {
+    min-width: 260px;
+    min-height: 48px;
+    padding: 0 1rem !important;
+    background: #fffdf9 !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 18px !important;
+    color: var(--iluro-text) !important;
+}
+
+#changelist-filter {
+    background: rgba(255, 249, 242, 0.96) !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 24px !important;
+    padding: 1rem !important;
+    box-shadow: var(--iluro-shadow);
+}
+
+#changelist-filter h2,
+#changelist-filter h3 {
+    color: var(--iluro-text) !important;
+    font-family: "Space Grotesk", "Manrope", sans-serif !important;
+}
+
+#changelist-filter li.selected a,
+#changelist-filter a:hover {
+    color: var(--iluro-accent-deep) !important;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: center;
+    margin: 1rem 0 !important;
+}
+
+.actions label,
+.actions span.all,
+.actions span.action-counter,
+.actions .question {
+    color: var(--iluro-text) !important;
+}
+
+.actions select,
+#changelist-filter select,
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple,
+select.form-control {
+    min-height: 46px !important;
+    background: #fffdf9 !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 16px !important;
+    color: var(--iluro-text) !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered,
+.select2-container--default .select2-selection--multiple .select2-selection__choice,
+.select2-container--default .select2-search--inline .select2-search__field,
+.select2-dropdown,
+.select2-results__option {
+    color: var(--iluro-text) !important;
+    background: #fffdf9 !important;
+}
+
+.select2-dropdown {
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 18px !important;
+    overflow: hidden;
+    box-shadow: var(--iluro-shadow);
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background: var(--iluro-panel-soft) !important;
+    color: var(--iluro-accent-deep) !important;
+}
+
+#result_list,
+.results table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: rgba(255, 249, 242, 0.98) !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+}
+
+#result_list thead th,
+.results thead th {
+    background: rgba(255, 249, 242, 1) !important;
+    color: var(--iluro-accent-deep) !important;
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--iluro-border) !important;
+    padding: 1rem 0.9rem !important;
+}
+
+#result_list thead th a,
+.results thead th a,
+#result_list thead th .text span,
+.results thead th .text span {
+    color: var(--iluro-accent-deep) !important;
+}
+
+#result_list tbody td,
+.results tbody td,
+#result_list tbody th,
+.results tbody th {
+    background: transparent !important;
+    color: var(--iluro-text) !important;
+    padding: 0.95rem 0.9rem !important;
+    border-bottom: 1px solid var(--iluro-line) !important;
+}
+
+#result_list tbody tr:last-child td,
+.results tbody tr:last-child td,
+#result_list tbody tr:last-child th,
+.results tbody tr:last-child th {
+    border-bottom: none !important;
+}
+
+#result_list tbody tr:hover td,
+.results tbody tr:hover td,
+#result_list tbody tr:hover th,
+.results tbody tr:hover th {
+    background: rgba(241, 230, 215, 0.34) !important;
+}
+
+#result_list tbody th,
+.results tbody th,
+#result_list tbody th a,
+.results tbody th a,
+#result_list tbody td a,
+.results tbody td a {
+    color: var(--iluro-text) !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+}
+
+#result_list tbody th,
+.results tbody th {
+    width: auto !important;
+    min-width: 0 !important;
+}
+
+#result_list tbody td:first-child,
+#result_list tbody th:first-child,
+.results tbody td:first-child,
+.results tbody th:first-child {
+    background: transparent !important;
+}
+
+th.field-id,
+td.field-id,
+th.field-id a,
+td.field-id a,
+th.field-username,
+td.field-username,
+th.field-username a,
+td.field-username a {
+    background: transparent !important;
+    color: var(--iluro-text) !important;
+}
+
+td.action-checkbox,
+th.action-checkbox-column,
+.action-checkbox-column {
+    width: 56px !important;
+    text-align: center !important;
+    background: transparent !important;
+}
+
+td.field-id a,
+td.field-__str__ a,
+td[class*="field-"] a {
+    color: var(--iluro-text) !important;
+    font-weight: 700;
+}
+
+.sorted .sortoptions,
+.sortoptions,
+.sortremove,
+.sortpriority,
+.sortoptions a {
+    color: var(--iluro-accent-deep) !important;
+    background: transparent !important;
+}
+
+.submit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    padding: 1rem 0 0 !important;
+    background: transparent !important;
+    border-top: 1px solid var(--iluro-border) !important;
+}
+
+.aligned label,
+form .aligned p,
+.help,
+.helptext,
+.form-row p,
+.description {
+    color: var(--iluro-muted) !important;
+}
+
+.form-row {
+    border-bottom: 1px solid var(--iluro-line) !important;
+    padding: 1rem 0 !important;
+}
+
+.form-row:last-child {
+    border-bottom: none !important;
+}
+
+.inline-group .tabular tr.has_original td,
+.inline-group .tabular tr td,
+.inline-group .tabular tr th {
+    background: transparent !important;
+    color: var(--iluro-text) !important;
+    border-color: var(--iluro-line) !important;
+}
+
+.inline-group h2 {
+    margin-bottom: 0.8rem !important;
+}
+
+input[type="checkbox"] {
+    accent-color: var(--iluro-accent);
+}
+
+.paginator {
+    margin-top: 1rem !important;
+    padding: 0.9rem 1rem !important;
+    border: 1px solid var(--iluro-border) !important;
+    border-radius: 18px !important;
+    background: rgba(255, 249, 242, 0.96) !important;
+}
+
+@media (max-width: 960px) {
+    #toolbar,
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #toolbar input[type="text"],
+    #toolbar input[type="search"],
+    #searchbar,
+    #changelist-search input[type="text"] {
+        min-width: 100%;
+    }
+}

@@ -1,0 +1,91 @@
+<aside class="app-sidebar">
+    <svg class="ui-icon-sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">
+        <defs>
+            <symbol id="icon-home" viewBox="0 0 24 24">
+                <path d="M4 10.5 12 4l8 6.5" />
+                <path d="M6.5 9.5V19h11V9.5" />
+            </symbol>
+            <symbol id="icon-profile" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M5 19c1.8-3.3 4.2-5 7-5s5.2 1.7 7 5" />
+            </symbol>
+            <symbol id="icon-subscriptions" viewBox="0 0 24 24">
+                <path d="M4.5 7.5h15" />
+                <path d="M4.5 12h15" />
+                <path d="M4.5 16.5h15" />
+                <circle cx="7" cy="7.5" r="1.25" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="1.25" fill="currentColor" stroke="none" />
+                <circle cx="17" cy="16.5" r="1.25" fill="currentColor" stroke="none" />
+            </symbol>
+            <symbol id="icon-ranking" viewBox="0 0 24 24">
+                <path d="M12 4.5 14.2 9l4.8.7-3.5 3.4.8 4.9-4.3-2.3-4.3 2.3.8-4.9-3.5-3.4 4.8-.7L12 4.5Z" />
+            </symbol>
+            <symbol id="icon-ai" viewBox="0 0 24 24">
+                <path d="M12 3.5 13.8 8.2 18.5 10 13.8 11.8 12 16.5 10.2 11.8 5.5 10l4.7-1.8L12 3.5Z" />
+                <path d="M18 15.5 18.8 17.2 20.5 18 18.8 18.8 18 20.5 17.2 18.8 15.5 18l1.7-.8.8-1.7Z" />
+            </symbol>
+            <symbol id="icon-stats" viewBox="0 0 24 24">
+                <path d="M5 19V9" />
+                <path d="M12 19V5" />
+                <path d="M19 19v-7" />
+                <path d="M4 19.5h16" />
+            </symbol>
+        </defs>
+    </svg>
+    <a class="app-sidebar-brand" href="{% url 'index' %}">ILURO</a>
+
+    <nav class="app-sidebar-nav">
+        <a class="{% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'subject-workspace' %}is-active{% endif %}" href="{% url 'dashboard' %}">
+            <span class="nav-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><use href="#icon-home"></use></svg>
+            </span>
+            <span class="nav-link-label">Bosh menyu</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'profile' %}is-active{% endif %}" href="{% url 'profile' %}">
+            <span class="nav-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><use href="#icon-profile"></use></svg>
+            </span>
+            <span class="nav-link-label">Profil</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'subject-selection' %}is-active{% endif %}" href="{% url 'subject-selection' %}">
+            <span class="nav-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><use href="#icon-subscriptions"></use></svg>
+            </span>
+            <span class="nav-link-label">Obunalar</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'ranking' %}is-active{% endif %}" href="{% url 'ranking' %}">
+            <span class="nav-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><use href="#icon-ranking"></use></svg>
+            </span>
+            <span class="nav-link-label">Reyting</span>
+        </a>
+        <a href="{% url 'dashboard' %}#ai-lab">
+            <span class="nav-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><use href="#icon-ai"></use></svg>
+            </span>
+            <span class="nav-link-label">Ai mutaxasis</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'statistics' %}is-active{% endif %}" href="{% url 'statistics' %}">
+            <span class="nav-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><use href="#icon-stats"></use></svg>
+            </span>
+            <span class="nav-link-label">Statistika</span>
+        </a>
+    </nav>
+
+    <div class="app-sidebar-user">
+        <div class="app-sidebar-user-top">
+            <div class="app-sidebar-avatar" aria-hidden="true">{{ profile.full_name|default:request.user.username|first|upper }}</div>
+            <div>
+                <strong>{{ profile.full_name|default:request.user.username|default:request.user.username }}</strong>
+                {% if level_info %}
+                <span>{{ level_info.label }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="app-sidebar-actions">
+            <a href="{% url 'settings' %}">Nastroyka</a>
+            <a href="{% url 'logout' %}">Chiqish</a>
+        </div>
+    </div>
+</aside>

@@ -7,8 +7,8 @@ from django.contrib import messages
 from .models import (
     Subject, Subscription, Test,
     Question, Choice, UserTest,
-    UserAnswer, Profile, Book, SubjectSectionEntry, EssayTopic,
-    PracticeExercise, PracticeChoice, UserPracticeAttempt,
+    UserAnswer, Profile, UserSubjectPreference, Book, SubjectSectionEntry, EssayTopic,
+    PracticeSet, PracticeExercise, PracticeChoice, UserPracticeAttempt, PracticeSetAttempt,
 )
 
 
@@ -167,12 +167,21 @@ class ProfileAdmin(admin.ModelAdmin):
     purchased_subjects_summary.short_description = "Sotib olingan fanlar"
 
 
+@admin.register(UserSubjectPreference)
+class UserSubjectPreferenceAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "subject", "preferred_level", "updated_at")
+    list_filter = ("preferred_level", "subject")
+    search_fields = ("user__username", "subject__name")
+    autocomplete_fields = ("user", "subject")
+    ordering = ("-updated_at",)
+
+
 # ---------------- BOOK ----------------
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "subject", "access_level", "author", "has_pdf", "is_featured", "created_at")
-    list_filter = ("subject", "access_level", "is_featured", "created_at")
-    search_fields = ("title", "author", "subject__name")
+    list_display = ("id", "title", "subject", "grade", "access_level", "author", "has_pdf", "is_featured", "created_at")
+    list_filter = ("subject", "grade", "access_level", "is_featured", "created_at")
+    search_fields = ("title", "author", "subject__name", "grade")
     autocomplete_fields = ("subject",)
     ordering = ("-is_featured", "-created_at")
 
@@ -203,12 +212,30 @@ class EssayTopicAdmin(admin.ModelAdmin):
 
 @admin.register(PracticeExercise)
 class PracticeExerciseAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "subject", "topic", "source_book", "answer_mode", "difficulty", "is_featured", "created_at")
-    list_filter = ("subject", "answer_mode", "difficulty", "is_featured", "created_at")
-    search_fields = ("title", "topic", "source_book", "prompt", "subject__name")
-    autocomplete_fields = ("subject",)
+    list_display = ("id", "display_label", "practice_set", "subject", "answer_mode", "difficulty", "is_featured", "created_at")
+    list_filter = ("subject", "practice_set", "answer_mode", "difficulty", "is_featured", "created_at")
+    search_fields = ("title", "prompt", "practice_set__title", "subject__name")
+    autocomplete_fields = ("subject", "practice_set")
     inlines = [PracticeChoiceInline]
     ordering = ("-is_featured", "-created_at")
+    fields = ("practice_set", "title", "prompt", "answer_mode", "correct_text", "difficulty", "is_featured", "explanation")
+
+    @admin.display(description="Topshiriq")
+    def display_label(self, obj):
+        return obj.title or obj.prompt[:80]
+
+
+@admin.register(PracticeSet)
+class PracticeSetAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "subject", "topic", "source_book", "difficulty", "exercise_count", "is_featured", "created_at")
+    list_filter = ("subject", "difficulty", "is_featured", "created_at")
+    search_fields = ("title", "topic", "source_book", "description", "subject__name")
+    autocomplete_fields = ("subject",)
+    ordering = ("-is_featured", "-created_at")
+
+    @admin.display(description="Misollar soni")
+    def exercise_count(self, obj):
+        return obj.exercises.count()
 
 
 @admin.register(PracticeChoice)
@@ -226,10 +253,19 @@ class PracticeChoiceAdmin(admin.ModelAdmin):
 
 @admin.register(UserPracticeAttempt)
 class UserPracticeAttemptAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "exercise", "selected_choice", "answer_text", "is_correct", "created_at")
+    list_display = ("id", "user", "practice_session", "exercise", "selected_choice", "answer_text", "is_correct", "created_at")
     list_filter = ("is_correct", "exercise__subject", "exercise__difficulty", "created_at")
-    search_fields = ("user__username", "exercise__title", "answer_text")
-    autocomplete_fields = ("user", "exercise")
+    search_fields = ("user__username", "exercise__title", "answer_text", "practice_session__practice_set__title")
+    autocomplete_fields = ("user", "exercise", "practice_session")
+    ordering = ("-created_at",)
+
+
+@admin.register(PracticeSetAttempt)
+class PracticeSetAttemptAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "practice_set", "score", "correct_count", "total_count", "created_at")
+    list_filter = ("practice_set__subject", "practice_set__difficulty", "created_at")
+    search_fields = ("user__username", "practice_set__title", "practice_set__topic")
+    autocomplete_fields = ("user", "practice_set")
     ordering = ("-created_at",)
 
 

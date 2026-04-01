@@ -1,0 +1,143 @@
+import secrets
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.http import FileResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.clickjacking import xframe_options_exempt
+
+from .models import Book, GRADE_CHOICES, Subject
+from .selectors import get_tests_listing
+from .services import (
+    get_active_subscription_ids as _get_active_subscription_ids,
+    get_or_sync_profile as _get_or_sync_profile,
+    sidebar_context as _sidebar_context,
+    user_can_access_subject as _user_can_access_subject,
+)
+
+
+@login_required
+def tests_list_view(request):
+    sidebar = _sidebar_context(request.user)
+    tests = get_tests_listing(request.user, sidebar["profile"].level)
+    return render(request, "tests_list.html", {**sidebar, "tests": tests})
+
+
+@login_required
+def books_list_view(request):
+    sidebar = _sidebar_context(request.user)
+    selected_subject_id = request.GET.get("subject", "").strip()
+    selected_grade = request.GET.get("grade", "").strip()
+    subject_queryset = Subject.objects.order_by("name")
+    selected_subject = None
+    book_queryset = Book.objects.select_related("subject").order_by("-is_featured", "-created_at")
+    allowed_grades = {choice[0] for choice in GRADE_CHOICES}
+
+    if selected_subject_id.isdigit():
+        selected_subject = get_object_or_404(Subject, id=selected_subject_id)
+        if not _user_can_access_subject(request.user, selected_subject.id):
+            messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
+            return redirect("subject-selection")
+        book_queryset = book_queryset.filter(subject=selected_subject)
+    else:
+        book_queryset = book_queryset.none()
+
+    if selected_grade in allowed_grades:
+        book_queryset = book_queryset.filter(grade=selected_grade)
+
+    books = [
+        {
+            "id": book.id,
+            "title": book.title,
+            "subject": book.subject.name,
+            "grade": book.get_grade_display() if book.grade else "",
+            "author": book.author,
+            "description": book.description,
+            "pdf_url": book.pdf_file.url if book.pdf_file else "",
+            "is_featured": book.is_featured,
+        }
+        for book in book_queryset
+    ]
+    grade_filters = [{"value": "", "label": "Barchasi", "is_active": selected_grade == ""}]
+    grade_filters.extend(
+        {
+            "value": value,
+            "label": label,
+            "is_active": selected_grade == value,
+        }
+        for value, label in GRADE_CHOICES
+    )
+    owned_subject_ids = set(_get_active_subscription_ids(request.user))
+    subject_cards = [
+        {
+            "id": subject.id,
+            "name": subject.name,
+            "is_owned": subject.id in owned_subject_ids,
+        }
+        for subject in subject_queryset
+    ]
+    return render(
+        request,
+        "books_list.html",
+        {
+            **sidebar,
+            "books": books,
+            "grade_filters": grade_filters,
+            "selected_grade": selected_grade,
+            "selected_subject": selected_subject,
+            "subject_cards": subject_cards,
+            "current_books_path": request.get_full_path(),
+        },
+    )
+
+
+@login_required
+def book_read_view(request, book_id):
+    book = get_object_or_404(Book.objects.select_related("subject"), id=book_id)
+    if not book.pdf_file:
+        messages.error(request, "Bu kitob uchun hali PDF yuklanmagan.")
+        return redirect("books")
+    if not _user_can_access_subject(request.user, book.subject_id):
+        messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
+        return redirect("subject-selection")
+    _get_or_sync_profile(request.user)
+    reader_tokens = request.session.get("reader_tokens", {})
+    token = secrets.token_urlsafe(24)
+    reader_tokens[str(book.id)] = token
+    request.session["reader_tokens"] = reader_tokens
+    request.session.modified = True
+    next_url = request.GET.get("next", "").strip()
+    back_url = next_url or f"/subjects/{book.subject_id}/books/"
+
+    return render(
+        request,
+        "book_read.html",
+        {"book": book, "reader_token": token, "back_url": back_url},
+    )
+
+
+@login_required
+@xframe_options_exempt
+def book_pdf_view(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    if not book.pdf_file:
+        messages.error(request, "Bu kitob uchun hali PDF yuklanmagan.")
+        return redirect("books")
+
+    session_tokens = request.session.get("reader_tokens", {})
+    provided_token = request.GET.get("token", "")
+    expected_token = session_tokens.get(str(book.id))
+    fetch_dest = request.META.get("HTTP_SEC_FETCH_DEST", "")
+
+    if not expected_token or provided_token != expected_token:
+        return HttpResponseForbidden("Bu PDF faqat sayt ichidagi reader orqali ochiladi.")
+
+    if fetch_dest and fetch_dest not in {"iframe", "embed", "object"}:
+        return HttpResponseForbidden("Bu PDF alohida ochish uchun yopilgan.")
+
+    response = FileResponse(book.pdf_file.open("rb"), content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{book.pdf_file.name.split("/")[-1]}"'
+    response["Cache-Control"] = "private, no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response

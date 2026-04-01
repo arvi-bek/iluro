@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | {{ practice_set.title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+</head>
+<body>
+    <div class="flow-shell">
+        <section class="solve-header">
+            <p class="eyebrow">Misol / Masala bo'limi</p>
+            <h1>{{ practice_set.title }}</h1>
+            <div class="meta-list">
+                <span>Fan: {{ practice_set.subject.name }}</span>
+                <span>Daraja: {{ practice_set.get_difficulty_display }}</span>
+                {% if practice_set.source_book %}<span>Kitob: {{ practice_set.source_book }}</span>{% endif %}
+                {% if practice_set.topic %}<span>Mavzu: {{ practice_set.topic }}</span>{% endif %}
+                <span>{{ exercises|length }} ta topshiriq</span>
+            </div>
+            {% if practice_set.description %}
+            <p class="lead">{{ practice_set.description }}</p>
+            {% endif %}
+        </section>
+
+        <form class="solve-form" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            {% for exercise in exercises %}
+            <article class="question-card">
+                <p class="question-index">{{ forloop.counter }}-topshiriq</p>
+                {% if exercise.title %}
+                <p class="eyebrow">{{ exercise.title }}</p>
+                {% endif %}
+                <h2>{{ exercise.prompt }}</h2>
+                <div class="meta-list">
+                    <span>{{ exercise.get_answer_mode_display }}</span>
+                </div>
+
+                {% if exercise.answer_mode == "choice" %}
+                <div class="choices">
+                    {% for choice in exercise.choices.all %}
+                    <label class="choice-option">
+                        <input type="radio" name="exercise_{{ exercise.id }}_choice" value="{{ choice.id }}">
+                        <span>{{ choice.text }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="choices">
+                    <label class="choice-option">
+                        <span style="width:100%;">
+                            <input type="text" name="exercise_{{ exercise.id }}_input" placeholder="Javobni shu yerga yozing" style="width:100%; min-height:48px; border-radius:14px; border:1px solid rgba(138,84,37,.16); padding:0 14px; font:inherit;">
+                        </span>
+                    </label>
+                </div>
+                {% endif %}
+            </article>
+            {% endfor %}
+
+            <button class="primary-btn" type="submit">Bo'limni yakunlash</button>
+            <a class="back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' practice_set.subject.id 'problems' %}{% endif %}">Misol / Masalalarga qaytish</a>
+        </form>
+    </div>
+</body>
+</html>

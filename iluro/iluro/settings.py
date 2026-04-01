@@ -25,12 +25,13 @@ SECRET_KEY = 'django-insecure-(0%p+1$+^3$3nww@-i^j3*-=k+9gq3&^vfnfinge7@rdxx955=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -124,3 +125,73 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+JAZZMIN_SETTINGS = {
+    "site_title": "ILURO Admin",
+    "site_header": "ILURO",
+    "site_brand": "ILURO",
+    "site_logo_classes": "img-circle",
+    "welcome_sign": "ILURO boshqaruv paneli",
+    "copyright": "ILURO",
+    "search_model": ["auth.User"],
+    "topmenu_links": [
+        {"name": "Sayt", "url": "index", "permissions": ["auth.view_user"]},
+        {"name": "Asosiy bo'limlar", "app": "main"},
+        {"name": "Foydalanuvchilar", "model": "auth.User"},
+    ],
+    "order_with_respect_to": [
+        "main",
+        "auth",
+    ],
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "main.Subject": "fas fa-book-open",
+        "main.Subscription": "fas fa-credit-card",
+        "main.Profile": "fas fa-id-badge",
+        "main.Test": "fas fa-clipboard-check",
+        "main.Question": "fas fa-circle-question",
+        "main.Choice": "fas fa-list-ul",
+        "main.UserTest": "fas fa-chart-line",
+        "main.UserAnswer": "fas fa-square-check",
+        "main.Book": "fas fa-file-pdf",
+        "main.SubjectSectionEntry": "fas fa-layer-group",
+        "main.EssayTopic": "fas fa-pen-nib",
+        "main.PracticeSet": "fas fa-shapes",
+        "main.PracticeExercise": "fas fa-calculator",
+        "main.PracticeChoice": "fas fa-list-check",
+        "main.PracticeSetAttempt": "fas fa-chart-column",
+        "main.UserPracticeAttempt": "fas fa-square-poll-vertical",
+    },
+    "custom_css": "css/admin_custom.css",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "show_ui_builder": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "simplex",
+    "dark_mode_theme": None,
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": True,
+    "accent": "accent-warning",
+    "navbar_small_text": False,
+    "sidebar": "sidebar-light-light",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme_colour": "navbar-white",
+    "button_classes": {
+        "primary": "btn btn-warning",
+        "secondary": "btn btn-outline-secondary",
+        "info": "btn btn-outline-info",
+        "warning": "btn btn-warning",
+        "danger": "btn btn-outline-danger",
+        "success": "btn btn-outline-success",
+    },
+}

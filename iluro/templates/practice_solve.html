@@ -1,0 +1,60 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Mashq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+</head>
+<body>
+    <div class="flow-shell">
+        <section class="solve-header">
+            <p class="eyebrow">Misol / Masala</p>
+            <h1>{{ exercise.title }}</h1>
+            <div class="meta-list">
+                <span>Fan: {{ exercise.subject.name }}</span>
+                <span>Daraja: {{ exercise.get_difficulty_display }}</span>
+                <span>Javob turi: {{ exercise.get_answer_mode_display }}</span>
+                {% if exercise.source_book %}<span>Kitob: {{ exercise.source_book }}</span>{% endif %}
+                {% if exercise.topic %}<span>Mavzu: {{ exercise.topic }}</span>{% endif %}
+            </div>
+            <p class="lead">{{ exercise.prompt }}</p>
+        </section>
+
+        <form class="solve-form" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <article class="question-card">
+                <p class="question-index">Amaliy mashq</p>
+                <h2>Javobingizni kiriting</h2>
+
+                {% if exercise.answer_mode == "choice" %}
+                <div class="choices">
+                    {% for choice in choices %}
+                    <label class="choice-option">
+                        <input type="radio" name="selected_choice" value="{{ choice.id }}">
+                        <span>{{ choice.text }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="choices">
+                    <label class="choice-option">
+                        <span style="width:100%;">
+                            <input type="text" name="answer_text" placeholder="Javobni shu yerga yozing" style="width:100%; min-height:48px; border-radius:14px; border:1px solid rgba(138,84,37,.16); padding:0 14px; font:inherit;">
+                        </span>
+                    </label>
+                </div>
+                {% endif %}
+            </article>
+
+            <button class="primary-btn" type="submit">Yakunlash</button>
+            <a class="back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' exercise.subject.id 'problems' %}{% endif %}">Orqaga qaytish</a>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,367 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | {{ subject.name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260401-6">
+</head>
+<body>
+    <div class="workspace-shell">
+        <aside class="subject-sidebar">
+            <a class="subject-sidebar-brand" href="{% url 'index' %}">ILURO</a>
+
+            <nav class="subject-sidebar-nav">
+                {% for item in section_items %}
+                <a class="{% if item.is_active %}is-active{% endif %}" href="{% if item.key == 'home' %}{% url 'subject-workspace' subject.id %}{% else %}{% url 'subject-workspace-section' subject.id item.key %}{% endif %}">{{ item.label }}</a>
+                {% endfor %}
+            </nav>
+
+            <div class="subject-sidebar-user">
+                <strong>{{ profile.full_name|default:request.user.username }}</strong>
+                <span>{{ level_info.label }}</span>
+                <a href="{% url 'settings' %}">Nastroyka</a>
+                <a href="{% url 'logout' %}">Chiqish</a>
+            </div>
+        </aside>
+
+        <main class="workspace-main">
+            <section class="workspace-topbar">
+                <div class="workspace-topbar-links">
+                    <a class="peer-link home-link" href="{% url 'dashboard' %}">Asosiy sahifa</a>
+                    {% for item in peer_subjects %}
+                    <a class="peer-link {% if item.is_owned %}is-owned{% else %}is-locked{% endif %}" href="{% url 'subject-workspace' item.id %}">
+                        {{ item.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="workspace-topbar-status">
+                    <span>{{ profile.xp }} XP</span>
+                    <span>{{ level_info.label }}</span>
+                </div>
+            </section>
+
+            <section class="workspace-xp-strip">
+                <div class="workspace-xp-head">
+                    <strong>XP progress</strong>
+                    <span>{% if level_info.next_threshold %}{{ level_info.xp_to_next }} XP qoldi{% else %}Maksimal bosqich{% endif %}</span>
+                </div>
+                <div class="workspace-xp-track">
+                    <div class="workspace-xp-fill" style="width: {{ level_info.progress_percent }}%;"></div>
+                </div>
+                <div class="workspace-xp-foot">
+                    <small>{{ level_info.label }}</small>
+                    <small>{{ level_info.next_label }}</small>
+                </div>
+            </section>
+
+            {% if current_section == "home" %}
+            <section class="workspace-hero theme-{{ subject_theme.key }}">
+                <div class="workspace-hero-copy">
+                    <p class="eyebrow">{{ subject_theme.eyebrow }}</p>
+                    <h1>{{ subject.name }}</h1>
+                    <h2 class="hero-headline">{{ subject_theme.headline }}</h2>
+                    <p class="hero-copy">{{ subject_theme.description }}</p>
+                    <div class="workspace-hero-actions">
+                        <a class="mini-link hero-link" href="{% url 'subject-workspace-section' subject.id 'tests' %}">Mashqlarni ochish</a>
+                        <a class="mini-link hero-link secondary" href="{% url 'subject-workspace-section' subject.id 'books' %}">Kitoblarni ko'rish</a>
+                    </div>
+                </div>
+                <div class="hero-stat">
+                    <span>{{ subject_theme.stat_label }}</span>
+                    <strong>{{ subject_theme.stat_value }}</strong>
+                    <small>{{ level_info.label }} daraja bilan ochiq bo'lgan fan workspace</small>
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="workspace-body">
+                <section class="subject-content">
+                    {% if current_section == "home" %}
+                    <div class="content-panel">
+                        <p class="eyebrow">Asosiy menyu</p>
+                        <h2>{{ subject.name }} uchun alohida vibe</h2>
+                        <p>{{ subject_theme.description }}</p>
+                        <div class="metric-grid">
+                            {% for metric in home_metrics %}
+                            <article class="metric-card">
+                                <div class="metric-card-head">
+                                    <span>{{ metric.label }}</span>
+                                    <i class="metric-dot"></i>
+                                </div>
+                                <strong>{{ metric.value }}</strong>
+                                <small>{{ metric.hint }}</small>
+                            </article>
+                            {% endfor %}
+                        </div>
+                        <div class="content-grid">
+                            {% for card in subject_theme.cards %}
+                            <article class="mini-card">
+                                <span>{{ subject.name }}</span>
+                                <h3>{{ card.title }}</h3>
+                                <p>{{ card.text }}</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif current_section == "books" %}
+                    <div class="content-panel">
+                        <p class="eyebrow">Kitoblar</p>
+                        <h2>{{ subject.name }} resurslari</h2>
+                        <section class="workspace-filter-strip" aria-label="Sinf bo'yicha filter">
+                            <div class="workspace-filter-head">
+                                <p class="eyebrow">Sinf bo'yicha</p>
+                                <span>{{ books|length }} ta kitob</span>
+                            </div>
+                            <div class="workspace-filter-row">
+                                {% for item in grade_filters %}
+                                <a class="workspace-filter-pill {% if item.is_active %}is-active{% endif %}" href="{% url 'subject-workspace-section' subject.id 'books' %}{% if item.value %}?grade={{ item.value }}{% endif %}">
+                                    {{ item.label }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </section>
+                        <div class="content-grid">
+                            {% for book in books %}
+                            <article class="mini-card">
+                                <div class="mini-card-top">
+                                    <span>{{ subject.name }}{% if book.grade %} · {{ book.get_grade_display }}{% endif %}</span>
+                                    <strong class="card-state">Resurs</strong>
+                                </div>
+                                <h3>{{ book.title }}</h3>
+                                <p>{% if book.grade %}<strong>{{ book.get_grade_display }}</strong>. {% endif %}{% if book.author %}Muallif: {{ book.author }}.{% endif %} {{ book.description|truncatechars:100 }}</p>
+                                {% if book.pdf_file %}
+                                <a class="mini-link" href="{% url 'book-read' book.id %}?next={{ current_path|urlencode }}">Online o'qish</a>
+                                {% endif %}
+                            </article>
+                            {% empty %}
+                            <article class="mini-card empty-card">
+                                <h3>Kitob yo'q</h3>
+                                <p>Bu fan uchun hali resurs yuklanmagan.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif current_section == "tests" %}
+                    <div class="content-panel">
+                        <p class="eyebrow">Mashqlar</p>
+                        <h2>{{ subject.name }} testlari</h2>
+                        <div class="content-grid">
+                            {% for test in tests %}
+                            <article class="mini-card">
+                                <div class="mini-card-top">
+                                    <span>{{ test.display_difficulty }}</span>
+                                    <strong class="card-state">Test</strong>
+                                </div>
+                                <h3>{{ test.title }}</h3>
+                                <p>{{ test.duration }} daqiqa, {{ test.question_count }} ta savol.</p>
+                                <div class="test-stat-stack">
+                                    <small>{% if test.best_score is not None %}Eng yaxshi: {{ test.best_score }}%{% else %}Eng yaxshi natija yo'q{% endif %}</small>
+                                    <small>{% if test.last_score is not None %}Oxirgi: {{ test.last_score }}%{% else %}Hali ishlanmagan{% endif %}</small>
+                                    <small>{{ test.attempts }} ta urinish</small>
+                                </div>
+                                <a class="mini-link" href="{% url 'test-start' test.id %}?next={{ current_path|urlencode }}">Boshlash</a>
+                            </article>
+                            {% empty %}
+                            <article class="mini-card empty-card">
+                                <h3>Test yo'q</h3>
+                                <p>Bu fan uchun hali test qo'shilmagan.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif current_section == "formulas" %}
+                    <div class="content-panel formulas-panel">
+                        <p class="eyebrow">Formulalar</p>
+                        <h2>{{ subject.name }} uchun formula katalogi</h2>
+                        <p>Bu bo'lim darajaga bog'liq emas. Qidiruv va filter orqali kerakli formulani tez topishingiz mumkin.</p>
+
+                        <form class="formula-toolbar" method="get">
+                            <input type="hidden" name="section" value="formulas">
+                            <label class="formula-search">
+                                <span>Qidiruv</span>
+                                <input type="text" name="q" value="{{ formula_query }}" placeholder="Masalan, kvadrat tenglama, sinus, logarifm">
+                            </label>
+                            <label class="formula-filter">
+                                <span>Filter</span>
+                                <select name="formula_filter">
+                                    <option value="all" {% if formula_filter == "all" %}selected{% endif %}>Barchasi</option>
+                                    <option value="featured" {% if formula_filter == "featured" %}selected{% endif %}>Tavsiya etilgan</option>
+                                </select>
+                            </label>
+                            <button class="mini-link formula-submit" type="submit">Qo'llash</button>
+                        </form>
+
+                        <div class="formula-row" aria-label="Formulalar ro'yhati">
+                            {% for entry in formula_entries %}
+                            <a class="formula-chip" href="#formula-{{ entry.id }}">{{ entry.title }}</a>
+                            {% empty %}
+                            <span class="formula-chip empty">Formula topilmadi</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="formula-list">
+                            {% for entry in formula_entries %}
+                            <article class="formula-card" id="formula-{{ entry.id }}">
+                                <div class="formula-card-head">
+                                    <span>{% if entry.is_featured %}Tavsiya etilgan{% else %}Formula{% endif %}</span>
+                                    <h3>{{ entry.title }}</h3>
+                                </div>
+                                {% if entry.summary %}
+                                <p class="formula-summary">{{ entry.summary }}</p>
+                                {% endif %}
+                                {% if entry.body %}
+                                <div class="formula-body">{{ entry.body|linebreaksbr }}</div>
+                                {% endif %}
+                            </article>
+                            {% empty %}
+                            <article class="mini-card empty-card">
+                                <h3>Formula topilmadi</h3>
+                                <p>Qidiruvni o'zgartirib ko'ring yoki admin paneldan yangi formulalar qo'shing.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif current_section == "problems" %}
+                    <div class="content-panel">
+                        <p class="eyebrow">Misol / Masalalar</p>
+                        <h2>{{ subject.name }} uchun amaliy mashq bo'limlari</h2>
+                        <div class="content-grid">
+                            {% for practice_set in practice_sets %}
+                            <article class="mini-card">
+                                <div class="mini-card-top">
+                                    <span>{{ practice_set.get_difficulty_display }}</span>
+                                    <strong class="card-state">Set</strong>
+                                </div>
+                                <h3>{{ practice_set.title }}</h3>
+                                <p>
+                                    {% if practice_set.source_book %}<strong>Kitob:</strong> {{ practice_set.source_book }}. {% endif %}
+                                    {% if practice_set.topic %}<strong>Mavzu:</strong> {{ practice_set.topic }}.{% endif %}
+                                </p>
+                                {% if practice_set.description %}
+                                <p>{{ practice_set.description|truncatechars:120 }}</p>
+                                {% endif %}
+                                <div class="test-stat-stack">
+                                    <small>{{ practice_set.exercise_count }} ta topshiriq</small>
+                                    <small>{% if practice_set.best_score is not None %}Eng yaxshi: {{ practice_set.best_score }}%{% else %}Eng yaxshi natija yo'q{% endif %}</small>
+                                    <small>{% if practice_set.last_score is not None %}Oxirgi: {{ practice_set.last_score }}%{% else %}Hali ishlanmagan{% endif %}</small>
+                                    <small>{{ practice_set.attempts }} ta urinish</small>
+                                </div>
+                                <a class="mini-link" href="{% url 'practice-set-solve' practice_set.id %}?next={{ current_path|urlencode }}">Boshlash</a>
+                            </article>
+                            {% empty %}
+                            <article class="mini-card empty-card">
+                                <h3>Misol / Masala bo'limlari yo'q</h3>
+                                <p>Admin paneldan avval bo'lim yarating, keyin ichiga topshiriqlar qo'shing.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif current_section == "ai" %}
+                    <div class="content-panel coming-soon-panel">
+                        <p class="eyebrow">Ai yordamchi</p>
+                        <h2>{{ subject.name }} uchun AI yordamchi</h2>
+                        <p>Bu modul MVP yakunlangach fan bo'yicha tushuntirish, tahlil va aqlli tavsiyalar bilan ulanadi.</p>
+                        <div class="coming-soon-badge">Coming Soon</div>
+                        <div class="coming-soon-actions">
+                            <span class="mini-link is-static">Fan bo'yicha tahlil</span>
+                            <span class="mini-link is-static">Aqlli tavsiya</span>
+                            <span class="mini-link is-static">Xato izohi</span>
+                        </div>
+                    </div>
+                    {% elif current_section == "chat" %}
+                    <div class="content-panel coming-soon-panel">
+                        <p class="eyebrow">Chat</p>
+                        <h2>{{ subject.name }} chat maydoni</h2>
+                        <p>Bu bo'lim MVPdan keyin mavzu bo'yicha suhbat, savol-javob va tezkor yordam uchun ochiladi.</p>
+                        <div class="coming-soon-badge">Coming Soon</div>
+                        <div class="coming-soon-actions">
+                            <span class="mini-link is-static">Mavzu chatlari</span>
+                            <span class="mini-link is-static">Savol-javob</span>
+                            <span class="mini-link is-static">Tezkor yordam</span>
+                        </div>
+                    </div>
+                    {% elif current_section == "essay" %}
+                    <div class="content-panel essay-panel">
+                        <p class="eyebrow">Insho</p>
+                        <h2>{{ subject.name }} uchun insho laboratoriyasi</h2>
+                        <p>
+                            Bu yerda mavzu, tezis, reja, kirish va xulosa bilan ishlaysiz.
+                            Keyingi bosqichda AI yordamchi shu bo'limga insho tahlili va baholash oqimini ham qo'shamiz.
+                        </p>
+
+                        <div class="essay-guide-grid">
+                            <article class="essay-guide-card">
+                                <span>1-bosqich</span>
+                                <h3>Mavzuni ochish</h3>
+                                <p>Mavzudagi asosiy g'oyani toping va pozitsiyangizni bir jumlada aniqlang.</p>
+                            </article>
+                            <article class="essay-guide-card">
+                                <span>2-bosqich</span>
+                                <h3>Reja tuzish</h3>
+                                <p>Kirish, 2-3 ta asosiy fikr va xulosani oldindan yozib chiqing.</p>
+                            </article>
+                            <article class="essay-guide-card">
+                                <span>3-bosqich</span>
+                                <h3>Tahrirlash</h3>
+                                <p>Grammatika, uslub va mantiqiy bog'lanishni qayta tekshiring.</p>
+                            </article>
+                        </div>
+
+                        <div class="content-grid">
+                            {% for topic in essay_topics %}
+                            <article class="mini-card essay-topic-card">
+                                <span>{% if topic.is_featured %}Tavsiya etiladi{% else %}Insho mavzusi{% endif %} · {{ topic.get_access_level_display }}</span>
+                                <h3>{{ topic.title }}</h3>
+                                <p>{{ topic.prompt_text|truncatechars:180 }}</p>
+                                {% if topic.thesis_hint %}
+                                <div class="essay-detail">
+                                    <strong>Tezis g'oyasi</strong>
+                                    <p>{{ topic.thesis_hint|truncatechars:120 }}</p>
+                                </div>
+                                {% endif %}
+                                {% if topic.outline %}
+                                <div class="essay-detail">
+                                    <strong>Qisqa reja</strong>
+                                    <p>{{ topic.outline|truncatechars:120 }}</p>
+                                </div>
+                                {% endif %}
+                            </article>
+                            {% empty %}
+                            <article class="mini-card empty-card">
+                                <h3>Insho mavzulari hali qo'shilmagan</h3>
+                                <p>Admin paneldagi `EssayTopic` orqali mavzular, tezis va reja namunalarini kiritasiz.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="content-panel">
+                        <p class="eyebrow">{{ current_section_label }}</p>
+                        <h2>{{ subject.name }}: {{ current_section_label }}</h2>
+                        <div class="content-grid">
+                            {% for entry in section_entries %}
+                            <article class="mini-card">
+                                <span>{{ current_section_label }} · {{ entry.get_access_level_display }}</span>
+                                <h3>{{ entry.title }}</h3>
+                                <p>{% if entry.summary %}{{ entry.summary }}{% else %}{{ entry.body|truncatechars:140 }}{% endif %}</p>
+                            </article>
+                            {% empty %}
+                            <article class="mini-card empty-card">
+                                <h3>Ma'lumot hali qo'shilmagan</h3>
+                                <p>Bu bo'limni admin paneldagi `SubjectSectionEntry` orqali to'ldirasiz.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </section>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

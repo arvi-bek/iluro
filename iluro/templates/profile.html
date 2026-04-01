@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Profil</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260401-3">
+</head>
+<body>
+    <div class="profile-layout">
+        {% include "partials/app_sidebar_v2.html" %}
+
+        <main class="profile-shell">
+            <header class="profile-header">
+                <div>
+                    <p class="eyebrow">Profil</p>
+                    <h1>{{ profile.full_name|default:request.user.username }}</h1>
+                </div>
+                <div class="header-side">
+                    <div class="header-pills">
+                        <span>{{ profile.xp }} XP</span>
+                        <span>{{ level_info.label }}</span>
+                        <span>{{ profile.get_role_display }}</span>
+                    </div>
+                    <div class="profile-actions">
+                        <a href="{% url 'settings' %}">Nastroyka</a>
+                        <a href="{% url 'dashboard' %}">Dashboard</a>
+                    </div>
+                </div>
+            </header>
+
+            <section class="hero-card">
+                <div class="avatar-wrap">
+                    {% if profile.photo %}
+                    <img src="{{ profile.photo.url }}" alt="{{ profile.full_name }}">
+                    {% else %}
+                    <div class="avatar-fallback">{{ profile.full_name|default:request.user.username|first|upper }}</div>
+                    {% endif %}
+                </div>
+                <h2>{{ profile.full_name|default:request.user.username }}</h2>
+                <p class="username">@{{ request.user.username }}</p>
+                <div class="hero-badges">
+                    <span>{{ level_info.label }}</span>
+                    <span>{{ profile.get_role_display }}</span>
+                </div>
+                <p class="hero-meta">A'zo bo'lgan sana: {{ member_since|date:"F, Y" }}</p>
+            </section>
+
+            <section class="identity-grid">
+                <article class="identity-card">
+                    <span>Email</span>
+                    <strong>{{ request.user.email|default:"Email kiritilmagan" }}</strong>
+                </article>
+                <article class="identity-card">
+                    <span>Username</span>
+                    <strong>@{{ request.user.username }}</strong>
+                </article>
+                <article class="identity-card">
+                    <span>Status</span>
+                    <strong>{{ profile.get_role_display }}</strong>
+                </article>
+            </section>
+
+            <section class="summary-grid">
+                <article class="summary-card">
+                    <span>XP</span>
+                    <strong>{{ profile.xp }}</strong>
+                </article>
+                <article class="summary-card">
+                    <span>Testlar</span>
+                    <strong>{{ total_tests }}</strong>
+                </article>
+                <article class="summary-card">
+                    <span>Sotib olingan fanlar</span>
+                    <strong>{{ active_subject_count }}</strong>
+                </article>
+                <article class="summary-card">
+                    <span>Reyting</span>
+                    <strong>{% if rank_position %}#{{ rank_position }}{% else %}-{% endif %}</strong>
+                </article>
+            </section>
+
+            <section class="progress-card">
+                <div class="progress-head">
+                    <div>
+                        <h3>{{ level_info.label }}</h3>
+                        <p>Keyingi bosqich: {{ level_info.next_label }}</p>
+                    </div>
+                    <span>{{ level_info.xp_to_next }} XP qoldi</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ level_info.progress_percent }}%;"></div>
+                </div>
+                <div class="progress-foot">
+                    <span>{{ profile.xp }} XP</span>
+                    <span>{{ level_info.range_text }}</span>
+                </div>
+            </section>
+
+            <section class="subscriptions-panel">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">Sotib olingan fanlar</p>
+                        <h2>Fanlar bu yerda ko'rinadi. Ularni admin paneldagi `Subscription` bo'limidan boshqarasiz.</h2>
+                    </div>
+                </div>
+
+                <div class="subjects-chip-row">
+                    {% for name in purchased_subject_names %}
+                    <span>{{ name }}</span>
+                    {% empty %}
+                    <span>Hali fan biriktirilmagan</span>
+                    {% endfor %}
+                </div>
+
+                <div class="subject-status-grid">
+                    {% for item in subject_statuses %}
+                    <article class="subject-status-card">
+                        <span>{% if item.is_active %}Faol{% else %}Tugagan{% endif %}</span>
+                        <h3>{{ item.subject }}</h3>
+                        <p>Fan darajasi: <strong>{{ item.level }}</strong></p>
+                        <p>Eng yaxshi natija: {{ item.score }}%</p>
+                        <p>Obuna muddati: {{ item.expires_at|date:"d.m.Y H:i" }}</p>
+                    </article>
+                    {% empty %}
+                    <article class="subject-status-card empty-card">
+                        <h3>Obuna topilmadi</h3>
+                        <p>Admin paneldagi `Subscription` bo'limidan userga fan biriktirilgach shu yerda chiqadi.</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

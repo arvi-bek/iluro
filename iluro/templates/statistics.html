@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Statistika</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260401-3">
+</head>
+<body>
+    <div class="app-layout">
+        {% include "partials/app_sidebar_v2.html" %}
+        <main class="app-main">
+            <div class="content-shell">
+                <header class="content-header">
+                    <div>
+                        <p class="eyebrow">Statistika</p>
+                        <h1>Umumiy progress va fanlar bo'yicha natijalar.</h1>
+                    </div>
+                    <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
+                </header>
+
+                <section class="stats-overview-grid">
+                    {% for item in stats %}
+                    <article class="content-card stat-overview-card">
+                        <span>{{ item.label }}</span>
+                        <h2>{{ item.value }}</h2>
+                        <p>{{ item.hint }}</p>
+                    </article>
+                    {% endfor %}
+                </section>
+
+                <section class="table-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">Fanlar kesimida</p>
+                            <h2>Har bir fan bo'yicha holat</h2>
+                        </div>
+                    </div>
+                    <div class="subject-progress-list">
+                        {% for row in subject_rows %}
+                        <article class="subject-progress-card">
+                            <div class="subject-progress-head">
+                                <div>
+                                    <strong>{{ row.name }}</strong>
+                                    <span>{% if row.is_owned %}Faol obuna{% else %}Obuna yo'q{% endif %}</span>
+                                </div>
+                                <div class="subject-progress-meta">
+                                    <span>{{ row.level }}</span>
+                                    <span>{{ row.best_score }}%</span>
+                                </div>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: {{ row.progress_percent }}%;"></div>
+                            </div>
+                            <div class="subject-progress-foot">
+                                <span>{{ row.attempts }} ta urinish</span>
+                                <span>{{ row.test_count }} ta test mavjud</span>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="table-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">So'nggi urinishlar</p>
+                            <h2>Oxirgi ishlangan testlar</h2>
+                        </div>
+                    </div>
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>Fan</th>
+                                <th>Test</th>
+                                <th>Foiz</th>
+                                <th>To'g'ri</th>
+                                <th>Vaqt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_attempts %}
+                            <tr>
+                                <td>{{ item.subject }}</td>
+                                <td>{{ item.title }}</td>
+                                <td>{{ item.score }}%</td>
+                                <td>{{ item.correct_count }}</td>
+                                <td>{{ item.finished_at|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5">Hali ishlangan testlar yo'q.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

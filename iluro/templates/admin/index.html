@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+{% load i18n log %}
+
+{% block content %}
+{% get_admin_log 8 as admin_log for_user user %}
+
+<section class="iluro-admin-hero">
+    <div>
+        <p class="iluro-admin-kicker">ILURO Admin</p>
+        <h1>Boshqaruv markazi</h1>
+        <p class="iluro-admin-lead">
+            Fanlar, testlar, kitoblar va foydalanuvchilarni bitta joydan boshqaring.
+        </p>
+    </div>
+    <div class="iluro-admin-hero-badge">
+        <span>Bugungi fokus</span>
+        <strong>Kontent va nazorat</strong>
+    </div>
+</section>
+
+<section class="iluro-admin-grid">
+    <div class="iluro-admin-main">
+        {% for app in app_list %}
+        <section class="iluro-admin-app-card">
+            <div class="iluro-admin-app-head">
+                <div>
+                    <p class="iluro-admin-app-eyebrow">Bo'lim</p>
+                    <h2>{{ app.name }}</h2>
+                </div>
+            </div>
+
+            <div class="iluro-admin-model-list">
+                {% for model in app.models %}
+                <article class="iluro-admin-model-row">
+                    <div class="iluro-admin-model-copy">
+                        <h3>{{ model.name }}</h3>
+                        <p>
+                            {% if model.admin_url %}
+                            Ro'yxat va tahrirlash mavjud
+                            {% else %}
+                            Ko'rish rejimi mavjud emas
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="iluro-admin-model-actions">
+                        {% if model.add_url %}
+                        <a href="{{ model.add_url }}">Qo'shish</a>
+                        {% endif %}
+                        {% if model.admin_url %}
+                        <a class="is-secondary" href="{{ model.admin_url }}">Boshqarish</a>
+                        {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+
+    <aside class="iluro-admin-side">
+        <section class="iluro-admin-side-card">
+            <p class="iluro-admin-app-eyebrow">Oxirgi harakatlar</p>
+            <h2>Recent actions</h2>
+
+            <div class="iluro-admin-log-list">
+                {% for entry in admin_log %}
+                <article class="iluro-admin-log-item">
+                    <span class="iluro-admin-log-time">{{ entry.action_time|date:"d.m.Y H:i" }}</span>
+                    <strong>{{ entry.object_repr }}</strong>
+                    <p>{{ entry.content_type }}</p>
+                </article>
+                {% empty %}
+                <article class="iluro-admin-log-item">
+                    <strong>Harakatlar hali yo'q</strong>
+                    <p>Admin paneldagi yangi o'zgarishlar shu yerda ko'rinadi.</p>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+    </aside>
+</section>
+{% endblock %}

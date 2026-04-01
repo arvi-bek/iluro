@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260401-6">
 </head>
 <body>
     <div class="content-shell">
@@ -21,7 +21,7 @@
                 </p>
             </div>
             <div class="reader-actions">
-                <a class="header-link" href="{% url 'books' %}">Kitoblarga qaytish</a>
+                <a class="header-link" href="{{ back_url }}">Kitoblarga qaytish</a>
             </div>
         </header>
 

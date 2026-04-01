@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Mashq natijasi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+</head>
+<body>
+    <div class="flow-shell">
+        <section class="flow-panel">
+            <p class="eyebrow">Mashq natijasi</p>
+            <h1>{{ exercise.title }}</h1>
+            <div class="result-grid">
+                <article>
+                    <span>Holat</span>
+                    <strong>{% if attempt.is_correct %}To'g'ri{% else %}Noto'g'ri{% endif %}</strong>
+                </article>
+                <article>
+                    <span>Mavzu</span>
+                    <strong>{{ exercise.topic|default:"Ko'rsatilmagan" }}</strong>
+                </article>
+                <article>
+                    <span>Javob turi</span>
+                    <strong>{{ exercise.get_answer_mode_display }}</strong>
+                </article>
+            </div>
+
+            <div class="review-list">
+                <article class="review-card {% if attempt.is_correct %}correct{% else %}wrong{% endif %}">
+                    <p class="question-index">Sizning javobingiz</p>
+                    <h2>{% if exercise.answer_mode == "choice" %}{{ attempt.selected_choice.text|default:"Tanlanmagan" }}{% else %}{{ attempt.answer_text|default:"Kiritilmagan" }}{% endif %}</h2>
+                    <div class="review-meta">
+                        {% if exercise.answer_mode == "choice" and correct_choice %}
+                        <p><strong>To'g'ri javob:</strong> {{ correct_choice.text }}</p>
+                        {% elif exercise.correct_text %}
+                        <p><strong>To'g'ri javob:</strong> {{ exercise.correct_text }}</p>
+                        {% endif %}
+                        {% if exercise.explanation %}
+                        <p><strong>Izoh:</strong> {{ exercise.explanation }}</p>
+                        {% endif %}
+                    </div>
+                </article>
+            </div>
+
+            <div class="result-actions">
+                <a class="primary-btn link-btn" href="{% url 'practice-solve' exercise.id %}?next={{ next_url|urlencode }}">Qayta ishlash</a>
+                <a class="back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' exercise.subject.id 'problems' %}{% endif %}">Misol / Masalalarga qaytish</a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

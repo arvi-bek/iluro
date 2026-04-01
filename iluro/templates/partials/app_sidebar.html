@@ -1,0 +1,41 @@
+<aside class="app-sidebar">
+    <a class="app-sidebar-brand" href="{% url 'index' %}">ILURO</a>
+
+    <nav class="app-sidebar-nav">
+        <a class="{% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'subject-workspace' %}is-active{% endif %}" href="{% url 'dashboard' %}">
+            <span class="nav-link-icon">⌂</span>
+            <span class="nav-link-label">Bosh menyu</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'profile' %}is-active{% endif %}" href="{% url 'profile' %}">
+            <span class="nav-link-icon">◉</span>
+            <span class="nav-link-label">Profil</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'subject-selection' %}is-active{% endif %}" href="{% url 'subject-selection' %}">
+            <span class="nav-link-icon">▣</span>
+            <span class="nav-link-label">Obunalar</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'ranking' %}is-active{% endif %}" href="{% url 'ranking' %}">
+            <span class="nav-link-icon">★</span>
+            <span class="nav-link-label">Reyting</span>
+        </a>
+        <a href="{% url 'dashboard' %}#ai-lab">
+            <span class="nav-link-icon">✦</span>
+            <span class="nav-link-label">Ai mutaxasis</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'statistics' %}is-active{% endif %}" href="{% url 'statistics' %}">
+            <span class="nav-link-icon">▤</span>
+            <span class="nav-link-label">Statistika</span>
+        </a>
+    </nav>
+
+    <div class="app-sidebar-user">
+        <strong>{{ profile.full_name|default:request.user.username|default:request.user.username }}</strong>
+        {% if level_info %}
+        <span>{{ level_info.label }}</span>
+        {% endif %}
+        <div class="app-sidebar-actions">
+            <a href="{% url 'settings' %}">Nastroyka</a>
+            <a href="{% url 'logout' %}">Chiqish</a>
+        </div>
+    </div>
+</aside>

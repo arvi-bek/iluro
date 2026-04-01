@@ -8,32 +8,54 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260401-3">
 </head>
 <body>
     <div class="app-layout">
-        {% include "partials/app_sidebar.html" %}
+        {% include "partials/app_sidebar_v2.html" %}
         <main class="app-main">
             <div class="content-shell">
                 <header class="content-header">
                     <div>
-                        <p class="eyebrow">Admin reyting</p>
-                        <h1>Foydalanuvchilar ro'yxati va eng yaxshi natijalar.</h1>
+                        <p class="eyebrow">Reyting</p>
+                        <h1>XP asosida foydalanuvchilar reytingi.</h1>
                     </div>
                     <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
                 </header>
 
                 <section class="table-panel">
+                    <form class="ranking-filters" method="get">
+                        <label>
+                            <span>Fan bo'yicha</span>
+                            <select name="subject">
+                                <option value="">Barcha fanlar</option>
+                                {% for subject in ranking_subjects %}
+                                <option value="{{ subject.id }}" {% if selected_subject == subject.id|stringformat:"s" %}selected{% endif %}>{{ subject.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Ishlagan testlar</span>
+                            <select name="tests">
+                                <option value="all" {% if selected_tests_filter == "all" %}selected{% endif %}>Barchasi</option>
+                                <option value="1_4" {% if selected_tests_filter == "1_4" %}selected{% endif %}>1-4 ta</option>
+                                <option value="5_9" {% if selected_tests_filter == "5_9" %}selected{% endif %}>5-9 ta</option>
+                                <option value="10_plus" {% if selected_tests_filter == "10_plus" %}selected{% endif %}>10+ ta</option>
+                            </select>
+                        </label>
+                        <button type="submit" class="header-link">Filterlash</button>
+                    </form>
+
                     <table class="ranking-table">
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Foydalanuvchi</th>
                                 <th>Username</th>
-                                <th>Foiz</th>
                                 <th>XP</th>
                                 <th>Daraja</th>
                                 <th>Testlar</th>
+                                <th>Eng yaxshi foiz</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -42,14 +64,14 @@
                                 <td>{{ row.rank }}</td>
                                 <td>{{ row.name }}</td>
                                 <td>{{ row.username }}</td>
-                                <td>{{ row.best_score }}%</td>
                                 <td>{{ row.xp }}</td>
                                 <td>{{ row.level }}</td>
                                 <td>{{ row.tests }}</td>
+                                <td>{{ row.best_score }}%</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="7">Hali foydalanuvchi natijalari mavjud emas.</td>
+                                <td colspan="7">Tanlangan filter bo'yicha foydalanuvchi natijalari topilmadi.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

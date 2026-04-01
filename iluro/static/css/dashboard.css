@@ -1,4 +1,5 @@
 :root {
+    --sidebar-width: 296px;
     --bg: #f7f1e8;
     --bg-soft: #efe2d1;
     --panel: rgba(255, 251, 245, 0.94);
@@ -25,17 +26,35 @@ body {
 .dashboard-shell {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
 }
 
 .sidebar,
 .app-sidebar {
-    padding: 28px 22px;
+    grid-column: 1;
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    min-height: 100vh;
+    width: 100%;
+    max-width: var(--sidebar-width);
+    justify-self: stretch;
+    align-self: start;
+    padding: 22px 18px;
     background: rgba(255, 249, 242, 0.9);
     border-right: 1px solid var(--line);
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 18px;
+    overflow: hidden;
+}
+
+.ui-icon-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
 }
 
 .sidebar-brand,
@@ -58,17 +77,47 @@ body {
 .app-sidebar-nav {
     display: grid;
     gap: 8px;
+    min-height: 0;
+    align-content: start;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .sidebar-nav a,
 .app-sidebar-nav a {
-    min-height: 48px;
+    position: relative;
+    min-height: 46px;
     display: flex;
     align-items: center;
-    padding: 0 16px;
+    gap: 12px;
+    padding: 0 16px 0 18px;
     border-radius: 16px;
     text-decoration: none;
     color: var(--muted);
+    transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.nav-link-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-link-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.nav-link-label {
+    flex: 1;
 }
 
 .sidebar-nav a.is-active,
@@ -79,20 +128,53 @@ body {
     background: rgba(168, 106, 51, 0.09);
 }
 
+.app-sidebar-nav a.is-active::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 10px;
+    bottom: 10px;
+    width: 4px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+}
+
 .sidebar-user,
 .app-sidebar-user {
-    margin-top: auto;
-    padding: 18px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.55);
+    padding: 16px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 250, 244, 0.72));
     border: 1px solid var(--line);
     display: grid;
-    gap: 6px;
+    gap: 12px;
+    align-self: end;
+    box-shadow: 0 16px 34px rgba(103, 69, 38, 0.08);
+}
+
+.app-sidebar-user-top {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+
+.app-sidebar-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff8f0;
+    font-size: 0.94rem;
+    font-weight: 800;
 }
 
 .sidebar-user strong,
 .app-sidebar-user strong {
     font-size: 1rem;
+    display: block;
 }
 
 .sidebar-user span,
@@ -104,7 +186,32 @@ body {
     font-size: 0.95rem;
 }
 
+.app-sidebar-user span {
+    display: block;
+    margin-top: 2px;
+}
+
+.app-sidebar-actions {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-sidebar-actions a {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border-radius: 14px;
+    background: rgba(168, 106, 51, 0.09);
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
 .dashboard-main {
+    grid-column: 2;
     padding: 28px;
     display: grid;
     gap: 22px;
@@ -303,11 +410,14 @@ body {
 
 .hero-panel {
     border-radius: 32px;
-    padding: 28px;
+    padding: 32px;
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) 220px;
-    gap: 18px;
+    grid-template-columns: minmax(0, 1.3fr) 240px;
+    gap: 24px;
     align-items: center;
+    background:
+        radial-gradient(circle at top right, rgba(168, 106, 51, 0.12), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 244, 0.9));
 }
 
 .hero-panel h2 {
@@ -324,11 +434,68 @@ body {
     font-size: 0.98rem;
 }
 
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.hero-action-primary,
+.hero-action-secondary {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 800;
+    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.hero-action-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff8f0;
+    box-shadow: 0 16px 26px rgba(138, 84, 37, 0.18);
+}
+
+.hero-action-secondary {
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--accent-strong);
+    border: 1px solid rgba(138, 84, 37, 0.16);
+}
+
+.hero-action-primary:hover,
+.hero-action-secondary:hover {
+    transform: translateY(-1px);
+}
+
+.hero-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.hero-highlights span {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(168, 106, 51, 0.08);
+    color: var(--accent-strong);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
 .hero-badge {
-    padding: 20px;
-    border-radius: 26px;
+    padding: 22px;
+    border-radius: 28px;
     background: linear-gradient(180deg, rgba(168, 106, 51, 0.16), rgba(138, 84, 37, 0.08));
     text-align: center;
+    border: 1px solid rgba(138, 84, 37, 0.12);
 }
 
 .hero-badge span {
@@ -341,6 +508,14 @@ body {
     display: block;
     margin-top: 12px;
     font-size: 1.45rem;
+}
+
+.hero-badge small {
+    display: block;
+    margin-top: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 0.86rem;
 }
 
 .stats-grid,
@@ -357,7 +532,9 @@ body {
 
 .stat-card {
     padding: 22px;
-    border-radius: 24px;
+    border-radius: 26px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 250, 244, 0.72));
+    border: 1px solid rgba(138, 84, 37, 0.12);
 }
 
 .stat-card p,
@@ -366,9 +543,32 @@ body {
     color: var(--muted);
 }
 
+.stat-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.stat-card-head p {
+    font-size: 0.84rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+}
+
+.stat-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), #f7b32b);
+    box-shadow: 0 0 0 6px rgba(168, 106, 51, 0.08);
+}
+
 .stat-card strong {
     display: block;
-    margin: 10px 0 6px;
+    margin: 14px 0 8px;
     font-size: 1.8rem;
 }
 
@@ -390,10 +590,23 @@ body {
     border: 1px solid rgba(138, 84, 37, 0.12);
 }
 
+.subject-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .subject-card span {
     color: var(--accent);
     font-size: 0.82rem;
     font-weight: 700;
+}
+
+.subject-card-top strong {
+    color: var(--accent-strong);
+    font-size: 0.82rem;
+    font-weight: 800;
 }
 
 .subject-card h4 {
@@ -416,6 +629,14 @@ body {
     font-weight: 700;
 }
 
+.subject-card.is-owned {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(244, 251, 245, 0.64));
+}
+
+.subject-card.is-locked {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 246, 243, 0.66));
+}
+
 .practice-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     margin-top: 18px;
@@ -428,10 +649,29 @@ body {
     border: 1px solid rgba(138, 84, 37, 0.12);
 }
 
+.practice-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .practice-card span {
     color: var(--accent);
     font-size: 0.82rem;
     font-weight: 700;
+}
+
+.card-mini-pill {
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(168, 106, 51, 0.08);
+    color: var(--accent-strong) !important;
+    font-size: 0.74rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
 .practice-card h4 {
@@ -489,10 +729,26 @@ body {
     font-size: 0.96rem;
 }
 
+.soon-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    margin-top: 18px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff8f0;
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .action-list {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: flex-end;
 }
 
 .action-list span {
@@ -506,6 +762,20 @@ body {
     font-weight: 700;
 }
 
+.action-panel {
+    align-items: flex-start;
+}
+
+.action-panel-copy {
+    max-width: 38rem;
+}
+
+.action-panel-copy p:last-child {
+    margin: 12px 0 0;
+    color: var(--muted);
+    line-height: 1.72;
+}
+
 @media (max-width: 1100px) {
     .dashboard-shell {
         grid-template-columns: 1fr;
@@ -513,8 +783,15 @@ body {
 
     .sidebar,
     .app-sidebar {
+        grid-column: auto;
+        position: static;
+        height: auto;
         border-right: 0;
         border-bottom: 1px solid var(--line);
+    }
+
+    .dashboard-main {
+        grid-column: auto;
     }
 
     .hero-panel,
@@ -541,5 +818,9 @@ body {
     .action-panel {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .app-sidebar-actions {
+        grid-template-columns: 1fr;
     }
 }
