@@ -1,4 +1,4 @@
-from django.http import HttpRequest
+from django.http import HttpRequest, JsonResponse
 from django.shortcuts import render
 
 
@@ -51,3 +51,7 @@ def index(request: HttpRequest):
         "steps": steps,
     }
     return render(request, "index.html", context)
+
+
+def health_check(request: HttpRequest) -> JsonResponse:
+    return JsonResponse({"status": "ok"})

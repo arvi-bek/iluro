@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>404 | ILURO</title>
+    <style>
+        :root {
+            --bg: #f8f2e8;
+            --panel: rgba(255, 252, 247, 0.92);
+            --stroke: #e6d4bd;
+            --text: #27170f;
+            --muted: #8d6d55;
+            --accent: #b77434;
+            --accent-soft: #f4e5d2;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(183, 116, 52, 0.12), transparent 32%),
+                linear-gradient(180deg, #fbf7f1 0%, var(--bg) 100%);
+            color: var(--text);
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .shell {
+            width: min(720px, 100%);
+            background: var(--panel);
+            border: 1px solid var(--stroke);
+            border-radius: 32px;
+            box-shadow: 0 24px 60px rgba(117, 78, 40, 0.12);
+            padding: 32px;
+        }
+
+        .eyebrow {
+            font-size: 13px;
+            letter-spacing: 0.24em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin: 0 0 12px;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: clamp(40px, 7vw, 72px);
+            line-height: 0.95;
+            margin: 0;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            margin: 16px 0 0;
+            font-size: 20px;
+            line-height: 1.5;
+            color: var(--muted);
+            max-width: 560px;
+        }
+
+        .note {
+            margin-top: 22px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: var(--accent-soft);
+            color: #8f5925;
+            font-size: 15px;
+            line-height: 1.45;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 0 22px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fffaf4;
+            box-shadow: 0 12px 24px rgba(183, 116, 52, 0.22);
+        }
+
+        .btn-secondary {
+            border: 1px solid var(--stroke);
+            background: #fffaf4;
+            color: var(--text);
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <p class="eyebrow">ILURO</p>
+        <h1>404</h1>
+        <p class="subtitle">Siz ochmoqchi bo'lgan sahifa topilmadi yoki bu bo'lim mavjud emas.</p>
+        <div class="note">
+            URL noto'g'ri yozilgan bo'lishi mumkin yoki kerakli sahifa o'chirilgan bo'lishi mumkin.
+        </div>
+        <div class="actions">
+            <a class="btn btn-primary" href="/">Bosh sahifaga qaytish</a>
+            <a class="btn btn-secondary" href="/dashboard/">Dashboard</a>
+            <a class="btn btn-secondary" href="/subjects/">Fanlar</a>
+        </div>
+    </main>
+</body>
+</html>

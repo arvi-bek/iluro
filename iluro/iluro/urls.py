@@ -18,11 +18,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import index
+from .views import health_check, index
+
+handler404 = "iluro.error_views.custom_404"
+handler500 = "iluro.error_views.custom_500"
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', index, name='index'),
+    path('health/', health_check, name='health-check'),
     path('', include('main.urls')),
 ]
 

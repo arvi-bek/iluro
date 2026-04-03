@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -221,7 +222,7 @@ def subject_workspace_view(request, subject_id, section=None):
         item["key"] for item in subject_theme["extra_sections"]
     }
     if current_section not in allowed_sections:
-        current_section = "home"
+        raise Http404("Bunday bo'lim mavjud emas.")
 
     peer_subjects = get_subject_peer_subjects(request.user, subject.id)
 
