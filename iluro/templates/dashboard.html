@@ -8,13 +8,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260401-4">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260402-1">
 </head>
 <body>
     <div class="dashboard-shell">
         {% include "partials/app_sidebar_v2.html" %}
 
         <main class="dashboard-main">
+            {% if show_beta_trial_notice %}
+            <section class="beta-trial-banner" aria-label="Beta taklif">
+                <div class="beta-trial-copy">
+                    <p class="tiny-label">Beta access</p>
+                    <h2>Sayt beta versiyada ishlayapti.</h2>
+                    <p>Sizga bepul <strong>2 haftalik obuna</strong> taqdim qilindi va u hozirgi barcha fanlar uchun amal qiladi.</p>
+                </div>
+                <form method="post" action="{% url 'dismiss-beta-notice' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="beta-trial-close">Tushunarli</button>
+                </form>
+            </section>
+            {% endif %}
+
             <section class="subject-strip" aria-label="Fanlar navigatsiyasi">
                 <div class="subject-strip-head">
                     <p class="tiny-label">Fanlar</p>

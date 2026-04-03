@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db import OperationalError, ProgrammingError
 from django.db.models import Count, Max, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -16,7 +17,7 @@ from .models import (
     UserPracticeAttempt,
     UserTest,
 )
-from .services import filter_by_allowed_level, get_active_subscription_ids
+from .services import filter_by_allowed_level, get_active_subscription_ids, get_effective_subject_level
 from .utils import normalize_difficulty_label
 
 
@@ -51,15 +52,28 @@ def get_dashboard_subject_cards(user):
 
 
 def get_subject_books(subject, grade=None, limit=12):
-    books_queryset = Book.objects.filter(subject=subject).order_by("-is_featured", "-created_at")
-    if grade:
-        books_queryset = books_queryset.filter(grade=grade)
-    return list(books_queryset[:limit])
+    base_queryset = Book.objects.filter(subject=subject).order_by("-is_featured", "-created_at")
+    if grade == "other":
+        base_queryset = base_queryset.filter(grade="")
+    elif grade:
+        base_queryset = base_queryset.filter(grade=grade)
+
+    try:
+        books_queryset = base_queryset.annotate(viewer_count=Coalesce(Sum("views__view_count"), Value(0)))
+        return list(books_queryset[:limit])
+    except (ProgrammingError, OperationalError):
+        books = list(base_queryset[:limit])
+        for book in books:
+            book.viewer_count = 0
+        return books
 
 
-def get_subject_tests(user, subject, profile_level, limit=6):
+def get_subject_tests(user, subject, profile_level, limit=6, category_filter="all"):
+    tests_queryset = Test.objects.filter(subject=subject)
+    if category_filter in {"general", "terms", "years"}:
+        tests_queryset = tests_queryset.filter(category=category_filter)
     tests = list(
-        filter_by_allowed_level(Test.objects.filter(subject=subject), "difficulty", profile_level)
+        filter_by_allowed_level(tests_queryset, "difficulty", profile_level)
         .annotate(question_count=Count("question"))
         .order_by("-created_at")[:limit]
     )
@@ -77,6 +91,7 @@ def get_subject_tests(user, subject, profile_level, limit=6):
     }
     for test in tests:
         test.display_difficulty = normalize_difficulty_label(test.difficulty)
+        test.display_category = dict(Test._meta.get_field("category").choices).get(test.category, "Umumiy")
         attempt_data = test_attempt_stats.get(test.id, {})
         test.attempts = attempt_data.get("attempts", 0)
         test.best_score = attempt_data.get("best_score")
@@ -125,7 +140,9 @@ def get_tests_listing(user, profile_level):
         .annotate(question_count=Count("question"))
         .order_by("-created_at")
     )
-    if subscribed_subject_ids:
+    if not subscribed_subject_ids:
+        test_queryset = test_queryset.none()
+    else:
         test_queryset = test_queryset.filter(subject_id__in=subscribed_subject_ids)
 
     return [
@@ -203,6 +220,7 @@ def get_formula_entries(subject, formula_query="", formula_filter="all"):
             Q(title__icontains=formula_query)
             | Q(summary__icontains=formula_query)
             | Q(body__icontains=formula_query)
+            | Q(usage_note__icontains=formula_query)
         )
     if formula_filter == "featured":
         formulas_queryset = formulas_queryset.filter(is_featured=True)
@@ -232,7 +250,7 @@ def get_user_profile_summary(user, current_level_label):
                 "subject": subscription.subject.name,
                 "expires_at": subscription.end_date,
                 "is_active": is_active,
-                "level": current_level_label,
+                "level": get_effective_subject_level(user, subject_id=subscription.subject_id),
                 "score": best_score or 0,
             }
         )
@@ -272,7 +290,7 @@ def get_statistics_payload(user, profile_xp, current_level_label):
     )
 
     subject_rows = []
-    for subject in Subject.objects.all().annotate(test_count=Count("test")).order_by("name"):
+    for subject in Subject.objects.filter(id__in=active_subject_ids).annotate(test_count=Count("test")).order_by("name"):
         subject_tests = user_tests.filter(test__subject=subject)
         best_score = subject_tests.aggregate(best_score=Max("score")).get("best_score") or 0
         attempts = subject_tests.count()
@@ -282,7 +300,7 @@ def get_statistics_payload(user, profile_xp, current_level_label):
                 "is_owned": subject.id in active_subject_ids,
                 "attempts": attempts,
                 "best_score": best_score,
-                "level": current_level_label,
+                "level": get_effective_subject_level(user, subject_id=subject.id),
                 "progress_percent": best_score,
                 "test_count": subject.test_count,
             }

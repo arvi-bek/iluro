@@ -1,4 +1,5 @@
-XP_PER_TEST = 1
+XP_PER_CORRECT_TEST_ANSWER = 6
+XP_PER_CORRECT_PRACTICE_ANSWER = 5
 
 DIFFICULTY_ALIAS_MAP = {
     "s": "S",
@@ -16,12 +17,12 @@ DIFFICULTY_ALIAS_MAP = {
 LEVEL_ORDER = ["S", "S+", "B", "B+", "A", "A+"]
 
 XP_LEVEL_RULES = [
-    {"label": "S", "min_xp": 0, "max_xp": 99},
-    {"label": "S+", "min_xp": 100, "max_xp": 249},
-    {"label": "B", "min_xp": 250, "max_xp": 499},
-    {"label": "B+", "min_xp": 500, "max_xp": 799},
-    {"label": "A", "min_xp": 800, "max_xp": 1199},
-    {"label": "A+", "min_xp": 1200, "max_xp": None},
+    {"label": "✨ Yangi User", "min_xp": 0, "max_xp": 200},
+    {"label": "🎓 O'quvchi", "min_xp": 200, "max_xp": 500},
+    {"label": "🔥 Izlanuvchi", "min_xp": 500, "max_xp": 750},
+    {"label": "B+", "min_xp": 750, "max_xp": 1000},
+    {"label": "A", "min_xp": 1000, "max_xp": 1500},
+    {"label": "A+", "min_xp": 1500, "max_xp": 2000},
 ]
 
 SCORE_LEVEL_RULES = [

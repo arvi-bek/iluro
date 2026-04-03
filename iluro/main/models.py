@@ -14,6 +14,12 @@ DIFFICULTY_CHOICES = [
     ("A+", "A+"),
 ]
 
+TEST_CATEGORY_CHOICES = [
+    ("general", "Umumiy"),
+    ("terms", "Atamalar bo'yicha"),
+    ("years", "Yillar bo'yicha"),
+]
+
 GRADE_CHOICES = [
     ("5", "5-sinf"),
     ("6", "6-sinf"),
@@ -70,6 +76,7 @@ class Test(models.Model):
     duration = models.IntegerField()  # minut
     created_at = models.DateTimeField(auto_now_add=True)
     difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES)
+    category = models.CharField(max_length=20, choices=TEST_CATEGORY_CHOICES, default="general", blank=True)
 
     class Meta:
         verbose_name = "Test"
@@ -217,14 +224,35 @@ class Book(models.Model):
         return self.title
 
 
+class BookView(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="views", db_index=True)
+    first_viewed_at = models.DateTimeField(auto_now_add=True)
+    last_viewed_at = models.DateTimeField(auto_now=True)
+    view_count = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = "Kitob ko'rilishi"
+        verbose_name_plural = "Kitob ko'rilishlari"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "book"), name="unique_user_book_view"),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.book}"
+
+
 class SubjectSectionEntry(models.Model):
     SECTION_CHOICES = [
         ("formulas", "Formulalar"),
         ("problems", "Misol / Masalalar"),
+        ("terms", "Atamalar"),
+        ("chronology", "Xronologiya"),
+        ("grammar", "Gramatika"),
         ("rules", "Qoidalar"),
         ("essay", "Insho"),
         ("extras", "Qo'shimcha ma'lumotlar"),
-        ("events", "Tarixiy voqealar"),
+        ("events", "Sanalar / Voqealar"),
     ]
 
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, db_index=True)
@@ -232,6 +260,7 @@ class SubjectSectionEntry(models.Model):
     title = models.CharField(max_length=255)
     summary = models.TextField(blank=True)
     body = models.TextField(blank=True)
+    usage_note = models.TextField(blank=True)
     access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="S")
     order = models.PositiveIntegerField(default=0)
     is_featured = models.BooleanField(default=False)
@@ -244,6 +273,64 @@ class SubjectSectionEntry(models.Model):
 
     def __str__(self):
         return f"{self.subject.name} - {self.title}"
+
+
+class GrammarLessonQuestion(models.Model):
+    OPTION_CHOICES = [
+        ("A", "A"),
+        ("B", "B"),
+        ("C", "C"),
+        ("D", "D"),
+    ]
+
+    lesson = models.ForeignKey(
+        SubjectSectionEntry,
+        on_delete=models.CASCADE,
+        related_name="grammar_questions",
+        db_index=True,
+    )
+    prompt = models.TextField()
+    option_a = models.CharField(max_length=255)
+    option_b = models.CharField(max_length=255)
+    option_c = models.CharField(max_length=255)
+    option_d = models.CharField(max_length=255)
+    correct_option = models.CharField(max_length=1, choices=OPTION_CHOICES)
+    explanation = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("order", "id")
+        verbose_name = "Gramatika mini test savoli"
+        verbose_name_plural = "Gramatika mini test savollari"
+
+    def __str__(self):
+        return f"{self.lesson.title} - {self.prompt[:60]}"
+
+
+class GrammarLessonProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
+    lesson = models.ForeignKey(
+        SubjectSectionEntry,
+        on_delete=models.CASCADE,
+        related_name="grammar_progress",
+        db_index=True,
+    )
+    best_score = models.PositiveIntegerField(default=0)
+    last_score = models.PositiveIntegerField(default=0)
+    attempts_count = models.PositiveIntegerField(default=0)
+    is_completed = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Gramatika mavzu progressi"
+        verbose_name_plural = "Gramatika mavzu progresslari"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "lesson"), name="unique_user_grammar_lesson_progress"),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.lesson}"
 
 
 class EssayTopic(models.Model):

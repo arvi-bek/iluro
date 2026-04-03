@@ -2,8 +2,20 @@ from django.contrib.auth.models import User
 from django.db.models import Max
 from django.utils import timezone
 
-from .models import Profile, Subscription
-from .utils import get_allowed_level_labels, get_level_info
+from .models import (
+    Profile,
+    Subscription,
+    UserSubjectPreference,
+    UserPracticeAttempt,
+    UserTest,
+)
+from .utils import (
+    XP_PER_CORRECT_PRACTICE_ANSWER,
+    XP_PER_CORRECT_TEST_ANSWER,
+    get_allowed_level_labels,
+    get_level_info,
+    normalize_difficulty_label,
+)
 
 
 def get_subject_theme(subject_name):
@@ -42,7 +54,9 @@ def get_subject_theme(subject_name):
                 {"title": "AI yo'nalishi", "text": "Voqealar ketma-ketligini soddalashtirib tushuntirish va solishtirish."},
             ],
             "extra_sections": [
-                {"key": "events", "label": "Tarixiy voqealar"},
+                {"key": "chronology", "label": "Xronologiya"},
+                {"key": "terms", "label": "Atamalar"},
+                {"key": "events", "label": "Sanalar / Voqealar"},
             ],
         }
 
@@ -59,6 +73,7 @@ def get_subject_theme(subject_name):
             {"title": "AI yo'nalishi", "text": "Insho uchun reja, xato tahlili va jumla takomillashtirish."},
         ],
         "extra_sections": [
+            {"key": "grammar", "label": "Gramatika"},
             {"key": "rules", "label": "Qoidalar"},
             {"key": "essay", "label": "Insho"},
             {"key": "extras", "label": "Qo'shimcha ma'lumotlar"},
@@ -82,7 +97,7 @@ def get_active_subscription_ids(user):
 
 def user_can_access_subject(user, subject_id):
     active_ids = get_active_subscription_ids(user)
-    return not active_ids or subject_id in active_ids
+    return subject_id in active_ids
 
 
 def get_or_sync_profile(user: User):
@@ -98,7 +113,31 @@ def get_or_sync_profile(user: User):
     elif user.is_staff and not user.is_superuser and profile.role == "student":
         profile.role = "teacher"
         profile.save(update_fields=["role"])
+    progress = get_user_progress_summary(user)
+    updated_level = get_level_info(progress["xp"])
+    fields_to_update = []
+    if profile.xp != progress["xp"]:
+        profile.xp = progress["xp"]
+        fields_to_update.append("xp")
+    if profile.level != updated_level["label"]:
+        profile.level = updated_level["label"]
+        fields_to_update.append("level")
+    if fields_to_update:
+        profile.save(update_fields=fields_to_update)
     return profile
+
+
+def get_effective_subject_level(user: User, subject_id: int | None = None, profile: Profile | None = None):
+    fallback_level = (profile.level if profile else None) or get_or_sync_profile(user).level
+    if not subject_id:
+        return normalize_difficulty_label(fallback_level)
+
+    preferred_level = (
+        UserSubjectPreference.objects.filter(user=user, subject_id=subject_id)
+        .values_list("preferred_level", flat=True)
+        .first()
+    )
+    return normalize_difficulty_label(preferred_level or fallback_level)
 
 
 def sidebar_context(user):
@@ -106,6 +145,7 @@ def sidebar_context(user):
     return {
         "profile": profile,
         "level_info": get_level_info(profile.xp),
+        "xp_summary": get_user_progress_summary(user),
     }
 
 
@@ -118,3 +158,31 @@ def resolve_section_return_url(next_url, fallback_url):
         return fallback_url
     normalized_next = str(next_url).strip()
     return normalized_next if normalized_next.startswith("/subjects/") else fallback_url
+
+
+def get_user_progress_summary(user):
+    test_attempts = UserTest.objects.filter(user=user)
+    tests_xp = sum(
+        int((attempt.snapshot_json or {}).get("xp_awarded", 0) or 0)
+        for attempt in test_attempts
+    )
+    correct_test_answers = sum(max(0, attempt.correct_count or 0) for attempt in test_attempts)
+
+    correct_practice_answers = (
+        UserPracticeAttempt.objects.filter(
+            user=user,
+            is_correct=True,
+        )
+        .count()
+    )
+
+    practice_xp = correct_practice_answers * XP_PER_CORRECT_PRACTICE_ANSWER
+    xp = tests_xp + practice_xp
+
+    return {
+        "xp": xp,
+        "correct_tests": correct_test_answers,
+        "correct_practice": correct_practice_answers,
+        "tests_xp": tests_xp,
+        "practice_xp": practice_xp,
+    }

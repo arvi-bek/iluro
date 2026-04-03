@@ -5,21 +5,28 @@ from django.utils import timezone
 
 from .models import PracticeExercise, PracticeSet, PracticeSetAttempt, Question, Test, UserAnswer, UserPracticeAttempt, UserTest
 from .selectors import get_practice_review_items, get_test_answer_review
+from .services import get_effective_subject_level as _get_effective_subject_level
 from .services import get_or_sync_profile as _get_or_sync_profile
 from .services import resolve_section_return_url as _resolve_section_return_url
 from .services import user_can_access_subject as _user_can_access_subject
-from .utils import XP_PER_TEST, get_allowed_level_labels, get_level_info, normalize_difficulty_label
+from .utils import (
+    XP_PER_CORRECT_TEST_ANSWER,
+    get_allowed_level_labels,
+    get_level_info,
+    normalize_difficulty_label,
+)
 
 
 @login_required
 def test_start_view(request, test_id):
     test = get_object_or_404(Test.objects.select_related("subject"), id=test_id)
     profile = _get_or_sync_profile(request.user)
+    subject_level = _get_effective_subject_level(request.user, subject_id=test.subject_id, profile=profile)
     subject_tests_url = f"/subjects/{test.subject_id}/tests/"
     if not _user_can_access_subject(request.user, test.subject_id):
         messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
         return redirect("subject-selection")
-    if normalize_difficulty_label(test.difficulty) not in get_allowed_level_labels(profile.level):
+    if normalize_difficulty_label(test.difficulty) not in get_allowed_level_labels(subject_level):
         messages.error(request, "Sizning hozirgi darajangiz bu testni ochish uchun yetarli emas.")
         return redirect(subject_tests_url)
 
@@ -124,16 +131,10 @@ def test_solve_view(request, user_test_id):
 
         total_questions = len(questions)
         score = round((correct_count / total_questions) * 100) if total_questions else 0
-        xp_awarded = XP_PER_TEST if total_questions and correct_count == total_questions else 0
-        profile = _get_or_sync_profile(request.user)
-        profile.xp += xp_awarded
-        updated_level = get_level_info(profile.xp)
-        profile.level = updated_level["label"]
-        profile.save(update_fields=["xp", "level"])
-
         user_test.correct_count = correct_count
         user_test.score = score
         user_test.finished_at = timezone.now()
+        xp_awarded = correct_count * XP_PER_CORRECT_TEST_ANSWER
         user_test.snapshot_json = {
             "status": "completed",
             "question_count": total_questions,
@@ -141,6 +142,7 @@ def test_solve_view(request, user_test_id):
             "xp_awarded": xp_awarded,
         }
         user_test.save(update_fields=["correct_count", "score", "finished_at", "snapshot_json"])
+        _get_or_sync_profile(request.user)
         return redirect("test-result", user_test_id=user_test.id)
 
     context = {
@@ -185,11 +187,12 @@ def test_result_view(request, user_test_id):
 def practice_set_solve_view(request, set_id):
     practice_set = get_object_or_404(PracticeSet.objects.select_related("subject"), id=set_id)
     profile = _get_or_sync_profile(request.user)
+    subject_level = _get_effective_subject_level(request.user, subject_id=practice_set.subject_id, profile=profile)
     subject_problems_url = f"/subjects/{practice_set.subject_id}/problems/"
     if not _user_can_access_subject(request.user, practice_set.subject_id):
         messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
         return redirect("subject-selection")
-    if normalize_difficulty_label(practice_set.difficulty) not in get_allowed_level_labels(profile.level):
+    if normalize_difficulty_label(practice_set.difficulty) not in get_allowed_level_labels(subject_level):
         messages.error(request, "Sizning hozirgi darajangiz bu mashq bo'limini ochish uchun yetarli emas.")
         return redirect(subject_problems_url)
 
@@ -252,6 +255,7 @@ def practice_set_solve_view(request, set_id):
         practice_session.correct_count = correct_count
         practice_session.score = round((correct_count / len(exercises)) * 100) if exercises else 0
         practice_session.save(update_fields=["correct_count", "score"])
+        _get_or_sync_profile(request.user)
         request.session["practice_next_url"] = next_url
         return redirect("practice-set-result", session_id=practice_session.id)
 
@@ -293,10 +297,11 @@ def practice_solve_view(request, exercise_id):
         id=exercise_id,
     )
     profile = _get_or_sync_profile(request.user)
+    subject_level = _get_effective_subject_level(request.user, subject_id=exercise.subject_id, profile=profile)
     if not _user_can_access_subject(request.user, exercise.subject_id):
         messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
         return redirect("subject-selection")
-    if normalize_difficulty_label(exercise.difficulty) not in get_allowed_level_labels(profile.level):
+    if normalize_difficulty_label(exercise.difficulty) not in get_allowed_level_labels(subject_level):
         messages.error(request, "Sizning hozirgi darajangiz bu mashqni ochish uchun yetarli emas.")
         return redirect("subject-workspace", subject_id=exercise.subject_id)
 
@@ -334,6 +339,7 @@ def practice_solve_view(request, exercise_id):
             answer_text=answer_text,
             is_correct=is_correct,
         )
+        _get_or_sync_profile(request.user)
         request.session["practice_next_url"] = next_url
         return redirect("practice-result", attempt_id=attempt.id)
 

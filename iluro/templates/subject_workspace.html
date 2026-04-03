@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260401-6">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260403-5">
 </head>
 <body>
     <div class="workspace-shell">
@@ -23,8 +23,8 @@
 
             <div class="subject-sidebar-user">
                 <strong>{{ profile.full_name|default:request.user.username }}</strong>
-                <span>{{ level_info.label }}</span>
-                <a href="{% url 'settings' %}">Nastroyka</a>
+                <span>{{ subject_level }}</span>
+                <a href="{% url 'settings' %}">Настройка</a>
                 <a href="{% url 'logout' %}">Chiqish</a>
             </div>
         </aside>
@@ -41,7 +41,7 @@
                 </div>
                 <div class="workspace-topbar-status">
                     <span>{{ profile.xp }} XP</span>
-                    <span>{{ level_info.label }}</span>
+                    <span>{{ subject_level }}</span>
                 </div>
             </section>
 
@@ -74,7 +74,7 @@
                 <div class="hero-stat">
                     <span>{{ subject_theme.stat_label }}</span>
                     <strong>{{ subject_theme.stat_value }}</strong>
-                    <small>{{ level_info.label }} daraja bilan ochiq bo'lgan fan workspace</small>
+                    <small>{{ subject_level }} daraja bilan ochiq bo'lgan fan workspace</small>
                 </div>
             </section>
             {% endif %}
@@ -134,6 +134,9 @@
                                 </div>
                                 <h3>{{ book.title }}</h3>
                                 <p>{% if book.grade %}<strong>{{ book.get_grade_display }}</strong>. {% endif %}{% if book.author %}Muallif: {{ book.author }}.{% endif %} {{ book.description|truncatechars:100 }}</p>
+                                <div class="test-stat-stack">
+                                    <small>Просмотр: {{ book.viewer_count|default:0 }}</small>
+                                </div>
                                 {% if book.pdf_file %}
                                 <a class="mini-link" href="{% url 'book-read' book.id %}?next={{ current_path|urlencode }}">Online o'qish</a>
                                 {% endif %}
@@ -150,11 +153,22 @@
                     <div class="content-panel">
                         <p class="eyebrow">Mashqlar</p>
                         <h2>{{ subject.name }} testlari</h2>
+                        {% if subject_theme.key == "history" %}
+                        <section class="workspace-filter-strip test-filter-strip" aria-label="Tarix test filteri">
+                            <div class="workspace-filter-row">
+                                {% for item in history_test_filters %}
+                                <a class="workspace-filter-pill {% if item.is_active %}is-active{% endif %}" href="{% url 'subject-workspace-section' subject.id 'tests' %}{% if item.value != 'all' %}?test_filter={{ item.value }}{% endif %}">
+                                    {{ item.label }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </section>
+                        {% endif %}
                         <div class="content-grid">
                             {% for test in tests %}
                             <article class="mini-card">
                                 <div class="mini-card-top">
-                                    <span>{{ test.display_difficulty }}</span>
+                                    <span>{{ test.display_difficulty }}{% if subject_theme.key == "history" %} · {{ test.display_category }}{% endif %}</span>
                                     <strong class="card-state">Test</strong>
                                 </div>
                                 <h3>{{ test.title }}</h3>
@@ -178,10 +192,9 @@
                     <div class="content-panel formulas-panel">
                         <p class="eyebrow">Formulalar</p>
                         <h2>{{ subject.name }} uchun formula katalogi</h2>
-                        <p>Bu bo'lim darajaga bog'liq emas. Qidiruv va filter orqali kerakli formulani tez topishingiz mumkin.</p>
+                        <p>Bu bo'lim darajaga bog'liq emas. Kartadan formulani tanlang, detail panelda formula yozilishi va undan qayerda foydalanilishini ko'rasiz.</p>
 
                         <form class="formula-toolbar" method="get">
-                            <input type="hidden" name="section" value="formulas">
                             <label class="formula-search">
                                 <span>Qidiruv</span>
                                 <input type="text" name="q" value="{{ formula_query }}" placeholder="Masalan, kvadrat tenglama, sinus, logarifm">
@@ -196,28 +209,24 @@
                             <button class="mini-link formula-submit" type="submit">Qo'llash</button>
                         </form>
 
-                        <div class="formula-row" aria-label="Formulalar ro'yhati">
+                        <div class="content-grid formula-grid">
                             {% for entry in formula_entries %}
-                            <a class="formula-chip" href="#formula-{{ entry.id }}">{{ entry.title }}</a>
-                            {% empty %}
-                            <span class="formula-chip empty">Formula topilmadi</span>
-                            {% endfor %}
-                        </div>
-
-                        <div class="formula-list">
-                            {% for entry in formula_entries %}
-                            <article class="formula-card" id="formula-{{ entry.id }}">
-                                <div class="formula-card-head">
-                                    <span>{% if entry.is_featured %}Tavsiya etilgan{% else %}Formula{% endif %}</span>
-                                    <h3>{{ entry.title }}</h3>
+                            <a
+                                class="mini-card formula-tile {% if selected_formula and selected_formula.id == entry.id %}is-active{% endif %}"
+                                href="{% url 'subject-workspace-section' subject.id 'formulas' %}?formula={{ entry.id }}{% if formula_query %}&q={{ formula_query|urlencode }}{% endif %}{% if formula_filter and formula_filter != 'all' %}&formula_filter={{ formula_filter|urlencode }}{% endif %}#formula-detail"
+                            >
+                                <div class="mini-card-top">
+                                    <span>{{ subject.name }}</span>
+                                    <strong class="card-state">{% if entry.is_featured %}Tanlangan{% else %}Formula{% endif %}</strong>
                                 </div>
-                                {% if entry.summary %}
-                                <p class="formula-summary">{{ entry.summary }}</p>
+                                <h3>{{ entry.title }}</h3>
+                                <p>{% if entry.summary %}{{ entry.summary|truncatechars:100 }}{% elif entry.body %}{{ entry.body|truncatechars:100 }}{% else %}Formula tafsiloti detail panelda ko'rsatiladi.{% endif %}</p>
+                                {% if entry.usage_note %}
+                                <div class="test-stat-stack formula-meta">
+                                    <small>Foydalanish: {{ entry.usage_note|truncatechars:82 }}</small>
+                                </div>
                                 {% endif %}
-                                {% if entry.body %}
-                                <div class="formula-body">{{ entry.body|linebreaksbr }}</div>
-                                {% endif %}
-                            </article>
+                            </a>
                             {% empty %}
                             <article class="mini-card empty-card">
                                 <h3>Formula topilmadi</h3>
@@ -225,6 +234,45 @@
                             </article>
                             {% endfor %}
                         </div>
+
+                        {% if selected_formula %}
+                        <article class="formula-detail-panel" id="formula-detail">
+                            <div class="formula-detail-head">
+                                <div>
+                                    <p class="eyebrow">Tanlangan formula</p>
+                                    <h3>{{ selected_formula.title }}</h3>
+                                </div>
+                                <strong class="card-state detail-state">{% if selected_formula.is_featured %}Tanlangan{% else %}Formula{% endif %}</strong>
+                            </div>
+
+                            {% if selected_formula.summary %}
+                            <p class="formula-detail-summary">{{ selected_formula.summary }}</p>
+                            {% endif %}
+
+                            <div class="formula-detail-grid">
+                                <section class="formula-detail-card">
+                                    <span>Formula</span>
+                                    <div class="formula-detail-body">
+                                        {% if selected_formula.body %}
+                                        {{ selected_formula.body|linebreaksbr }}
+                                        {% else %}
+                                        Formula yozilishi hali kiritilmagan.
+                                        {% endif %}
+                                    </div>
+                                </section>
+                                <section class="formula-detail-card">
+                                    <span>Qayerda ishlatiladi</span>
+                                    <div class="formula-detail-body">
+                                        {% if selected_formula.usage_note %}
+                                        {{ selected_formula.usage_note|linebreaksbr }}
+                                        {% else %}
+                                        Bu formula uchun foydalanish izohi hali kiritilmagan.
+                                        {% endif %}
+                                    </div>
+                                </section>
+                            </div>
+                        </article>
+                        {% endif %}
                     </div>
                     {% elif current_section == "problems" %}
                     <div class="content-panel">
@@ -285,6 +333,276 @@
                             <span class="mini-link is-static">Tezkor yordam</span>
                         </div>
                     </div>
+                    {% elif current_section == "grammar" %}
+                    <div class="content-panel grammar-panel">
+                        <div class="grammar-shell">
+                            <aside class="grammar-sidebar">
+                                <div class="grammar-sidebar-head">
+                                    <p class="eyebrow">Gramatika</p>
+                                    <h2>Mavzular</h2>
+                                    <p>{{ grammar_total_count }} ta dars · {{ grammar_selected_level }} daraja</p>
+                                </div>
+
+                                <div class="grammar-progress-card">
+                                    <div class="grammar-progress-top">
+                                        <strong>Bugungi oqim</strong>
+                                        <span>{{ grammar_completed_count }}/{{ grammar_total_count }} dars</span>
+                                    </div>
+                                    <div class="grammar-progress-track">
+                                        <div class="grammar-progress-fill" style="width:{{ grammar_progress_percent }}%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="grammar-level-filter" aria-label="Gramatika daraja filtri">
+                                    {% for item in grammar_groups %}
+                                    <a class="grammar-level-chip {% if item.is_active %}is-active{% endif %}" href="{% url 'subject-workspace-section' subject.id 'grammar' %}?grammar_level={{ item.label|urlencode }}">
+                                        <span>{{ item.label }}</span>
+                                        <small>{{ item.completed_count }}/{{ item.count }}</small>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="grammar-stage-list">
+                                    {% for item in grammar_groups %}
+                                    <div class="grammar-stage-row {% if item.is_active %}is-active{% endif %}">
+                                        <span>{{ item.label }}</span>
+                                        <strong>{{ item.completed_count }}/{{ item.count }}</strong>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="grammar-topic-list">
+                                    {% for row in grammar_lesson_rows %}
+                                    {% if row.is_available %}
+                                    <a class="grammar-topic-item {% if selected_grammar_entry and selected_grammar_entry.id == row.entry.id %}is-active{% endif %}" href="{% url 'subject-workspace-section' subject.id 'grammar' %}?grammar_level={{ grammar_selected_level|urlencode }}&entry={{ row.entry.id }}">
+                                        <div class="grammar-topic-index">{{ forloop.counter }}</div>
+                                        <div class="grammar-topic-copy">
+                                            <strong>{{ row.entry.title }}</strong>
+                                            <span>{% if row.entry.summary %}{{ row.entry.summary|truncatechars:78 }}{% else %}Qisqa qoida hali yozilmagan.{% endif %}</span>
+                                        </div>
+                                        <div class="grammar-topic-meta">
+                                            <span class="grammar-topic-level">{{ row.entry.access_level }}</span>
+                                            {% if row.is_completed %}
+                                            <span class="grammar-topic-status is-done">Tayyor</span>
+                                            {% endif %}
+                                        </div>
+                                    </a>
+                                    {% else %}
+                                    <article class="grammar-topic-item is-locked">
+                                        <div class="grammar-topic-index grammar-topic-lock">🔒</div>
+                                        <div class="grammar-topic-copy">
+                                            <strong>{{ row.entry.title }}</strong>
+                                            <span>Oldingi darsni 80% bilan yakunlagach ochiladi.</span>
+                                        </div>
+                                        <div class="grammar-topic-meta">
+                                            <span class="grammar-topic-level">{{ row.entry.access_level }}</span>
+                                        </div>
+                                    </article>
+                                    {% endif %}
+                                    {% empty %}
+                                    <article class="grammar-empty-sidebar">
+                                        <strong>Mavzular yo'q</strong>
+                                        <p>Admin paneldan `Gramatika` bo'limi uchun material qo'shing.</p>
+                                    </article>
+                                    {% endfor %}
+                                </div>
+                            </aside>
+
+                            <section class="grammar-detail-stage">
+                                {% if selected_grammar_entry %}
+                                <div class="grammar-detail-header">
+                                    <div>
+                                        <p class="eyebrow">Tanlangan mavzu</p>
+                                        <h2>{{ selected_grammar_entry.title }}</h2>
+                                        <p class="grammar-detail-lead">{{ selected_grammar_entry.summary|default:"Mavzuning qisqa qoidasini shu yerda ko'rasiz." }}</p>
+                                    </div>
+                                    <div class="grammar-level-stack">
+                                        <span class="grammar-level-pill">{{ selected_grammar_entry.get_access_level_display }}</span>
+                                        {% if grammar_progress and grammar_progress.is_completed %}
+                                        <span class="grammar-completion-pill">Tugallangan</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="grammar-detail-table">
+                                    <div class="grammar-detail-row grammar-detail-head-row">
+                                        <span>Mavzu</span>
+                                        <span>Asosiy qoida</span>
+                                        <span>Qo'llanish</span>
+                                        <span>Holat</span>
+                                    </div>
+                                    <div class="grammar-detail-row">
+                                        <span>{{ selected_grammar_entry.title }}</span>
+                                        <span>{{ selected_grammar_entry.summary|default:"Qisqa qoida hali kiritilmagan." }}</span>
+                                        <span>{{ selected_grammar_entry.usage_note|default:"Misol hali kiritilmagan." }}</span>
+                                        <span>{% if selected_grammar_entry.is_featured %}Asosiy{% else %}Standart{% endif %}</span>
+                                    </div>
+                                </div>
+
+                                {% if grammar_points %}
+                                <div class="grammar-point-cloud">
+                                    {% for item in grammar_points %}
+                                    <div class="grammar-point-pill">{{ item }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <div class="grammar-explanation-card">
+                                    <h3>O'qituvchi izohi</h3>
+                                    <div class="grammar-explanation-body">
+                                        {% if selected_grammar_entry.body %}
+                                        {{ selected_grammar_entry.body|linebreaksbr }}
+                                        {% else %}
+                                        Bu mavzu uchun to'liq izoh hali kiritilmagan.
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="grammar-example-card">
+                                    <h3>Qanday ishlaydi?</h3>
+                                    <div class="grammar-example-grid">
+                                        <section>
+                                            <span>Qoidaning mazmuni</span>
+                                            <p>{{ selected_grammar_entry.summary|default:"Qisqa qoida hali kiritilmagan." }}</p>
+                                        </section>
+                                        <section>
+                                            <span>Amaliy ko'rinish</span>
+                                            <p>{{ selected_grammar_entry.usage_note|default:"Bu mavzu uchun amaliy misol hali kiritilmagan." }}</p>
+                                        </section>
+                                    </div>
+                                </div>
+
+                                <div class="grammar-quiz-card">
+                                    <div class="grammar-quiz-head">
+                                        <div>
+                                            <p class="eyebrow">Mini test</p>
+                                            <h3>Mavzu bo'yicha tekshiruv</h3>
+                                            <p class="grammar-quiz-subcopy">Bu test shu dars bo'yicha yakuniy tekshiruv. 80% yoki undan yuqori natija keyingi darsni ochadi.</p>
+                                        </div>
+                                        <span class="grammar-quiz-rule">Kamida 80% kerak</span>
+                                    </div>
+                                    <div class="grammar-quiz-launcher">
+                                        <div class="grammar-quiz-launcher-copy">
+                                            <strong>{{ grammar_question_total }} ta savol</strong>
+                                            <span>Yakuniy mini test modal oynada ochiladi</span>
+                                        </div>
+                                        {% if grammar_questions %}
+                                        <button class="mini-link grammar-quiz-open" type="button" data-open-grammar-quiz>
+                                            Mini testni boshlash
+                                        </button>
+                                        {% else %}
+                                        <p class="grammar-quiz-empty">Bu mavzu uchun mini test hali qo'shilmagan.</p>
+                                        {% endif %}
+                                    </div>
+
+                                </div>
+
+                                {% if grammar_questions %}
+                                <div class="grammar-quiz-modal {% if grammar_quiz_result %}is-visible{% endif %}" data-grammar-quiz-modal>
+                                    <div class="grammar-quiz-backdrop" data-close-grammar-quiz></div>
+                                    <div class="grammar-quiz-dialog" role="dialog" aria-modal="true" aria-labelledby="grammar-quiz-title">
+                                        <div class="grammar-quiz-dialog-head">
+                                            <div>
+                                                <p class="eyebrow">Mini test</p>
+                                                <h3 id="grammar-quiz-title">{{ selected_grammar_entry.title }}</h3>
+                                                <p class="grammar-quiz-dialog-copy">{{ grammar_question_total }} ta savol. 80% dan yuqori natija keyingi darsni ochadi.</p>
+                                            </div>
+                                            <button class="grammar-quiz-close" type="button" data-close-grammar-quiz aria-label="Yopish">×</button>
+                                        </div>
+
+                                        {% if grammar_quiz_result %}
+                                        <div class="grammar-quiz-result-screen {% if grammar_quiz_result.passed %}is-pass{% else %}is-fail{% endif %}">
+                                            <div class="grammar-quiz-result-hero">
+                                                <strong>Natija: {{ grammar_quiz_result.score }}%</strong>
+                                                <span>{{ grammar_quiz_result.correct_count }}/{{ grammar_quiz_result.total_questions }} ta to'g'ri</span>
+                                                <p>
+                                                    {% if grammar_quiz_result.passed %}
+                                                    Ajoyib. Bu mavzu tugallandi va keyingi dars ochildi.
+                                                    {% else %}
+                                                    Hali 80% ga yetmadi. Shu mavzuni qayta ko'rib, mini testni yana ishlang.
+                                                    {% endif %}
+                                                </p>
+                                            </div>
+
+                                            <div class="grammar-quiz-review-list">
+                                                {% for item in grammar_quiz_result.review_items %}
+                                                <article class="grammar-quiz-review-item {% if item.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                                                    <strong>{{ forloop.counter }}. {{ item.prompt }}</strong>
+                                                    <p>Sizning javob: {{ item.selected }}</p>
+                                                    <p>To'g'ri javob: {{ item.correct }}</p>
+                                                    {% if item.explanation %}
+                                                    <small>{{ item.explanation }}</small>
+                                                    {% endif %}
+                                                </article>
+                                                {% endfor %}
+                                            </div>
+
+                                            <div class="grammar-quiz-actions">
+                                                <button class="mini-link secondary" type="button" data-close-grammar-quiz>Yopish</button>
+                                                {% if not grammar_quiz_result.passed %}
+                                                <a class="mini-link grammar-quiz-submit" href="{% url 'subject-workspace-section' subject.id 'grammar' %}?grammar_level={{ grammar_selected_level|urlencode }}&entry={{ selected_grammar_entry.id }}">Qayta ishlash</a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <form method="post" class="grammar-quiz-form modal-mode">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="grammar_action" value="submit_quiz">
+                                            <div class="grammar-quiz-meta-bar">
+                                                <span>{{ grammar_question_total }} ta savol</span>
+                                                <span>Har savolda 1 ta to'g'ri javob</span>
+                                                <span>80% dan o'tish kerak</span>
+                                            </div>
+                                            <div class="grammar-quiz-scroll">
+                                                {% for question in grammar_questions %}
+                                                <article class="grammar-quiz-question">
+                                                    <div class="grammar-quiz-question-head">
+                                                        <span class="grammar-quiz-question-index">{{ forloop.counter }}</span>
+                                                        <strong>{{ question.prompt }}</strong>
+                                                    </div>
+                                                    <div class="grammar-quiz-options">
+                                                        <label class="grammar-quiz-option">
+                                                            <input type="radio" name="grammar_question_{{ question.id }}" value="A">
+                                                            <span class="grammar-quiz-option-letter">A</span>
+                                                            <span class="grammar-quiz-option-text">{{ question.option_a }}</span>
+                                                        </label>
+                                                        <label class="grammar-quiz-option">
+                                                            <input type="radio" name="grammar_question_{{ question.id }}" value="B">
+                                                            <span class="grammar-quiz-option-letter">B</span>
+                                                            <span class="grammar-quiz-option-text">{{ question.option_b }}</span>
+                                                        </label>
+                                                        <label class="grammar-quiz-option">
+                                                            <input type="radio" name="grammar_question_{{ question.id }}" value="C">
+                                                            <span class="grammar-quiz-option-letter">C</span>
+                                                            <span class="grammar-quiz-option-text">{{ question.option_c }}</span>
+                                                        </label>
+                                                        <label class="grammar-quiz-option">
+                                                            <input type="radio" name="grammar_question_{{ question.id }}" value="D">
+                                                            <span class="grammar-quiz-option-letter">D</span>
+                                                            <span class="grammar-quiz-option-text">{{ question.option_d }}</span>
+                                                        </label>
+                                                    </div>
+                                                </article>
+                                                {% endfor %}
+                                            </div>
+                                            <div class="grammar-quiz-actions">
+                                                <button class="mini-link secondary" type="button" data-close-grammar-quiz>Bekor qilish</button>
+                                                <button class="mini-link grammar-quiz-submit" type="submit">Natijani ko'rish</button>
+                                            </div>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <article class="grammar-detail-empty">
+                                    <h3>Gramatika mavzusi tanlanmagan</h3>
+                                    <p>Chap tomondan mavzuni tanlang yoki admin paneldan yangi mavzu qo'shing.</p>
+                                </article>
+                                {% endif %}
+                            </section>
+                        </div>
+                    </div>
                     {% elif current_section == "essay" %}
                     <div class="content-panel essay-panel">
                         <p class="eyebrow">Insho</p>
@@ -339,6 +657,173 @@
                             {% endfor %}
                         </div>
                     </div>
+                    {% elif current_section == "chronology" %}
+                    <div class="content-panel chronology-panel">
+                        <div class="history-panel-head chronology-panel-head">
+                            <div class="history-panel-copy">
+                                <p class="eyebrow">{{ current_section_label }}</p>
+                                <h2>Tarix uchun xronologiya katalogi</h2>
+                                <p>
+                                    Muhim sana va davrlarni bir oqimda ko'ring. Avval preview bilan tanishing, keyin `To'liq ko'rish` orqali alohida sahifada batafsil o'qing.
+                                </p>
+                            </div>
+                            <form class="history-search-form" method="get">
+                                <label class="history-search-field">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M10.5 4a6.5 6.5 0 1 1 0 13a6.5 6.5 0 0 1 0-13Zm0 1.8a4.7 4.7 0 1 0 0 9.4a4.7 4.7 0 0 0 0-9.4Zm7.18 10.6l2.72 2.72a.9.9 0 0 1-1.27 1.27l-2.72-2.72a.9.9 0 0 1 1.27-1.27Z"/>
+                                    </svg>
+                                    <input type="text" name="q" value="{{ history_query }}" placeholder="Xronologiya qidirish">
+                                </label>
+                            </form>
+                        </div>
+
+                        <div class="history-toolbar chronology-toolbar">
+                            <div class="history-mode-tabs">
+                                <span class="history-mode-tab is-active">Xronologiya</span>
+                                <a class="history-mode-tab" href="{% url 'subject-workspace-section' subject.id 'tests' %}?filter=years">Savol-javob</a>
+                            </div>
+                            <span class="history-toolbar-count">{{ chronology_cards|length }} ta bo'lim</span>
+                        </div>
+
+                        <div class="chronology-grid">
+                            {% for card in chronology_cards %}
+                            <article class="chronology-card">
+                                <div class="chronology-card-head">
+                                    <div>
+                                        <span class="chronology-card-tag">Xronologiya</span>
+                                        <h3>{{ card.entry.title }}</h3>
+                                    </div>
+                                    <span class="chronology-card-count">{{ card.line_count }}+ qator</span>
+                                </div>
+                                <div class="chronology-preview">
+                                    {% if card.preview_lines %}
+                                        {% for line in card.preview_lines %}
+                                        <p>{{ line }}</p>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p>Xronologiya mazmuni hali kiritilmagan.</p>
+                                    {% endif %}
+                                </div>
+                                <div class="chronology-card-actions">
+                                    <a class="history-card-toggle chronology-open-link" href="{% url 'history-chronology-detail' subject.id card.entry.id %}">
+                                        To'liq ko'rish
+                                    </a>
+                                </div>
+                            </article>
+                            {% empty %}
+                            <article class="history-empty-state">
+                                <h3>Xronologiya hali qo'shilmagan</h3>
+                                <p>Admin paneldan `Xronologiya` bo'limiga davrlar va sanalarni kiriting.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif current_section == "terms" or current_section == "events" %}
+                    <div class="content-panel history-panel">
+                        <div class="history-panel-head">
+                            <div class="history-panel-copy">
+                                <p class="eyebrow">{{ current_section_label }}</p>
+                                <h2>{{ current_section_label }}</h2>
+                                <p>
+                                    Katalogdan kerakli kartani tanlang, keyin pastda qisqa mazmun va to'liq izohini ko'ring.
+                                </p>
+                            </div>
+                            <form class="history-search-form" method="get">
+                                <label class="history-search-field">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M10.5 4a6.5 6.5 0 1 1 0 13a6.5 6.5 0 0 1 0-13Zm0 1.8a4.7 4.7 0 1 0 0 9.4a4.7 4.7 0 0 0 0-9.4Zm7.18 10.6l2.72 2.72a.9.9 0 0 1-1.27 1.27l-2.72-2.72a.9.9 0 0 1 1.27-1.27Z"/>
+                                    </svg>
+                                    <input type="text" name="q" value="{{ history_query }}" placeholder="{% if current_section == 'terms' %}Atama qidirish{% else %}Sana yoki voqeani qidirish{% endif %}">
+                                </label>
+                            </form>
+                        </div>
+
+                        <div class="history-toolbar">
+                            <div class="history-mode-tabs">
+                                <span class="history-mode-tab is-active">{{ current_section_label }}</span>
+                                <a class="history-mode-tab" href="{% url 'subject-workspace-section' subject.id 'tests' %}">Savol-javob</a>
+                            </div>
+                            <span class="history-toolbar-count">{% if history_page_obj %}{{ history_page_obj.paginator.count }} ta karta{% else %}{{ section_entries|length }} ta karta{% endif %}</span>
+                        </div>
+
+                        <div class="history-card-grid">
+                            {% for entry in section_entries %}
+                            <article class="history-card" data-history-card>
+                                <div class="history-card-head">
+                                    <span class="history-card-tag">{{ current_section_label }}</span>
+                                    <span class="history-card-badge">{% if current_section == "terms" %}Atama{% else %}Sana{% endif %}</span>
+                                </div>
+                                <h3>{{ entry.title }}</h3>
+                                <p class="history-card-summary">
+                                    {% if entry.summary %}
+                                    {{ entry.summary|truncatechars:116 }}
+                                    {% elif entry.body %}
+                                    {{ entry.body|truncatechars:116 }}
+                                    {% else %}
+                                    Qisqa mazmun hali kiritilmagan.
+                                    {% endif %}
+                                </p>
+                                <button class="history-card-toggle" type="button" data-history-toggle aria-expanded="false">
+                                    Batafsil
+                                </button>
+
+                                <div class="history-card-detail" data-history-detail>
+                                    <div class="history-card-detail-inner">
+                                        <section class="history-inline-block">
+                                            <span>Qisqa mazmun</span>
+                                            <div class="history-detail-body">
+                                                {% if entry.summary %}
+                                                {{ entry.summary|linebreaksbr }}
+                                                {% elif entry.body %}
+                                                {{ entry.body|truncatechars:220|linebreaksbr }}
+                                                {% else %}
+                                                Bu karta uchun qisqa mazmun hali kiritilmagan.
+                                                {% endif %}
+                                            </div>
+                                        </section>
+                                        <section class="history-inline-block">
+                                            <span>{% if current_section == "terms" %}To'liq ta'rif{% else %}To'liq izoh{% endif %}</span>
+                                            <div class="history-detail-body">
+                                                {% if entry.body %}
+                                                {{ entry.body|linebreaksbr }}
+                                                {% else %}
+                                                Bu karta uchun to'liq izoh hali kiritilmagan.
+                                                {% endif %}
+                                            </div>
+                                        </section>
+                                    </div>
+                                </div>
+                            </article>
+                            {% empty %}
+                            <article class="history-empty-state">
+                                <h3>Hech narsa topilmadi</h3>
+                                <p>Qidiruvni o'zgartirib ko'ring yoki admin paneldan yangi material qo'shing.</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+
+                        {% if history_page_obj and history_page_obj.paginator.num_pages > 1 %}
+                        <div class="history-pagination">
+                            <div class="history-pagination-meta">
+                                <span>{{ history_page_obj.start_index }}-{{ history_page_obj.end_index }} / {{ history_page_obj.paginator.count }}</span>
+                                <strong>{{ history_page_obj.number }} / {{ history_page_obj.paginator.num_pages }} sahifa</strong>
+                            </div>
+                            <div class="history-pagination-actions">
+                                {% if history_page_obj.has_previous %}
+                                <a class="history-page-link" href="?{% if history_query %}q={{ history_query|urlencode }}&{% endif %}page={{ history_page_obj.previous_page_number }}">Oldingi</a>
+                                {% else %}
+                                <span class="history-page-link is-disabled">Oldingi</span>
+                                {% endif %}
+
+                                {% if history_page_obj.has_next %}
+                                <a class="history-page-link" href="?{% if history_query %}q={{ history_query|urlencode }}&{% endif %}page={{ history_page_obj.next_page_number }}">Keyingi</a>
+                                {% else %}
+                                <span class="history-page-link is-disabled">Keyingi</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                     {% else %}
                     <div class="content-panel">
                         <p class="eyebrow">{{ current_section_label }}</p>
@@ -363,5 +848,72 @@
             </section>
         </main>
     </div>
+    {% if current_section == "terms" or current_section == "events" %}
+    <script>
+        document.addEventListener("click", function (event) {
+            const toggle = event.target.closest("[data-history-toggle]");
+            if (!toggle) return;
+
+            const card = toggle.closest("[data-history-card]");
+            if (!card) return;
+
+            const isOpen = card.classList.contains("is-open");
+
+            document.querySelectorAll("[data-history-card].is-open").forEach(function (openCard) {
+                openCard.classList.remove("is-open");
+                const openToggle = openCard.querySelector("[data-history-toggle]");
+                if (openToggle) {
+                    openToggle.setAttribute("aria-expanded", "false");
+                    openToggle.textContent = "Batafsil";
+                }
+            });
+
+            if (!isOpen) {
+                card.classList.add("is-open");
+                toggle.setAttribute("aria-expanded", "true");
+                toggle.textContent = "Yopish";
+            }
+        });
+    </script>
+    {% endif %}
+    {% if current_section == "grammar" and grammar_questions %}
+    <script>
+        (function () {
+            const modal = document.querySelector("[data-grammar-quiz-modal]");
+            if (!modal) return;
+
+            const openButton = document.querySelector("[data-open-grammar-quiz]");
+            const closeButtons = modal.querySelectorAll("[data-close-grammar-quiz]");
+
+            function openModal() {
+                modal.classList.add("is-visible");
+                document.body.classList.add("grammar-modal-open");
+            }
+
+            function closeModal() {
+                modal.classList.remove("is-visible");
+                document.body.classList.remove("grammar-modal-open");
+            }
+
+            if (openButton) {
+                openButton.addEventListener("click", openModal);
+            }
+
+            closeButtons.forEach(function (button) {
+                button.addEventListener("click", closeModal);
+            });
+
+            if (modal.classList.contains("is-visible")) {
+                document.body.classList.add("grammar-modal-open");
+            }
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape") {
+                    closeModal();
+                }
+            });
+        })();
+    </script>
+    {% endif %}
 </body>
 </html>

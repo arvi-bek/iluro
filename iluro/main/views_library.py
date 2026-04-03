@@ -2,11 +2,14 @@ import secrets
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import OperationalError, ProgrammingError
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import FileResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from .models import Book, GRADE_CHOICES, Subject
+from .models import Book, BookView, GRADE_CHOICES, Subject
 from .selectors import get_tests_listing
 from .services import (
     get_active_subscription_ids as _get_active_subscription_ids,
@@ -26,9 +29,10 @@ def tests_list_view(request):
 @login_required
 def books_list_view(request):
     sidebar = _sidebar_context(request.user)
+    owned_subject_ids = set(_get_active_subscription_ids(request.user))
     selected_subject_id = request.GET.get("subject", "").strip()
     selected_grade = request.GET.get("grade", "").strip()
-    subject_queryset = Subject.objects.order_by("name")
+    subject_queryset = Subject.objects.filter(id__in=owned_subject_ids).order_by("name")
     selected_subject = None
     book_queryset = Book.objects.select_related("subject").order_by("-is_featured", "-created_at")
     allowed_grades = {choice[0] for choice in GRADE_CHOICES}
@@ -42,22 +46,42 @@ def books_list_view(request):
     else:
         book_queryset = book_queryset.none()
 
-    if selected_grade in allowed_grades:
+    if selected_grade == "other":
+        book_queryset = book_queryset.filter(grade="")
+    elif selected_grade in allowed_grades:
         book_queryset = book_queryset.filter(grade=selected_grade)
 
-    books = [
-        {
-            "id": book.id,
-            "title": book.title,
-            "subject": book.subject.name,
-            "grade": book.get_grade_display() if book.grade else "",
-            "author": book.author,
-            "description": book.description,
-            "pdf_url": book.pdf_file.url if book.pdf_file else "",
-            "is_featured": book.is_featured,
-        }
-        for book in book_queryset
-    ]
+    try:
+        book_items = list(book_queryset.annotate(viewer_count=Coalesce(Sum("views__view_count"), Value(0))))
+        books = [
+            {
+                "id": book.id,
+                "title": book.title,
+                "subject": book.subject.name,
+                "grade": book.get_grade_display() if book.grade else "",
+                "author": book.author,
+                "description": book.description,
+                "pdf_url": book.pdf_file.url if book.pdf_file else "",
+                "is_featured": book.is_featured,
+                "viewer_count": book.viewer_count,
+            }
+            for book in book_items
+        ]
+    except (ProgrammingError, OperationalError):
+        books = [
+            {
+                "id": book.id,
+                "title": book.title,
+                "subject": book.subject.name,
+                "grade": book.get_grade_display() if book.grade else "",
+                "author": book.author,
+                "description": book.description,
+                "pdf_url": book.pdf_file.url if book.pdf_file else "",
+                "is_featured": book.is_featured,
+                "viewer_count": 0,
+            }
+            for book in book_queryset
+        ]
     grade_filters = [{"value": "", "label": "Barchasi", "is_active": selected_grade == ""}]
     grade_filters.extend(
         {
@@ -67,12 +91,18 @@ def books_list_view(request):
         }
         for value, label in GRADE_CHOICES
     )
-    owned_subject_ids = set(_get_active_subscription_ids(request.user))
+    grade_filters.append(
+        {
+            "value": "other",
+            "label": "Boshqalar",
+            "is_active": selected_grade == "other",
+        }
+    )
     subject_cards = [
         {
             "id": subject.id,
             "name": subject.name,
-            "is_owned": subject.id in owned_subject_ids,
+            "is_owned": True,
         }
         for subject in subject_queryset
     ]
@@ -101,6 +131,14 @@ def book_read_view(request, book_id):
         messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
         return redirect("subject-selection")
     _get_or_sync_profile(request.user)
+    try:
+        book_view, created = BookView.objects.get_or_create(user=request.user, book=book)
+        if not created:
+            book_view.view_count += 1
+            book_view.save(update_fields=["view_count", "last_viewed_at"])
+        viewer_count = book.views.aggregate(total=Coalesce(Sum("view_count"), Value(0))).get("total", 0)
+    except (ProgrammingError, OperationalError):
+        viewer_count = 0
     reader_tokens = request.session.get("reader_tokens", {})
     token = secrets.token_urlsafe(24)
     reader_tokens[str(book.id)] = token
@@ -112,7 +150,12 @@ def book_read_view(request, book_id):
     return render(
         request,
         "book_read.html",
-        {"book": book, "reader_token": token, "back_url": back_url},
+        {
+            "book": book,
+            "reader_token": token,
+            "back_url": back_url,
+            "viewer_count": viewer_count,
+        },
     )
 
 

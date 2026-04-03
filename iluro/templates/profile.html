@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260401-3">
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260403-4">
 </head>
 <body>
     <div class="profile-layout">
@@ -16,9 +16,10 @@
 
         <main class="profile-shell">
             <header class="profile-header">
-                <div>
+                <div class="profile-header-copy">
                     <p class="eyebrow">Profil</p>
                     <h1>{{ profile.full_name|default:request.user.username }}</h1>
+                    <p class="profile-subtitle">Shaxsiy holat, progress va sotib olingan fanlar bir joyda.</p>
                 </div>
                 <div class="header-side">
                     <div class="header-pills">
@@ -27,85 +28,93 @@
                         <span>{{ profile.get_role_display }}</span>
                     </div>
                     <div class="profile-actions">
-                        <a href="{% url 'settings' %}">Nastroyka</a>
+                        <a href="{% url 'settings' %}">Настройка</a>
                         <a href="{% url 'dashboard' %}">Dashboard</a>
                     </div>
                 </div>
             </header>
 
-            <section class="hero-card">
-                <div class="avatar-wrap">
-                    {% if profile.photo %}
-                    <img src="{{ profile.photo.url }}" alt="{{ profile.full_name }}">
-                    {% else %}
-                    <div class="avatar-fallback">{{ profile.full_name|default:request.user.username|first|upper }}</div>
-                    {% endif %}
-                </div>
-                <h2>{{ profile.full_name|default:request.user.username }}</h2>
-                <p class="username">@{{ request.user.username }}</p>
-                <div class="hero-badges">
-                    <span>{{ level_info.label }}</span>
-                    <span>{{ profile.get_role_display }}</span>
-                </div>
-                <p class="hero-meta">A'zo bo'lgan sana: {{ member_since|date:"F, Y" }}</p>
-            </section>
-
-            <section class="identity-grid">
-                <article class="identity-card">
-                    <span>Email</span>
-                    <strong>{{ request.user.email|default:"Email kiritilmagan" }}</strong>
-                </article>
-                <article class="identity-card">
-                    <span>Username</span>
-                    <strong>@{{ request.user.username }}</strong>
-                </article>
-                <article class="identity-card">
-                    <span>Status</span>
-                    <strong>{{ profile.get_role_display }}</strong>
-                </article>
-            </section>
-
-            <section class="summary-grid">
-                <article class="summary-card">
-                    <span>XP</span>
-                    <strong>{{ profile.xp }}</strong>
-                </article>
-                <article class="summary-card">
-                    <span>Testlar</span>
-                    <strong>{{ total_tests }}</strong>
-                </article>
-                <article class="summary-card">
-                    <span>Sotib olingan fanlar</span>
-                    <strong>{{ active_subject_count }}</strong>
-                </article>
-                <article class="summary-card">
-                    <span>Reyting</span>
-                    <strong>{% if rank_position %}#{{ rank_position }}{% else %}-{% endif %}</strong>
-                </article>
-            </section>
-
-            <section class="progress-card">
-                <div class="progress-head">
-                    <div>
-                        <h3>{{ level_info.label }}</h3>
-                        <p>Keyingi bosqich: {{ level_info.next_label }}</p>
+            <section class="profile-spotlight">
+                <article class="spotlight-card">
+                    <div class="spotlight-avatar">
+                        {% if profile.photo %}
+                        <img src="{{ profile.photo.url }}" alt="{{ profile.full_name }}">
+                        {% else %}
+                        <div class="spotlight-fallback">{{ profile.full_name|default:request.user.username|first|upper }}</div>
+                        {% endif %}
                     </div>
-                    <span>{{ level_info.xp_to_next }} XP qoldi</span>
+                    <h2>{{ profile.full_name|default:request.user.username }}</h2>
+                    <p class="spotlight-username">@{{ request.user.username }}</p>
+                    <div class="spotlight-badges">
+                        <span>{{ level_info.label }}</span>
+                        <span>{{ profile.get_role_display }}</span>
+                    </div>
+                </article>
+            </section>
+
+            <section class="profile-kpi-strip">
+                <article class="kpi-card">
+                    <span class="kpi-icon">⚡</span>
+                    <strong>{{ profile.xp }}</strong>
+                    <p>XP</p>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-icon">◔</span>
+                    <strong>{{ total_tests }}</strong>
+                    <p>Testlar</p>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-icon">▣</span>
+                    <strong>{{ active_subject_count }}</strong>
+                    <p>Faol fanlar</p>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-icon">🏆</span>
+                    <strong>{% if rank_position %}#{{ rank_position }}{% else %}-{% endif %}</strong>
+                    <p>Reyting</p>
+                </article>
+            </section>
+
+            <section class="profile-level-rail">
+                <div class="level-rail-head">
+                    <div class="level-rail-title">
+                        <strong>{{ level_info.label }}</strong>
+                        <span>Keyingi: {{ level_info.next_label }}</span>
+                    </div>
+                    <div class="level-rail-side">{{ level_info.xp_to_next }} XP qoldi</div>
                 </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ level_info.progress_percent }}%;"></div>
+                <div class="level-rail-progress">
+                    <div class="level-rail-fill" style="width: {{ level_info.progress_percent }}%;"></div>
                 </div>
-                <div class="progress-foot">
+                <div class="level-rail-foot">
                     <span>{{ profile.xp }} XP</span>
                     <span>{{ level_info.range_text }}</span>
                 </div>
             </section>
 
-            <section class="subscriptions-panel">
+            <section class="profile-meta-strip">
+                <article class="meta-strip-item">
+                    <span>Email</span>
+                    <strong>{{ request.user.email|default:"Email kiritilmagan" }}</strong>
+                </article>
+                <article class="meta-strip-item">
+                    <span>Status</span>
+                    <strong>{{ profile.get_role_display }}</strong>
+                </article>
+                <article class="meta-strip-item">
+                    <span>A'zo bo'lganidan beri</span>
+                    <strong>{{ member_since|date:"F, Y" }}</strong>
+                </article>
+            </section>
+
+            <section class="subscriptions-panel subscriptions-panel-lite">
                 <div class="section-head">
                     <div>
                         <p class="eyebrow">Sotib olingan fanlar</p>
-                        <h2>Fanlar bu yerda ko'rinadi. Ularni admin paneldagi `Subscription` bo'limidan boshqarasiz.</h2>
+                        <h2>Fanlar, holati va shu yo‘nalish bo‘yicha eng yaxshi natijalar.</h2>
+                    </div>
+                    <div class="section-side-note">
+                        <span>{{ active_subject_count }} ta faol yo'nalish</span>
                     </div>
                 </div>
 
@@ -117,14 +126,26 @@
                     {% endfor %}
                 </div>
 
-                <div class="subject-status-grid">
+                <div class="subject-status-grid subject-status-grid-lite">
                     {% for item in subject_statuses %}
-                    <article class="subject-status-card">
-                        <span>{% if item.is_active %}Faol{% else %}Tugagan{% endif %}</span>
+                    <article class="subject-status-card subject-status-card-lite">
+                        <div class="subject-status-top">
+                            <span class="status-pill {% if item.is_active %}is-active{% else %}is-expired{% endif %}">
+                                {% if item.is_active %}Faol{% else %}Tugagan{% endif %}
+                            </span>
+                            <strong>{{ item.level }}</strong>
+                        </div>
                         <h3>{{ item.subject }}</h3>
-                        <p>Fan darajasi: <strong>{{ item.level }}</strong></p>
-                        <p>Eng yaxshi natija: {{ item.score }}%</p>
-                        <p>Obuna muddati: {{ item.expires_at|date:"d.m.Y H:i" }}</p>
+                        <div class="subject-status-metrics">
+                            <div>
+                                <small>Eng yaxshi natija</small>
+                                <strong>{{ item.score }}%</strong>
+                            </div>
+                            <div>
+                                <small>Obuna muddati</small>
+                                <strong>{{ item.expires_at|date:"d.m.Y" }}</strong>
+                            </div>
+                        </div>
                     </article>
                     {% empty %}
                     <article class="subject-status-card empty-card">

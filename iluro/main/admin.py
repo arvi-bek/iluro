@@ -2,13 +2,16 @@
 
 from django.contrib import admin
 from django.utils import timezone
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from datetime import timedelta
 from django.contrib import messages
 from .models import (
     Subject, Subscription, Test,
     Question, Choice, UserTest,
     UserAnswer, Profile, UserSubjectPreference, Book, SubjectSectionEntry, EssayTopic,
-    PracticeSet, PracticeExercise, PracticeChoice, UserPracticeAttempt, PracticeSetAttempt,
+    PracticeSet, PracticeExercise, PracticeChoice, UserPracticeAttempt, PracticeSetAttempt, BookView,
+    GrammarLessonQuestion, GrammarLessonProgress,
 )
 
 
@@ -73,8 +76,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
 # ---------------- TEST ----------------
 @admin.register(Test)
 class TestAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "subject", "duration", "difficulty", "created_at")
-    list_filter = ("subject", "difficulty")
+    list_display = ("id", "title", "subject", "category", "duration", "difficulty", "created_at")
+    list_filter = ("subject", "category", "difficulty")
     search_fields = ("title",)
     autocomplete_fields = ("subject",)
     ordering = ("-created_at",)
@@ -89,6 +92,11 @@ class ChoiceInline(admin.TabularInline):
 class PracticeChoiceInline(admin.TabularInline):
     model = PracticeChoice
     extra = 4
+
+
+class GrammarQuestionInline(admin.TabularInline):
+    model = GrammarLessonQuestion
+    extra = 2
 
 
 # ---------------- QUESTION ----------------
@@ -179,7 +187,7 @@ class UserSubjectPreferenceAdmin(admin.ModelAdmin):
 # ---------------- BOOK ----------------
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "subject", "grade", "access_level", "author", "has_pdf", "is_featured", "created_at")
+    list_display = ("id", "title", "subject", "grade", "access_level", "author", "viewer_count", "has_pdf", "is_featured", "created_at")
     list_filter = ("subject", "grade", "access_level", "is_featured", "created_at")
     search_fields = ("title", "author", "subject__name", "grade")
     autocomplete_fields = ("subject",)
@@ -190,15 +198,67 @@ class BookAdmin(admin.ModelAdmin):
     has_pdf.boolean = True
     has_pdf.short_description = "PDF"
 
+    @admin.display(description="Просмотр")
+    def viewer_count(self, obj):
+        return obj.views.aggregate(total=Coalesce(Sum("view_count"), Value(0))).get("total", 0)
+
+
+@admin.register(BookView)
+class BookViewAdmin(admin.ModelAdmin):
+    list_display = ("id", "book", "user", "view_count", "first_viewed_at", "last_viewed_at")
+    list_filter = ("book__subject", "first_viewed_at", "last_viewed_at")
+    search_fields = ("book__title", "user__username", "book__subject__name")
+    autocomplete_fields = ("book", "user")
+    ordering = ("-last_viewed_at",)
+
 
 # ---------------- SUBJECT SECTION ENTRY ----------------
 @admin.register(SubjectSectionEntry)
 class SubjectSectionEntryAdmin(admin.ModelAdmin):
     list_display = ("id", "title", "subject", "section_key", "access_level", "order", "is_featured", "created_at")
     list_filter = ("subject", "section_key", "access_level", "is_featured", "created_at")
-    search_fields = ("title", "summary", "body", "subject__name")
+    search_fields = ("title", "summary", "body", "usage_note", "subject__name")
     autocomplete_fields = ("subject",)
     ordering = ("subject", "section_key", "order", "-created_at")
+    inlines = [GrammarQuestionInline]
+    fields = (
+        "subject",
+        "section_key",
+        "title",
+        "summary",
+        "body",
+        "usage_note",
+        "access_level",
+        "order",
+        "is_featured",
+    )
+
+    def get_inline_instances(self, request, obj=None):
+        if obj and obj.section_key == "grammar":
+            return super().get_inline_instances(request, obj)
+        return []
+
+
+@admin.register(GrammarLessonQuestion)
+class GrammarLessonQuestionAdmin(admin.ModelAdmin):
+    list_display = ("id", "lesson", "order", "short_prompt", "correct_option")
+    list_filter = ("lesson__subject", "lesson__access_level")
+    search_fields = ("prompt", "lesson__title", "lesson__subject__name")
+    autocomplete_fields = ("lesson",)
+    ordering = ("lesson", "order", "id")
+
+    @admin.display(description="Savol")
+    def short_prompt(self, obj):
+        return obj.prompt[:80]
+
+
+@admin.register(GrammarLessonProgress)
+class GrammarLessonProgressAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "lesson", "best_score", "last_score", "attempts_count", "is_completed", "completed_at")
+    list_filter = ("is_completed", "lesson__subject", "lesson__access_level", "completed_at")
+    search_fields = ("user__username", "lesson__title", "lesson__subject__name")
+    autocomplete_fields = ("user", "lesson")
+    ordering = ("-updated_at",)
 
 
 @admin.register(EssayTopic)

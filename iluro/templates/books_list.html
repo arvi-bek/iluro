@@ -56,6 +56,9 @@
                             {% if book.author %}Muallif: {{ book.author }}.{% endif %}
                             {% if book.description %} {{ book.description|truncatechars:140 }}{% endif %}
                         </p>
+                        <div class="content-card-meta">
+                            <span>Просмотр: {{ book.viewer_count }}</span>
+                        </div>
                         {% if book.pdf_url %}
                         <a class="open-link" href="{% url 'book-read' book.id %}?next={{ current_books_path|urlencode }}">Read online</a>
                         {% else %}

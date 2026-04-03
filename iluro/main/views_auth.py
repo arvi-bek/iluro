@@ -6,8 +6,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from datetime import timedelta
 
-from .models import Profile, Subscription, UserSubjectPreference
+from .models import Profile, Subject, Subscription, UserSubjectPreference
 from .services import get_or_sync_profile as _get_or_sync_profile
 from .services import sidebar_context as _sidebar_context
 
@@ -61,11 +62,27 @@ def register_view(request):
             password=password,
             first_name=full_name,
         )
-        Profile.objects.create(
+        beta_trial_end = timezone.now() + timedelta(days=14)
+        profile = Profile.objects.create(
             user=user,
             full_name=full_name,
             role=role,
+            premium_until=beta_trial_end,
         )
+        subjects = list(Subject.objects.all())
+        if subjects:
+            Subscription.objects.bulk_create(
+                [
+                    Subscription(
+                        user=user,
+                        subject=subject,
+                        end_date=beta_trial_end,
+                    )
+                    for subject in subjects
+                ]
+            )
+        request.session["beta_trial_notice"] = True
+        request.session["beta_trial_expires_at"] = beta_trial_end.isoformat()
         login(request, user)
         return redirect("dashboard")
 
@@ -156,7 +173,7 @@ def settings_view(request):
                 defaults={"preferred_level": preferred_level},
             )
 
-        messages.success(request, "Nastroyka saqlandi.")
+        messages.success(request, "Настройка saqlandi.")
         return redirect("settings")
 
     preferred_subject_levels = []

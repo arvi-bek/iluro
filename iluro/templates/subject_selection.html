@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iluro | Fan tanlash</title>
+    <title>Iluro | Obunalar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260401-3">
+    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260402-1">
 </head>
 <body>
     <div class="app-layout">
@@ -17,31 +17,89 @@
             <div class="subjects-shell">
                 <header class="subjects-header">
                     <div>
-                        <p class="eyebrow">Fan tanlash</p>
-                        <h1>Har bir fan uchun oylik obuna `30 000 so'm`.</h1>
+                        <p class="eyebrow">Obunalar</p>
+                        <h1>Milliy sertifikat tayyorlovini o'zingizga mos tarif bilan boshlang.</h1>
                         <p class="lead">
-                            Foydalanuvchi fanlarni shu yerdan ko'radi. Obuna berish esa admin paneldagi
-                            `Subscription` bo'limi orqali xohlagan userga qo'lda biriktiriladi.
+                            Foydalanuvchi fanlarni shu yerdan ko'radi. Hozircha obuna faqat admin paneldagi
+                            <strong>`Subscription`</strong> bo'limi orqali userga qo'lda biriktiriladi.
                         </p>
                     </div>
                     <a class="header-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
                 </header>
 
+                <section class="pricing-stage">
+                    <article class="pricing-hero">
+                        <div class="pricing-hero-copy">
+                            <p class="eyebrow">Tariflar</p>
+                            <h2>Ikki xil yo'l bilan boshlash mumkin.</h2>
+                            <p>
+                                Birinchi variantda foydalanuvchi o'zi xohlagan bitta fanni tanlaydi.
+                                Ikkinchi variantda esa xohlagan <strong>3 ta fan</strong> ichidan
+                                <strong>2 tasining narxiga</strong> oladi va <strong>1 ta bonus fan</strong> qo'shiladi.
+                            </p>
+                        </div>
+                        <div class="pricing-hero-meta">
+                            <span>Faol obunalar</span>
+                            <strong>{{ active_count }} ta</strong>
+                            <small>Hozir foydalanuvchiga aktiv biriktirilgan fanlar soni</small>
+                        </div>
+                    </article>
+
+                    <div class="pricing-grid">
+                        <article class="plan-card">
+                            <div class="plan-top">
+                                <span class="plan-pill">Yakka fan</span>
+                                <strong>30 000 so'm</strong>
+                            </div>
+                            <h3>1 ta fan uchun oylik obuna</h3>
+                            <p>Foydalanuvchi o'ziga kerakli bitta fanni tanlaydi va shu fan bo'yicha to'liq workspace ochiladi.</p>
+                            <ul class="plan-points">
+                                <li>1 ta fan workspace</li>
+                                <li>Kitoblar, testlar va mashqlar</li>
+                                <li>Admin panel orqali aktivlash</li>
+                            </ul>
+                            <span class="plan-note">Hozircha admin tomonidan biriktiriladi</span>
+                        </article>
+
+                        <article class="plan-card featured-plan">
+                            <div class="plan-top">
+                                <span class="plan-pill plan-pill-accent">Eng foydali</span>
+                                <strong>60 000 so'm</strong>
+                            </div>
+                            <h3>3 ta fanni 2 tasi narxiga oling</h3>
+                            <p>Foydalanuvchi xohlagan 3 ta fan tanlaydi, ammo to'lov faqat 2 ta fan narxida bo'ladi.</p>
+                            <ul class="plan-points">
+                                <li>3 ta fan bir vaqtda ochiladi</li>
+                                <li>1 ta fan bonus sifatida beriladi</li>
+                                <li>Milliy sertifikat uchun qulay kombinatsiya</li>
+                            </ul>
+                            <span class="plan-note">Hozircha admin tomonidan biriktiriladi</span>
+                        </article>
+                    </div>
+                </section>
+
                 <section class="summary-panel">
-                    <div>
-                        <p class="eyebrow">Holat</p>
-                        <span>Faol obunalar</span>
-                        <strong>{{ active_count }} ta</strong>
-                    </div>
-                    <div>
-                        <p class="eyebrow">Tarif</p>
-                        <span>Narx</span>
-                        <strong>30 000 so'm / oy</strong>
-                    </div>
                     <div>
                         <p class="eyebrow">Jarayon</p>
                         <span>Aktivlash</span>
                         <strong>Admin panel orqali</strong>
+                    </div>
+                    <div>
+                        <p class="eyebrow">Tarif</p>
+                        <span>Asosiy narx</span>
+                        <strong>30 000 so'm / oy</strong>
+                    </div>
+                    <div>
+                        <p class="eyebrow">Bonus</p>
+                        <span>Paket</span>
+                        <strong>3 ta fan = 2 ta narx</strong>
+                    </div>
+                </section>
+
+                <section class="subjects-head">
+                    <div>
+                        <p class="eyebrow">Fanlar</p>
+                        <h2>Hozir mavjud yo'nalishlar</h2>
                     </div>
                 </section>
 
@@ -49,7 +107,7 @@
                     {% for subject in subject_cards %}
                     <article class="subject-card {% if subject.is_active %}is-active{% endif %}">
                         <div class="card-top">
-                            <span>{% if subject.is_active %}● Faol obuna{% else %}○ Obuna mavjud{% endif %}</span>
+                            <span>{% if subject.is_active %}Faol obuna{% else %}Obuna ochiq{% endif %}</span>
                             <strong>{{ subject.price }} so'm</strong>
                         </div>
                         <h2>{{ subject.name }}</h2>
@@ -61,6 +119,15 @@
                         {% endif %}
                     </article>
                     {% endfor %}
+                </section>
+
+                <section class="referral-panel">
+                    <div class="referral-copy">
+                        <p class="eyebrow">Referral tizim</p>
+                        <h2>Do'st taklif qilish oqimi keyingi bosqichda qo'shiladi.</h2>
+                        <p>Keyinchalik foydalanuvchi taklif havolasi orqali bonus obuna kunlari yoki bonus fanlar olishi mumkin bo'ladi.</p>
+                    </div>
+                    <span class="referral-badge">Soon...</span>
                 </section>
             </div>
         </main>

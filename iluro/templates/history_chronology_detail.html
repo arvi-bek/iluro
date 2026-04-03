@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | {{ subject.name }} | Xronologiya</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260403-4">
+</head>
+<body>
+    <div class="chronology-detail-shell">
+        <main class="chronology-detail-main">
+            <section class="chronology-detail-hero">
+                <p class="eyebrow">Xronologiya</p>
+                <div class="chronology-detail-head">
+                    <div>
+                        <h1>{{ entry.title }}</h1>
+                        <p>{{ chronology_lines|length }} ta tarixiy qator. Bu sahifada sana va davrlarni bir oqimda ko'rishingiz mumkin.</p>
+                    </div>
+                    <span class="chronology-card-count">{{ chronology_lines|length }}+ qator</span>
+                </div>
+                <div class="chronology-detail-actions">
+                    <a class="history-card-toggle chronology-open-link" href="{% url 'subject-workspace-section' subject.id 'chronology' %}">Ortga qaytish</a>
+                    {% if previous_entry %}
+                    <a class="history-card-toggle chronology-open-link is-ghost" href="{% url 'history-chronology-detail' subject.id previous_entry.id %}">Oldingi</a>
+                    {% endif %}
+                    {% if next_entry %}
+                    <a class="history-card-toggle chronology-open-link" href="{% url 'history-chronology-detail' subject.id next_entry.id %}">Keyingi</a>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="chronology-detail-list">
+                {% for line in chronology_lines %}
+                <article class="chronology-line-card">
+                    <span class="chronology-line-index">{{ forloop.counter }}</span>
+                    <p>{{ line }}</p>
+                </article>
+                {% empty %}
+                <article class="history-empty-state">
+                    <h3>Xronologiya qatori topilmadi</h3>
+                    <p>Admin paneldan ushbu bo'limga tarixiy qatorlarni qo'shing.</p>
+                </article>
+                {% endfor %}
+            </section>
+
+            <section class="chronology-detail-bottom">
+                <a class="history-card-toggle chronology-open-link" href="{% url 'subject-workspace-section' subject.id 'chronology' %}">Bo'limga qaytish</a>
+                <div class="chronology-detail-nav">
+                    {% if previous_entry %}
+                    <a class="history-card-toggle chronology-open-link is-ghost" href="{% url 'history-chronology-detail' subject.id previous_entry.id %}">Oldingi bo'lim</a>
+                    {% endif %}
+                    {% if next_entry %}
+                    <a class="history-card-toggle chronology-open-link" href="{% url 'history-chronology-detail' subject.id next_entry.id %}">Keyingi bo'lim</a>
+                    {% endif %}
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

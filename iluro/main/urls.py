@@ -3,11 +3,17 @@ from . import views
 
 urlpatterns = [
     path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("dashboard/beta-notice/dismiss/", views.dismiss_beta_notice_view, name="dismiss-beta-notice"),
     path("profile/", views.profile_view, name="profile"),
     path("settings/", views.settings_view, name="settings"),
     path("subjects/", views.subject_selection_view, name="subject-selection"),
     path("subjects/<int:subject_id>/", views.subject_workspace_view, name="subject-workspace"),
     path("subjects/<int:subject_id>/<str:section>/", views.subject_workspace_view, name="subject-workspace-section"),
+    path(
+        "subjects/<int:subject_id>/chronology/<int:entry_id>/",
+        views.chronology_detail_view,
+        name="history-chronology-detail",
+    ),
     path("statistics/", views.statistics_view, name="statistics"),
     path("tests/", views.tests_list_view, name="tests"),
     path("tests/<int:test_id>/start/", views.test_start_view, name="test-start"),
