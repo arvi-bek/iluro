@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260401-3">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260404-7">
 </head>
 <body>
     <div class="app-layout">
@@ -18,13 +18,33 @@
                 <header class="content-header">
                     <div>
                         <p class="eyebrow">Reyting</p>
-                        <h1>XP asosida foydalanuvchilar reytingi.</h1>
+
                     </div>
                     <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
                 </header>
 
-                <section class="table-panel">
-                    <form class="ranking-filters" method="get">
+                <section class="ranking-summary-panel">
+                    <div class="ranking-summary-copy">
+                        <p class="eyebrow">Sizning holatingiz</p>
+                        <div class="ranking-summary-head">
+                            <div class="ranking-summary-rank">
+                                <span class="ranking-summary-rank-label">O'rningiz</span>
+                                <strong>{% if current_user_row %}#{{ current_user_row.rank }}{% else %}—{% endif %}</strong>
+                            </div>
+                            <div class="ranking-summary-meta">
+                                <span class="ranking-summary-chip">{{ level_info.label }}</span>
+                                <span class="ranking-summary-chip">{{ profile.xp }} XP</span>
+                            </div>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: {{ level_info.progress_percent }}%;"></div>
+                        </div>
+                        <p class="ranking-summary-note">
+                            Keyingi daraja: {{ level_info.next_label }}{% if level_info.next_threshold %} ({{ level_info.next_threshold }} XP){% endif %}
+                            {% if level_info.xp_to_next %}<strong>{{ level_info.xp_to_next }} XP qoldi</strong>{% endif %}
+                        </p>
+                    </div>
+                    <form class="ranking-filters ranking-filters--compact" method="get">
                         <label>
                             <span>Fan bo'yicha</span>
                             <select name="subject">
@@ -45,38 +65,83 @@
                         </label>
                         <button type="submit" class="header-link">Filterlash</button>
                     </form>
-
-                    <table class="ranking-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Foydalanuvchi</th>
-                                <th>Username</th>
-                                <th>XP</th>
-                                <th>Daraja</th>
-                                <th>Testlar</th>
-                                <th>Eng yaxshi foiz</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in ranking_rows %}
-                            <tr>
-                                <td>{{ row.rank }}</td>
-                                <td>{{ row.name }}</td>
-                                <td>{{ row.username }}</td>
-                                <td>{{ row.xp }}</td>
-                                <td>{{ row.level }}</td>
-                                <td>{{ row.tests }}</td>
-                                <td>{{ row.best_score }}%</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7">Tanlangan filter bo'yicha foydalanuvchi natijalari topilmadi.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
                 </section>
+
+                {% if ranking_rows %}
+                <section class="ranking-podium-panel">
+                    <div class="panel-head panel-head--center">
+                        <div>
+                            <p class="eyebrow">Top 3</p>
+                            <h2>Eng kuchli foydalanuvchilar</h2>
+                        </div>
+                    </div>
+                    <div class="ranking-podium">
+                        {% for row in podium_rows %}
+                        <article class="ranking-podium-card ranking-podium-card--{{ row.slot }} ranking-podium-card--{{ row.accent }}">
+                            <span class="ranking-podium-medal">#{{ row.visual_rank }}</span>
+                            <div class="ranking-avatar-wrap">
+                                {% if row.photo_url %}
+                                <img class="ranking-avatar ranking-avatar--photo" src="{{ row.photo_url }}" alt="{{ row.name }}">
+                                {% else %}
+                                <span class="ranking-avatar">{{ row.initials }}</span>
+                                {% endif %}
+                            </div>
+                            <strong>{{ row.name }}</strong>
+                            <span>{{ row.role }}</span>
+                            <div class="ranking-podium-stats">
+                                <span>{{ row.xp }} XP</span>
+                                <span>{{ row.best_score }}%</span>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="ranking-list-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">Barcha o'rinlar</p>
+                            <h2>Qolgan reyting jadvali</h2>
+                        </div>
+                    </div>
+                    {% if remaining_rows %}
+                    <div class="ranking-list">
+                        {% for row in remaining_rows %}
+                        <article class="ranking-row{% if row.is_current_user %} is-current{% endif %}">
+                            <div class="ranking-row-left">
+                                <span class="ranking-row-rank">#{{ row.rank }}</span>
+                                {% if row.photo_url %}
+                                <img class="ranking-avatar ranking-avatar--small ranking-avatar--photo" src="{{ row.photo_url }}" alt="{{ row.name }}">
+                                {% else %}
+                                <span class="ranking-avatar ranking-avatar--small">{{ row.initials }}</span>
+                                {% endif %}
+                                <div class="ranking-row-copy">
+                                    <strong>{{ row.name }}</strong>
+                                    <span>{{ row.role }} · @{{ row.username }}</span>
+                                </div>
+                            </div>
+                            <div class="ranking-row-right">
+                                <span class="ranking-row-pill">{{ row.level }}</span>
+                                <span class="ranking-row-stat">{{ row.tests }} test</span>
+                                <span class="ranking-row-stat">{{ row.best_score }}%</span>
+                                <strong class="ranking-row-xp">{{ row.xp }} XP</strong>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="ranking-empty-inline">
+                        <p>Hozircha barcha foydalanuvchilar podium ichida. Yangi urinishlar bilan jadval kengayadi.</p>
+                    </div>
+                    {% endif %}
+                </section>
+                {% else %}
+                <section class="table-panel ranking-empty-panel">
+                    <p class="eyebrow">Reyting bo'sh</p>
+                    <h2>Tanlangan filter bo'yicha foydalanuvchi natijalari topilmadi.</h2>
+                    <p>Filterlarni yengillashtiring yoki umumiy ko'rinishga qayting.</p>
+                </section>
+                {% endif %}
             </div>
         </main>
     </div>

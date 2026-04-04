@@ -8,23 +8,46 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260403-5">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260404-6">
 </head>
 <body>
     <div class="workspace-shell">
         <aside class="subject-sidebar">
-            <a class="subject-sidebar-brand" href="{% url 'index' %}">ILURO</a>
+            <a class="subject-sidebar-brand subject-sidebar-brand-desktop" href="{% url 'index' %}">ILURO</a>
+
+            <input class="subject-sidebar-toggle-input" type="checkbox" id="subject-sidebar-toggle">
+            <label class="subject-sidebar-mobilebar" for="subject-sidebar-toggle">
+                <span class="subject-sidebar-brand subject-sidebar-brand-mobile">ILURO</span>
+                <span class="subject-sidebar-menu-button" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+            </label>
+
+            <div class="subject-mobile-drawer">
+            <div class="subject-mobile-meta">
+                <div class="subject-mobile-copy">
+                    <strong>{{ profile.full_name|default:request.user.username }}</strong>
+                    <span>{{ subject.name }} · {{ subject_level }}</span>
+                </div>
+                <div class="subject-mobile-links">
+                    <a href="{% url 'settings' %}">Sozlama</a>
+                    <a href="{% url 'logout' %}">Chiqish</a>
+                </div>
+            </div>
 
             <nav class="subject-sidebar-nav">
                 {% for item in section_items %}
                 <a class="{% if item.is_active %}is-active{% endif %}" href="{% if item.key == 'home' %}{% url 'subject-workspace' subject.id %}{% else %}{% url 'subject-workspace-section' subject.id item.key %}{% endif %}">{{ item.label }}</a>
                 {% endfor %}
             </nav>
+            </div>
 
             <div class="subject-sidebar-user">
                 <strong>{{ profile.full_name|default:request.user.username }}</strong>
                 <span>{{ subject_level }}</span>
-                <a href="{% url 'settings' %}">Настройка</a>
+                <a href="{% url 'settings' %}">Sozlama</a>
                 <a href="{% url 'logout' %}">Chiqish</a>
             </div>
         </aside>
@@ -84,28 +107,41 @@
                     {% if current_section == "home" %}
                     <div class="content-panel">
                         <p class="eyebrow">Asosiy menyu</p>
-                        <h2>{{ subject.name }} uchun alohida vibe</h2>
-                        <p>{{ subject_theme.description }}</p>
-                        <div class="metric-grid">
-                            {% for metric in home_metrics %}
-                            <article class="metric-card">
-                                <div class="metric-card-head">
-                                    <span>{{ metric.label }}</span>
-                                    <i class="metric-dot"></i>
-                                </div>
-                                <strong>{{ metric.value }}</strong>
-                                <small>{{ metric.hint }}</small>
-                            </article>
+                        <h2>{{ subject.name }} workspace</h2>
+                        <p>Quyidagi tugmalar orqali kerakli bo'limga tez o'tasiz. Har bir bo'lim alohida vazifa uchun ajratilgan.</p>
+                        <div class="workspace-home-map">
+                            {% for item in section_items %}
+                            <a class="workspace-home-button {% if item.is_active %}is-active{% endif %}" href="{% if item.key == 'home' %}{% url 'subject-workspace' subject.id %}{% else %}{% url 'subject-workspace-section' subject.id item.key %}{% endif %}">
+                                <span>{{ item.label }}</span>
+                                {% if item.key == 'home' %}
+                                <small>Asosiy ko'rinish</small>
+                                {% elif item.key == 'books' %}
+                                <small>Kitob va resurslar</small>
+                                {% elif item.key == 'tests' %}
+                                <small>Test va mashqlar</small>
+                                {% elif item.key == 'formulas' %}
+                                <small>Qisqa qoida va formulalar</small>
+                                {% elif item.key == 'practice' %}
+                                <small>Misol va masalalar</small>
+                                {% elif item.key == 'terms' %}
+                                <small>Atamalar katalogi</small>
+                                {% elif item.key == 'events' %}
+                                <small>Sanalar va voqealar</small>
+                                {% elif item.key == 'chronology' %}
+                                <small>Xronologik tartib</small>
+                                {% elif item.key == 'grammar' %}
+                                <small>Mavzu va mini test</small>
+                                {% elif item.key == 'chat' %}
+                                <small>Yordamchi suhbat</small>
+                                {% else %}
+                                <small>Bo'limni ochish</small>
+                                {% endif %}
+                            </a>
                             {% endfor %}
                         </div>
-                        <div class="content-grid">
-                            {% for card in subject_theme.cards %}
-                            <article class="mini-card">
-                                <span>{{ subject.name }}</span>
-                                <h3>{{ card.title }}</h3>
-                                <p>{{ card.text }}</p>
-                            </article>
-                            {% endfor %}
+                        <div class="workspace-home-note">
+                            <strong>Tavsiya:</strong>
+                            <span>Avval kitob yoki qoida bo'limini ko'ring, keyin test yoki mashq orqali mustahkamlang.</span>
                         </div>
                     </div>
                     {% elif current_section == "books" %}
@@ -150,9 +186,18 @@
                         </div>
                     </div>
                     {% elif current_section == "tests" %}
-                    <div class="content-panel">
-                        <p class="eyebrow">Mashqlar</p>
-                        <h2>{{ subject.name }} testlari</h2>
+                    <div class="content-panel tests-panel">
+                        <div class="workspace-section-intro tests-intro">
+                            <div class="workspace-section-copy">
+                                <p class="eyebrow">Mashqlar</p>
+                                <h2>{{ subject.name }} testlari</h2>
+                                <p class="workspace-section-text">Qisqa bloklarda test ishlang, natijani ko'rib keyingi mavzuga o'ting.</p>
+                            </div>
+                            <div class="workspace-section-meta">
+                                <span class="workspace-section-pill">{{ tests|length }} ta test</span>
+                                <span class="workspace-section-pill is-soft">{{ subject_level }} daraja</span>
+                            </div>
+                        </div>
                         {% if subject_theme.key == "history" %}
                         <section class="workspace-filter-strip test-filter-strip" aria-label="Tarix test filteri">
                             <div class="workspace-filter-row">
@@ -164,7 +209,7 @@
                             </div>
                         </section>
                         {% endif %}
-                        <div class="content-grid">
+                        <div class="content-grid tests-grid">
                             {% for test in tests %}
                             <article class="mini-card">
                                 <div class="mini-card-top">
@@ -341,6 +386,11 @@
                                     <p class="eyebrow">Gramatika</p>
                                     <h2>Mavzular</h2>
                                     <p>{{ grammar_total_count }} ta dars · {{ grammar_selected_level }} daraja</p>
+                                </div>
+
+                                <div class="grammar-overview-strip">
+                                    <span class="grammar-overview-pill">{{ grammar_selected_level }}</span>
+                                    <span class="grammar-overview-pill">{{ grammar_total_count }} ta dars</span>
                                 </div>
 
                                 <div class="grammar-progress-card">

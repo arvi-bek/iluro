@@ -10,74 +10,139 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'css/index.css' %}?v=20260404-4">
 </head>
 <body>
-    <div class="page-shell">
+    <div class="landing-shell">
         <header class="site-header">
+            <div class="header-utility">
+                <span class="utility-pill">Milliy sertifikat</span>
+                <span class="utility-pill">AI yordamchi</span>
+            </div>
             <a class="brand" href="/">ILURO</a>
             <nav class="site-nav">
+                <a href="#overview">Platforma</a>
                 <a href="#subjects">Fanlar</a>
                 <a href="#process">Jarayon</a>
-                <a href="#cta">Boshlash</a>
             </nav>
             <div class="header-actions">
                 {% if request.user.is_authenticated %}
-                    <span class="welcome-chip">{{ request.user.first_name|default:request.user.username }}</span>
-                    <a class="header-link filled" href="{% url 'logout' %}">Chiqish</a>
+                    <a class="header-link" href="{% url 'dashboard' %}">{{ request.user.first_name|default:request.user.username }}</a>
+                    <a class="header-link header-link--filled" href="{% url 'logout' %}">Chiqish</a>
                 {% else %}
                     <a class="header-link" href="{% url 'login' %}">Kirish</a>
-                    <a class="header-link filled" href="{% url 'register' %}">Ro'yxatdan o'tish</a>
+                    <a class="header-link header-link--filled" href="{% url 'register' %}">Boshlash</a>
                 {% endif %}
             </div>
         </header>
 
         <main>
-            <section class="hero">
+            <section class="hero" id="overview">
                 <div class="hero-copy">
-                    <p class="eyebrow">Milliy sertifikat va aqlli tayyorlov platformasi</p>
-                    <h1>Milliy sertifikatga tayyorlaning, AI yordamida fikrlash va yozishni kuchaytiring.</h1>
+                    <p class="eyebrow">Milliy sertifikat va AI yordamchi tayyorlov</p>
+                    <h1>Milliy sertifikat tayyorlovini bitta nazorat qilinadigan oqimga yig'ing.</h1>
                     <p class="hero-text">
-                        Iluro tarix, matematika hamda ona tili va adabiyot bo'yicha tayyorlovni
-                        bitta tartibli tizimga yig'adi. Platforma test ishlash, progressni ko'rish
-                        va AI yordamida insho ustida ishlash imkoniyatini bitta joyda beradi.
+                        Iluro tarix, matematika va ona tili tayyorlovini alohida sahifalar emas,
+                        yagona boshqariladigan mahsulot sifatida beradi: kunlik dars, resurs, test va tahlil.
                     </p>
+                    <div class="hero-metrics">
+                        {% for item in resource_metrics %}
+                        <article class="hero-metric">
+                            <strong>{{ item.value }}</strong>
+                            <span>{{ item.label }}</span>
+                        </article>
+                        {% endfor %}
+                    </div>
                     <div class="hero-actions">
                         {% if request.user.is_authenticated %}
                         <a class="primary-link" href="{% url 'dashboard' %}">Dashboardga o'tish</a>
                         {% else %}
                         <a class="primary-link" href="{% url 'register' %}">Bepul boshlash</a>
                         {% endif %}
-                        <a class="secondary-link" href="#process">Qanday ishlashini ko'rish</a>
+                        <a class="secondary-link" href="#process">Jarayonni ko'rish</a>
                     </div>
-                    <ul class="hero-points">
+                    <div class="hero-callout">
+                        <strong>Bugungi tayyorlov oqimi</strong>
+                        <span>3 fan, real test ritmi, AI tahlil va progress nazorati bir joyda.</span>
+                    </div>
+                    <div class="hero-notes">
                         {% for item in highlights %}
-                        <li>{{ item }}</li>
+                        <div class="hero-note">{{ item }}</div>
                         {% endfor %}
-                    </ul>
+                    </div>
                 </div>
 
-                <div class="hero-visual" aria-hidden="true">
-                    <div class="orb orb-one"></div>
-                    <div class="orb orb-two"></div>
-                    <div class="visual-grid"></div>
-                    <div class="focus-panel">
-                        <span class="focus-label">Asosiy yo'nalish</span>
-                        <strong>Milliy sertifikat tayyorlovini AI bilan boyitilgan bir tizimga jamlash</strong>
-                        <p>Tarix, Matematika va Ona tili fanlari bilan birga insho yozish sifati ustida ishlash uchun ham qulay muhit.</p>
+                <div class="hero-board" aria-hidden="true">
+                    <div class="hero-board-glow"></div>
+                    <div class="hero-board-grid"></div>
+                    <div class="hero-board-window">
+                        <div class="hero-board-top">
+                            <div class="hero-board-tabs">
+                                <span class="hero-board-tab is-active">Kunlik dars</span>
+                                <span class="hero-board-tab">Mening oqimim</span>
+                                <span class="hero-board-tab">Lug'at</span>
+                            </div>
+                            <div class="hero-board-user">
+                                <span class="hero-board-badge">Pre-A1</span>
+                            </div>
+                        </div>
+
+                        <article class="hero-board-focus">
+                            <div class="hero-board-focus-copy">
+                                <span class="hero-board-label">Bugungi oqim</span>
+                                <strong>3 fanlik tayyorlov rejasi</strong>
+                                <p>Kunlik dars, resurs va mini test bitta learning-board ichida.</p>
+                            </div>
+                            <div class="hero-learning-bar">
+                                <span></span>
+                            </div>
+                        </article>
+
+                        <div class="hero-board-core">
+                            <div class="hero-board-subjects">
+                                {% for subject in subjects %}
+                                <article class="hero-board-subject">
+                                    <span class="hero-board-subject-index">0{{ forloop.counter }}</span>
+                                    <strong>{{ subject.name }}</strong>
+                                    <p>{{ subject.accent }}</p>
+                                </article>
+                                {% endfor %}
+                            </div>
+
+                            <div class="hero-board-side">
+                                <article class="hero-board-card hero-board-card--accent">
+                                    <span class="hero-board-label">Resurslar</span>
+                                    <strong>Yig'ilgan tayyorlov bazasi</strong>
+                                    <div class="hero-board-points hero-board-points--tight">
+                                        {% for item in resource_metrics %}
+                                        <span>{{ item.value }} {{ item.label }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </article>
+                                <article class="hero-board-card">
+                                    <span class="hero-board-label">AI yordamchi</span>
+                                    <strong>Mavzu tahlili, xato izohi va insho reja generatori</strong>
+                                    <div class="hero-board-points hero-board-points--tight">
+                                        {% for item in curriculum_points %}
+                                        <span>{{ item }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </article>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <section class="features-section" id="about">
-                <div class="section-heading">
+            <section class="support-strip">
+                <div class="support-copy">
                     <p class="eyebrow">Nima uchun Iluro</p>
-                    <h2>Faqat test platformasi emas, chuqurroq o'qish va yozish muhiti.</h2>
+                    <h2>Tarqoq tayyorlov emas, boshqariladigan learning product.</h2>
                 </div>
-                <div class="features-list">
+                <div class="support-list">
                     {% for feature in features %}
-                    <article class="feature-block">
-                        <h3>{{ feature.title }}</h3>
+                    <article class="support-item">
+                        <strong>{{ feature.title }}</strong>
                         <p>{{ feature.text }}</p>
                     </article>
                     {% endfor %}
@@ -86,14 +151,14 @@
 
             <section class="subjects-section" id="subjects">
                 <div class="section-heading">
-                    <p class="eyebrow">Moslashuvchan yo'nalish</p>
-                    <h2>Bir xil yo'l emas, o'zingiz tanlagan fanlar asosida shaxsiy tayyorlov.</h2>
+                    <p class="eyebrow">Fanlar tizimi</p>
+                    <h2>Har bir fan alohida ritmga ega, lekin bir xil platforma ichida boshqariladi.</h2>
                 </div>
-                <div class="subjects-list">
+                <div class="subject-lanes">
                     {% for subject in subjects %}
-                    <article class="subject-block">
-                        <p class="subject-number">0{{ forloop.counter }}</p>
-                        <h3>{{ subject.name }}</h3>
+                    <article class="subject-lane">
+                        <span>0{{ forloop.counter }}</span>
+                        <strong>{{ subject.name }}</strong>
                         <p>{{ subject.accent }}</p>
                     </article>
                     {% endfor %}
@@ -102,14 +167,14 @@
 
             <section class="process-section" id="process">
                 <div class="section-heading">
-                    <p class="eyebrow">Soddalashtirilgan oqim</p>
-                    <h2>Odamga qulay, chalg'itmaydigan va amaliy uch bosqich.</h2>
+                    <p class="eyebrow">Ish jarayoni</p>
+                    <h2>Bir qarashda tushuniladigan uch bosqichli tayyorlov oqimi.</h2>
                 </div>
-                <div class="process-list">
+                <div class="process-track">
                     {% for step in steps %}
-                    <article class="process-item">
-                        <span>{{ step.number }}</span>
-                        <h3>{{ step.title }}</h3>
+                    <article class="process-step">
+                        <span class="process-number">{{ step.number }}</span>
+                        <strong>{{ step.title }}</strong>
                         <p>{{ step.description }}</p>
                     </article>
                     {% endfor %}
@@ -117,8 +182,8 @@
             </section>
 
             <section class="cta-section" id="cta">
-                <p class="eyebrow">Endi boshlash mumkin</p>
-                <h2>Hisob yarating, dashboardga kiring va fanlar bilan ishlashni keyingi bosqichga olib chiqing.</h2>
+                <p class="eyebrow">Boshlash</p>
+                <h2>Hisob yarating va tayyorlovni tizimli oqimga o'tkazing.</h2>
                 {% if request.user.is_authenticated %}
                 <a class="primary-link" href="{% url 'dashboard' %}">Dashboardga o'tish</a>
                 {% else %}

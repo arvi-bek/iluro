@@ -97,6 +97,14 @@ def _build_grammar_points(entry):
     return deduped[:2]
 
 
+def _build_user_initials(display_name, username):
+    source = (display_name or username or "?").strip()
+    parts = [part for part in source.replace("_", " ").split() if part]
+    if len(parts) >= 2:
+        return f"{parts[0][0]}{parts[1][0]}".upper()
+    return source[:2].upper()
+
+
 def _build_grammar_lesson_rows(entries, progress_map):
     lesson_rows = []
     unlocked = True
@@ -611,6 +619,7 @@ def ranking_view(request):
     for index, user in enumerate(users, start=1):
         profile = getattr(user, "profile", None)
         display_name = profile.full_name if profile and profile.full_name else user.first_name or user.username
+        role_label = profile.get_role_display() if profile else "O'quvchi"
         ranking_rows.append(
             {
                 "rank": index,
@@ -620,6 +629,41 @@ def ranking_view(request):
                 "tests": user.total_tests,
                 "level": getattr(profile, "level", "S") if profile else "S",
                 "xp": user.effective_xp,
+                "role": role_label,
+                "initials": _build_user_initials(display_name, user.username),
+                "photo_url": profile.photo.url if profile and profile.photo else "",
+                "is_current_user": user.id == request.user.id,
+            }
+        )
+
+    current_user_row = next((row for row in ranking_rows if row["is_current_user"]), None)
+    podium_source = ranking_rows[:3]
+    podium_rows = []
+    if len(podium_source) > 1:
+        podium_rows.append(
+            {
+                **podium_source[1],
+                "visual_rank": 2,
+                "accent": "silver",
+                "slot": "left",
+            }
+        )
+    if len(podium_source) > 0:
+        podium_rows.append(
+            {
+                **podium_source[0],
+                "visual_rank": 1,
+                "accent": "gold",
+                "slot": "center",
+            }
+        )
+    if len(podium_source) > 2:
+        podium_rows.append(
+            {
+                **podium_source[2],
+                "visual_rank": 3,
+                "accent": "bronze",
+                "slot": "right",
             }
         )
 
@@ -629,6 +673,9 @@ def ranking_view(request):
         {
             **sidebar,
             "ranking_rows": ranking_rows,
+            "current_user_row": current_user_row,
+            "podium_rows": podium_rows,
+            "remaining_rows": ranking_rows[3:],
             "ranking_subjects": subject_queryset,
             "selected_subject": subject_filter,
             "selected_tests_filter": tests_filter,

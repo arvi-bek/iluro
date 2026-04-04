@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260401-6">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260404-6">
 </head>
 <body>
     <div class="content-shell">
@@ -21,6 +21,7 @@
                 </p>
             </div>
             <div class="reader-actions">
+                <a class="header-link reader-full-link" href="{{ mobile_pdf_url }}" target="_blank" rel="noopener">To'liq reader</a>
                 <a class="header-link" href="{{ back_url }}">Kitoblarga qaytish</a>
             </div>
         </header>
@@ -47,6 +48,10 @@
         <section class="reader-panel">
             <div class="reader-note">
                 Yuklab olish va alohida ochish yopilgan. Kitobni shu oynaning ichida o'qishingiz mumkin.
+            </div>
+            <div class="reader-mobile-fallback">
+                <p>Mobil qurilmada kitobni to'liq varaqlash uchun alohida readerni yangi tabda oching. O'qib bo'lgach tabni yopib sahifaga qaytasiz.</p>
+                <a class="header-link reader-mobile-link" href="{{ mobile_pdf_url }}" target="_blank" rel="noopener">To'liq readerni ochish</a>
             </div>
             <iframe src="{% url 'book-pdf' book.id %}?token={{ reader_token }}" title="{{ book.title }}"></iframe>
         </section>

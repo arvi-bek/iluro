@@ -155,6 +155,7 @@ def book_read_view(request, book_id):
             "reader_token": token,
             "back_url": back_url,
             "viewer_count": viewer_count,
+            "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile",
         },
     )
 
@@ -171,11 +172,12 @@ def book_pdf_view(request, book_id):
     provided_token = request.GET.get("token", "")
     expected_token = session_tokens.get(str(book.id))
     fetch_dest = request.META.get("HTTP_SEC_FETCH_DEST", "")
+    reader_mode = request.GET.get("reader", "")
 
     if not expected_token or provided_token != expected_token:
         return HttpResponseForbidden("Bu PDF faqat sayt ichidagi reader orqali ochiladi.")
 
-    if fetch_dest and fetch_dest not in {"iframe", "embed", "object"}:
+    if reader_mode != "mobile" and fetch_dest and fetch_dest not in {"iframe", "embed", "object"}:
         return HttpResponseForbidden("Bu PDF alohida ochish uchun yopilgan.")
 
     response = FileResponse(book.pdf_file.open("rb"), content_type="application/pdf")

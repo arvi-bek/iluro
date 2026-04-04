@@ -32,7 +32,32 @@
             </symbol>
         </defs>
     </svg>
-    <a class="app-sidebar-brand" href="{% url 'index' %}">ILURO</a>
+    <a class="app-sidebar-brand app-sidebar-brand-desktop" href="{% url 'index' %}">ILURO</a>
+
+    <input class="app-sidebar-toggle-input" type="checkbox" id="app-sidebar-toggle">
+    <label class="app-sidebar-mobilebar" for="app-sidebar-toggle">
+        <span class="app-sidebar-brand app-sidebar-brand-mobile">ILURO</span>
+        <span class="app-sidebar-menu-button" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+        </span>
+    </label>
+
+    <div class="app-mobile-drawer">
+
+    <div class="app-mobile-meta">
+        <div class="app-mobile-meta-copy">
+            <strong>{{ profile.full_name|default:request.user.username|default:request.user.username }}</strong>
+            {% if level_info %}
+            <span>{{ level_info.label }} · {{ profile.get_role_display }}</span>
+            {% endif %}
+        </div>
+        <div class="app-mobile-links">
+            <a href="{% url 'settings' %}">Sozlama</a>
+            <a href="{% url 'logout' %}">Chiqish</a>
+        </div>
+    </div>
 
     <nav class="app-sidebar-nav">
         <a class="{% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'subject-workspace' %}is-active{% endif %}" href="{% url 'dashboard' %}">
@@ -73,6 +98,16 @@
         </a>
     </nav>
 
+    <a class="app-sidebar-beta-link" href="https://t.me/+c5-ItPYBkKcyNTU6" target="_blank" rel="noopener noreferrer">
+        <span class="app-sidebar-beta-emoji">📣</span>
+        <span class="app-sidebar-beta-copy">
+            <strong>Beta guruh</strong>
+            <span>Fikr, qo'llab-quvvatlash va yangiliklar</span>
+        </span>
+        <span class="app-sidebar-beta-arrow">↗</span>
+    </a>
+    </div>
+
     <div class="app-sidebar-user">
         <div class="app-sidebar-user-top">
             <div class="app-sidebar-avatar" aria-hidden="true">{{ profile.full_name|default:request.user.username|first|upper }}</div>
@@ -84,8 +119,16 @@
             </div>
         </div>
         <div class="app-sidebar-actions">
-            <a href="{% url 'settings' %}">Настройка</a>
+            <a href="{% url 'settings' %}">Sozlama</a>
             <a href="{% url 'logout' %}">Chiqish</a>
         </div>
+        <a class="app-sidebar-beta-link app-sidebar-beta-link--footer" href="https://t.me/+c5-ItPYBkKcyNTU6" target="_blank" rel="noopener noreferrer">
+            <span class="app-sidebar-beta-emoji">✨</span>
+            <span class="app-sidebar-beta-copy">
+                <strong>Beta community</strong>
+                <span>Yangiliklar va qo'llab-quvvatlash</span>
+            </span>
+            <span class="app-sidebar-beta-arrow">↗</span>
+        </a>
     </div>
 </aside>

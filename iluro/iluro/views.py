@@ -8,6 +8,16 @@ def index(request: HttpRequest):
         {"name": "Matematika", "accent": "Masala, formulalar va vaqtni boshqarish bo'yicha qat'iy mashq"},
         {"name": "Ona tili va adabiyot", "accent": "Matn, grammatika va AI yordamida insho ustida ishlash"},
     ]
+    resource_metrics = [
+        {"value": "70+", "label": "Gramatika darslari"},
+        {"value": "100+", "label": "Formula va qoida"},
+        {"value": "700+", "label": "Atama va sanalar"},
+    ]
+    curriculum_points = [
+        "Har kunlik dars ritmi",
+        "Mini test va progress nazorati",
+        "AI yordamida tushuntirish va tahlil",
+    ]
     highlights = [
         "Fanlarni foydalanuvchi o'zi tanlaydi",
         "Milliy sertifikat formatiga mos test oqimi",
@@ -46,6 +56,8 @@ def index(request: HttpRequest):
     ]
     context = {
         "subjects": subjects,
+        "resource_metrics": resource_metrics,
+        "curriculum_points": curriculum_points,
         "highlights": highlights,
         "features": features,
         "steps": steps,

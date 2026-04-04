@@ -200,6 +200,66 @@ body {
     font-weight: 700;
 }
 
+.app-sidebar-beta-link {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(138, 84, 37, 0.14);
+    background: linear-gradient(180deg, rgba(255, 248, 238, 0.9), rgba(255, 252, 246, 0.82));
+    color: var(--text);
+    text-decoration: none;
+    box-shadow: 0 12px 24px rgba(103, 69, 38, 0.06);
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.app-sidebar-beta-link:hover {
+    transform: translateY(-2px);
+    border-color: rgba(168, 106, 51, 0.24);
+}
+
+.app-sidebar-beta-link--footer {
+    margin-top: 2px;
+}
+
+.app-sidebar-beta-emoji,
+.app-sidebar-beta-arrow {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.app-sidebar-beta-copy strong {
+    display: block;
+    font-size: 0.92rem;
+}
+
+.app-sidebar-beta-copy span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.app-mobile-meta {
+    display: none;
+}
+
+.app-sidebar-toggle-input,
+.app-sidebar-mobilebar,
+.app-sidebar-brand-mobile {
+    display: none;
+}
+
+.app-mobile-drawer {
+    display: contents;
+}
+
+.app-sidebar-menu-button {
+    flex: 0 0 auto;
+}
+
 .app-main {
     grid-column: 2;
     min-width: 0;
@@ -565,5 +625,432 @@ body {
 
     .app-sidebar-actions {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    body {
+        font-size: 14px;
+    }
+
+    .app-sidebar-toggle-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .app-sidebar {
+        position: static;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+        display: block;
+        padding: 10px 12px 8px;
+    }
+
+    .app-sidebar-brand {
+        min-height: 36px;
+        padding: 0 12px;
+        letter-spacing: 0.14em;
+        font-size: 0.82rem;
+    }
+
+    .app-sidebar-brand-desktop {
+        display: none;
+    }
+
+    .app-sidebar-mobilebar {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        cursor: pointer;
+    }
+
+    .app-sidebar-brand-mobile {
+        display: inline-flex;
+    }
+
+    .app-sidebar-menu-button {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        border: 1px solid rgba(138, 84, 37, 0.14);
+        background: rgba(255, 250, 244, 0.84);
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .app-sidebar-menu-button span {
+        width: 15px;
+        height: 1.75px;
+        border-radius: 999px;
+        background: var(--accent-strong);
+        transition: transform 160ms ease, opacity 160ms ease;
+    }
+
+    .app-mobile-drawer {
+        display: none;
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 20px;
+        background: rgba(255, 251, 245, 0.78);
+        border: 1px solid rgba(138, 84, 37, 0.1);
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar + .app-mobile-drawer {
+        display: grid;
+        gap: 10px;
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar .app-sidebar-menu-button span:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar .app-sidebar-menu-button span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar .app-sidebar-menu-button span:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    .app-mobile-meta {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+    }
+
+    .app-mobile-meta-copy strong {
+        display: block;
+        font-size: 0.88rem;
+        line-height: 1.2;
+    }
+
+    .app-mobile-meta-copy span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 0.74rem;
+        line-height: 1.4;
+    }
+
+    .app-mobile-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+
+    .app-mobile-links a {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 10px;
+        border-radius: 999px;
+        text-decoration: none;
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(138, 84, 37, 0.12);
+        font-size: 0.76rem;
+        font-weight: 600;
+    }
+
+    .app-sidebar-nav {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        overflow: visible;
+        padding-right: 0;
+    }
+
+    .app-sidebar-nav a {
+        min-height: 42px;
+        justify-content: flex-start;
+        text-align: left;
+        gap: 8px;
+        padding: 0 12px;
+        border-radius: 16px;
+        flex-direction: row;
+        align-items: flex-start;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    .app-sidebar-nav a.is-active::before {
+        display: none;
+    }
+
+    .nav-link-icon,
+    .nav-link-icon svg {
+        width: 16px;
+        height: 16px;
+        flex-basis: 16px;
+    }
+
+    .nav-link-label {
+        font-size: 0.8rem;
+        line-height: 1.15;
+    }
+
+    .app-sidebar-user {
+        display: none;
+    }
+
+    .subjects-shell {
+        width: min(100%, calc(100% - 18px));
+        padding: 14px 0 22px;
+        gap: 16px;
+    }
+
+    .subjects-header,
+    .pricing-hero,
+    .referral-panel {
+        gap: 14px;
+    }
+
+    .subjects-header {
+        padding: 18px;
+        border-radius: 24px;
+    }
+
+    .subjects-header h1 {
+        font-size: clamp(1.6rem, 7vw, 2rem);
+        line-height: 1.05;
+    }
+
+    .lead,
+    .pricing-hero-copy p,
+    .plan-card p,
+    .subject-card p,
+    .referral-panel p {
+        font-size: 0.92rem;
+        line-height: 1.65;
+    }
+
+    .header-link,
+    .plan-note,
+    .status-chip,
+    .referral-badge,
+    .plan-pill {
+        font-size: 0.78rem;
+    }
+
+    .pricing-stage,
+    .summary-panel,
+    .subjects-head,
+    .subjects-grid,
+    .referral-panel {
+        border-radius: 24px;
+    }
+
+    .pricing-hero,
+    .summary-panel,
+    .referral-panel,
+    .plan-card,
+    .subject-card {
+        padding: 18px;
+    }
+
+    .pricing-hero-meta strong {
+        margin-top: 6px;
+        font-size: 1.55rem;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .plan-card h3,
+    .subjects-head h2 {
+        font-size: 1.18rem;
+    }
+
+    .plan-card strong,
+    .card-top strong {
+        font-size: 0.94rem;
+    }
+
+    .plan-points {
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .plan-points li {
+        padding-left: 16px;
+        font-size: 0.9rem;
+        line-height: 1.55;
+    }
+
+    .summary-panel {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .summary-panel strong {
+        margin-top: 4px;
+        font-size: 1.02rem;
+    }
+
+    .subjects-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .subject-card h2 {
+        margin: 14px 0 8px;
+        font-size: 1.12rem;
+        line-height: 1.2;
+    }
+
+    .referral-panel h2 {
+        font-size: 1.18rem;
+        line-height: 1.2;
+        max-width: none;
+    }
+}
+
+@media (max-width: 520px) {
+    body {
+        font-size: 13px;
+    }
+
+    .app-sidebar {
+        padding: 12px 10px;
+    }
+
+    .app-sidebar-mobilebar {
+        gap: 10px;
+    }
+
+    .app-mobile-drawer {
+        padding: 10px;
+        border-radius: 18px;
+    }
+
+    .app-sidebar-beta-link {
+        padding: 10px 12px;
+        border-radius: 16px;
+    }
+
+    .app-sidebar-beta-copy strong {
+        font-size: 0.86rem;
+    }
+
+    .app-sidebar-beta-copy span {
+        font-size: 0.76rem;
+    }
+
+    .app-sidebar-brand {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 0.82rem;
+        letter-spacing: 0.12em;
+    }
+
+    .app-mobile-meta-copy strong {
+        font-size: 0.92rem;
+    }
+
+    .app-mobile-meta-copy span {
+        font-size: 0.78rem;
+    }
+
+    .app-mobile-links a {
+        min-height: 34px;
+        border-radius: 12px;
+        font-size: 0.82rem;
+    }
+
+    .app-sidebar-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .app-sidebar-nav a {
+        min-height: 48px;
+        padding: 10px 8px;
+        gap: 6px;
+        align-items: flex-start;
+    }
+
+    .nav-link-label {
+        font-size: 0.73rem;
+        line-height: 1.18;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    .subjects-shell {
+        width: min(100%, calc(100% - 14px));
+        padding: 14px 0 24px;
+        gap: 12px;
+    }
+
+    .subjects-header,
+    .pricing-hero,
+    .summary-panel,
+    .plan-card,
+    .subject-card,
+    .referral-panel {
+        padding: 15px;
+        border-radius: 20px;
+    }
+
+    .subjects-header h1 {
+        font-size: 1.42rem;
+    }
+
+    .lead,
+    .pricing-hero-copy p,
+    .plan-card p,
+    .subject-card p,
+    .referral-panel p,
+    .plan-points li {
+        font-size: 0.86rem;
+    }
+
+    .eyebrow {
+        font-size: 0.68rem;
+        letter-spacing: 0.2em;
+    }
+
+    .header-link,
+    .plan-note,
+    .status-chip,
+    .referral-badge,
+    .plan-pill {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 0.74rem;
+    }
+
+    .plan-top,
+    .card-top {
+        gap: 10px;
+    }
+
+    .plan-card h3,
+    .subjects-head h2,
+    .subject-card h2,
+    .referral-panel h2 {
+        font-size: 1.02rem;
+    }
+
+    .pricing-hero-meta strong {
+        font-size: 1.32rem;
+    }
+
+    .summary-panel span {
+        font-size: 0.78rem;
+    }
+
+    .summary-panel strong {
+        font-size: 0.94rem;
     }
 }

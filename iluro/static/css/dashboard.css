@@ -210,6 +210,48 @@ body {
     font-weight: 700;
 }
 
+.app-sidebar-beta-link {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(138, 84, 37, 0.14);
+    background: linear-gradient(180deg, rgba(255, 248, 238, 0.9), rgba(255, 252, 246, 0.82));
+    color: var(--text);
+    text-decoration: none;
+    box-shadow: 0 12px 24px rgba(103, 69, 38, 0.06);
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.app-sidebar-beta-link:hover {
+    transform: translateY(-2px);
+    border-color: rgba(168, 106, 51, 0.24);
+}
+
+.app-sidebar-beta-link--footer {
+    margin-top: 2px;
+}
+
+.app-sidebar-beta-emoji,
+.app-sidebar-beta-arrow {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.app-sidebar-beta-copy strong {
+    display: block;
+    font-size: 0.92rem;
+}
+
+.app-sidebar-beta-copy span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
 .dashboard-main {
     grid-column: 2;
     padding: 28px;
@@ -866,5 +908,463 @@ body {
 
     .app-sidebar-actions {
         grid-template-columns: 1fr;
+    }
+}
+
+.app-mobile-meta {
+    display: none;
+}
+
+.app-sidebar-toggle-input,
+.app-sidebar-mobilebar,
+.app-sidebar-brand-mobile {
+    display: none;
+}
+
+.app-mobile-drawer {
+    display: contents;
+}
+
+.app-sidebar-menu-button {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 760px) {
+    .app-sidebar-toggle-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .app-sidebar {
+        display: block;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+        gap: 10px;
+        padding: 10px 12px 8px;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .app-sidebar-brand {
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        letter-spacing: 0.15em;
+    }
+
+    .app-sidebar-brand-desktop {
+        display: none;
+    }
+
+    .app-sidebar-mobilebar {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        cursor: pointer;
+    }
+
+    .app-sidebar-brand-mobile {
+        display: inline-flex;
+    }
+
+    .app-sidebar-menu-button {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        border: 1px solid rgba(138, 84, 37, 0.14);
+        background: rgba(255, 250, 244, 0.84);
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .app-sidebar-menu-button span {
+        width: 15px;
+        height: 1.75px;
+        border-radius: 999px;
+        background: var(--accent-strong);
+        transition: transform 160ms ease, opacity 160ms ease;
+    }
+
+    .app-mobile-drawer {
+        display: none;
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 18px;
+        background: rgba(255, 251, 245, 0.86);
+        border: 1px solid rgba(138, 84, 37, 0.1);
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar + .app-mobile-drawer {
+        display: grid;
+        gap: 10px;
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar .app-sidebar-menu-button span:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar .app-sidebar-menu-button span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .app-sidebar-toggle-input:checked ~ .app-sidebar-mobilebar .app-sidebar-menu-button span:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    .app-mobile-meta {
+        display: grid;
+        gap: 8px;
+        padding: 0 2px;
+    }
+
+    .app-mobile-meta-copy {
+        min-width: 0;
+    }
+
+    .app-mobile-meta strong {
+        display: block;
+        font-size: 0.88rem;
+        line-height: 1.1;
+    }
+
+    .app-mobile-meta span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 0.74rem;
+    }
+
+    .app-mobile-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+
+    .app-mobile-links a {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 250, 244, 0.84);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.76rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .app-sidebar-nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        overflow: visible;
+        min-height: 0;
+        align-content: start;
+        padding-right: 0;
+        padding: 0;
+    }
+
+    .app-sidebar-nav a {
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 16px;
+        gap: 8px;
+        background: rgba(255, 250, 244, 0.82);
+        border: 1px solid rgba(138, 84, 37, 0.12);
+        justify-content: flex-start;
+        align-items: flex-start;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    .nav-link-label {
+        white-space: normal;
+        line-height: 1.15;
+        font-size: 0.82rem;
+    }
+
+    .app-sidebar-nav a.is-active::before {
+        display: none;
+    }
+
+    .app-sidebar-user {
+        display: none;
+    }
+
+    .dashboard-main {
+        padding: 16px;
+    }
+
+    .subject-strip,
+    .dashboard-topbar,
+    .hero-panel,
+    .subject-panel,
+    .info-card,
+    .action-panel {
+        border-radius: 24px;
+    }
+
+    .subject-strip {
+        padding: 16px;
+    }
+
+    .subject-strip-status {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .dashboard-topbar h1 {
+        font-size: 1.9rem;
+        line-height: 1.08;
+    }
+
+    .hero-panel {
+        padding: 22px 18px;
+        gap: 18px;
+    }
+
+    .hero-panel h2 {
+        max-width: none;
+        font-size: 1.75rem;
+    }
+
+    .hero-highlights,
+    .action-list {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+    }
+
+    .hero-highlights::-webkit-scrollbar,
+    .action-list::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@media (max-width: 520px) {
+    body {
+        font-size: 14px;
+    }
+
+    .app-sidebar {
+        padding: 10px 12px 8px;
+    }
+
+    .app-sidebar-mobilebar {
+        gap: 10px;
+    }
+
+    .app-mobile-drawer {
+        padding: 10px;
+        border-radius: 18px;
+    }
+
+    .app-sidebar-beta-link {
+        padding: 10px 12px;
+        border-radius: 16px;
+    }
+
+    .app-sidebar-beta-copy strong {
+        font-size: 0.86rem;
+    }
+
+    .app-sidebar-beta-copy span {
+        font-size: 0.76rem;
+    }
+
+    .app-sidebar-brand {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 0.84rem;
+    }
+
+    .app-mobile-meta strong {
+        font-size: 0.9rem;
+    }
+
+    .app-mobile-meta span {
+        font-size: 0.74rem;
+    }
+
+    .app-mobile-links a {
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 0.76rem;
+    }
+
+    .app-sidebar-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .app-sidebar-nav a {
+        min-height: 52px;
+        padding: 10px 8px;
+        gap: 6px;
+        align-items: flex-start;
+    }
+
+    .nav-link-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .nav-link-label {
+        font-size: 0.73rem;
+        line-height: 1.18;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    .dashboard-main {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .subject-strip {
+        padding: 14px;
+    }
+
+    .subject-strip-head {
+        margin-bottom: 10px;
+    }
+
+    .subject-strip-head span {
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 0.76rem;
+    }
+
+    .xp-strip {
+        padding: 14px;
+    }
+
+    .xp-strip-head strong,
+    .xp-strip-head span,
+    .xp-strip-foot small {
+        font-size: 0.76rem;
+    }
+
+    .subject-strip-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .subject-pill {
+        min-height: 74px;
+        padding: 12px 14px;
+        border-radius: 18px;
+    }
+
+    .subject-pill strong {
+        font-size: 0.96rem;
+    }
+
+    .subject-pill small {
+        font-size: 0.72rem;
+    }
+
+    .dashboard-topbar h1 {
+        font-size: 1.42rem;
+        line-height: 1.04;
+        max-width: none;
+    }
+
+    .topbar-link {
+        min-height: 36px;
+        font-size: 0.8rem;
+    }
+
+    .hero-panel,
+    .subject-panel,
+    .info-card,
+    .action-panel,
+    .stat-card {
+        border-radius: 20px;
+    }
+
+    .hero-panel {
+        padding: 18px 16px;
+        gap: 14px;
+    }
+
+    .hero-panel h2 {
+        font-size: 1.34rem;
+        line-height: 1.08;
+    }
+
+    .hero-panel p,
+    .action-panel-copy p:last-child,
+    .info-card p:last-child,
+    .subject-card p,
+    .practice-card p {
+        font-size: 0.86rem;
+        line-height: 1.55;
+    }
+
+    .hero-action-primary,
+    .hero-action-secondary,
+    .card-link {
+        min-height: 38px;
+        font-size: 0.8rem;
+    }
+
+    .stat-card,
+    .subject-card,
+    .practice-card,
+    .info-card,
+    .action-panel {
+        padding: 16px;
+    }
+
+    .stat-card strong {
+        margin: 10px 0 6px;
+        font-size: 1.45rem;
+    }
+
+    .subject-card h4,
+    .practice-card h4 {
+        font-size: 0.98rem;
+        margin: 8px 0 6px;
+    }
+
+    .subject-card span,
+    .subject-card-top strong,
+    .practice-card span,
+    .card-mini-pill,
+    .stat-card-head p {
+        font-size: 0.72rem;
+    }
+
+    .subject-card small {
+        font-size: 0.74rem;
+    }
+
+    .info-card h3,
+    .action-panel h3,
+    .section-head h3 {
+        font-size: 1.08rem;
+        line-height: 1.15;
+    }
+
+    .soon-pill,
+    .action-list span,
+    .hero-highlights span {
+        min-height: 34px;
+        padding: 0 10px;
+        font-size: 0.74rem;
     }
 }
