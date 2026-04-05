@@ -69,6 +69,102 @@ class Subscription(models.Model):
     def __str__(self):
         return f"{self.user} - {self.subject}"
 
+
+class SubscriptionPlan(models.Model):
+    code = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=100)
+    subject_limit = models.PositiveIntegerField(null=True, blank=True)
+    is_all_access = models.BooleanField(default=False)
+    price = models.IntegerField(default=0)
+    duration_days = models.PositiveIntegerField(default=30)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("price", "name")
+        verbose_name = "Obuna rejasi"
+        verbose_name_plural = "Obuna rejalari"
+
+    def __str__(self):
+        return self.name
+
+
+class UserSubscription(models.Model):
+    STATUS_CHOICES = [
+        ("active", "Faol"),
+        ("expired", "Tugagan"),
+        ("cancelled", "Bekor qilingan"),
+    ]
+    SOURCE_CHOICES = [
+        ("purchase", "Sotib olish"),
+        ("beta_trial", "Beta trial"),
+        ("legacy_import", "Legacy import"),
+        ("manual", "Qo'lda"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bundle_subscriptions", db_index=True)
+    plan = models.ForeignKey(
+        SubscriptionPlan,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="subscriptions",
+    )
+    title = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="purchase")
+    is_all_access = models.BooleanField(default=False)
+    started_at = models.DateTimeField(default=timezone.now)
+    end_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-end_at", "-created_at")
+        verbose_name = "Foydalanuvchi obunasi"
+        verbose_name_plural = "Foydalanuvchi obunalari"
+        indexes = [
+            models.Index(fields=("user", "status", "end_at"), name="main_usub_user_stat_end_idx"),
+            models.Index(fields=("user", "created_at"), name="main_usub_user_created_idx"),
+        ]
+
+    @property
+    def is_active(self):
+        return self.status == "active" and self.end_at >= timezone.now()
+
+    def save(self, *args, **kwargs):
+        if not self.title and self.plan_id:
+            self.title = self.plan.name
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user} - {self.title or self.plan or 'Obuna'}"
+
+
+class UserSubscriptionSubject(models.Model):
+    subscription = models.ForeignKey(
+        UserSubscription,
+        on_delete=models.CASCADE,
+        related_name="subjects",
+        db_index=True,
+    )
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="subscription_items", db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Obunadagi fan"
+        verbose_name_plural = "Obunadagi fanlar"
+        constraints = [
+            models.UniqueConstraint(fields=("subscription", "subject"), name="unique_subscription_subject"),
+        ]
+        indexes = [
+            models.Index(fields=("subscription", "subject"), name="main_usubj_subj_idx"),
+            models.Index(fields=("subject",), name="main_usubj_subject_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.subscription_id} - {self.subject.name}"
+
 class Test(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, db_index=True)
     title = models.CharField(max_length=255)
@@ -127,6 +223,10 @@ class UserTest(models.Model):
     class Meta:
         verbose_name = "Test urinish"
         verbose_name_plural = "Test urinishlari"
+        indexes = [
+            models.Index(fields=("user", "finished_at"), name="main_usert_user_finish_idx"),
+            models.Index(fields=("user", "test"), name="main_usert_user_test_idx"),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.test}"
@@ -148,6 +248,9 @@ class UserAnswer(models.Model):
     class Meta:
         verbose_name = "Foydalanuvchi javobi"
         verbose_name_plural = "Foydalanuvchi javoblari"
+        indexes = [
+            models.Index(fields=("user", "question"), name="main_uans_user_question_idx"),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.question.id}"
@@ -186,6 +289,59 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+
+class UserStatSummary(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="stat_summary")
+    lifetime_xp = models.IntegerField(default=0)
+    lifetime_test_count = models.PositiveIntegerField(default=0)
+    lifetime_practice_count = models.PositiveIntegerField(default=0)
+    total_correct_answers = models.PositiveIntegerField(default=0)
+    total_correct_test_answers = models.PositiveIntegerField(default=0)
+    total_correct_practice_answers = models.PositiveIntegerField(default=0)
+    best_test_score = models.PositiveIntegerField(default=0)
+    best_practice_score = models.PositiveIntegerField(default=0)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Foydalanuvchi umumiy statistikasi"
+        verbose_name_plural = "Foydalanuvchi umumiy statistikasi"
+        indexes = [
+            models.Index(fields=("lifetime_xp",), name="main_ustat_xp_idx"),
+            models.Index(fields=("last_activity_at",), name="main_ustat_last_act_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} statistikasi"
+
+
+class UserSubjectStat(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subject_stats", db_index=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="user_stats", db_index=True)
+    xp = models.IntegerField(default=0)
+    tests_taken = models.PositiveIntegerField(default=0)
+    practice_taken = models.PositiveIntegerField(default=0)
+    total_correct_answers = models.PositiveIntegerField(default=0)
+    total_correct_test_answers = models.PositiveIntegerField(default=0)
+    total_correct_practice_answers = models.PositiveIntegerField(default=0)
+    best_score = models.PositiveIntegerField(default=0)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Foydalanuvchi fan statistikasi"
+        verbose_name_plural = "Foydalanuvchi fan statistikasi"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "subject"), name="unique_user_subject_stat"),
+        ]
+        indexes = [
+            models.Index(fields=("user", "subject"), name="main_usub_user_subject_idx"),
+            models.Index(fields=("subject", "xp"), name="main_usub_subject_xp_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.subject.name}"
 
 
 class UserSubjectPreference(models.Model):
@@ -270,6 +426,9 @@ class SubjectSectionEntry(models.Model):
         ordering = ("order", "-is_featured", "-created_at")
         verbose_name = "Fan bo'limi materiali"
         verbose_name_plural = "Fan bo'limi materiallari"
+        indexes = [
+            models.Index(fields=("subject", "section_key", "order"), name="main_ssect_sub_sec_ord_idx"),
+        ]
 
     def __str__(self):
         return f"{self.subject.name} - {self.title}"
@@ -403,6 +562,10 @@ class PracticeExercise(models.Model):
         ordering = ("-is_featured", "-created_at")
         verbose_name = "Misol / Masala"
         verbose_name_plural = "Misol / Masalalar"
+        indexes = [
+            models.Index(fields=("practice_set", "created_at"), name="main_pexpr_set_created_idx"),
+            models.Index(fields=("subject", "difficulty"), name="main_pexpr_subject_diff_idx"),
+        ]
 
     def clean(self):
         if self.practice_set:
@@ -453,6 +616,10 @@ class UserPracticeAttempt(models.Model):
         ordering = ("-created_at",)
         verbose_name = "Misol / Masala urinish"
         verbose_name_plural = "Misol / Masala urinishlari"
+        indexes = [
+            models.Index(fields=("user", "created_at"), name="main_upra_user_created_idx"),
+            models.Index(fields=("user", "practice_session"), name="main_upra_user_session_idx"),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.exercise}"
@@ -470,6 +637,10 @@ class PracticeSetAttempt(models.Model):
         ordering = ("-created_at",)
         verbose_name = "Misol / Masala bo'limi urinish"
         verbose_name_plural = "Misol / Masala bo'limi urinishlari"
+        indexes = [
+            models.Index(fields=("user", "created_at"), name="main_pset_user_created_idx"),
+            models.Index(fields=("user", "practice_set"), name="main_pset_user_set_idx"),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.practice_set}"

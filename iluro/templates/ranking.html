@@ -5,10 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iluro | Reyting</title>
+    {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260404-7">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260405-ranking2">
 </head>
 <body>
     <div class="app-layout">
@@ -18,22 +19,36 @@
                 <header class="content-header">
                     <div>
                         <p class="eyebrow">Reyting</p>
-
+                        <h1>Natijalar jadvali</h1>
                     </div>
-                    <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
+                    <a class="header-link secondary-link" href="{% url 'dashboard' %}">Dashboard</a>
                 </header>
 
                 <section class="ranking-summary-panel">
                     <div class="ranking-summary-copy">
-                        <p class="eyebrow">Sizning holatingiz</p>
+                        <p class="eyebrow ranking-summary-kicker">Siz</p>
                         <div class="ranking-summary-head">
                             <div class="ranking-summary-rank">
                                 <span class="ranking-summary-rank-label">O'rningiz</span>
-                                <strong>{% if current_user_row %}#{{ current_user_row.rank }}{% else %}—{% endif %}</strong>
+                                <strong>{% if current_user_row %}#{{ current_user_row.rank }}{% else %}-{% endif %}</strong>
                             </div>
-                            <div class="ranking-summary-meta">
-                                <span class="ranking-summary-chip">{{ level_info.label }}</span>
-                                <span class="ranking-summary-chip">{{ profile.xp }} XP</span>
+                            <div class="ranking-summary-user">
+                                <strong>{{ profile.full_name|default:request.user.username }}</strong>
+                                <span>{{ profile.get_role_display }}</span>
+                            </div>
+                        </div>
+                        <div class="ranking-summary-stats">
+                            <div class="ranking-summary-stat">
+                                <span>Daraja</span>
+                                <strong>{{ level_info.label }}</strong>
+                            </div>
+                            <div class="ranking-summary-stat">
+                                <span>XP</span>
+                                <strong>{{ profile.xp }}</strong>
+                            </div>
+                            <div class="ranking-summary-stat">
+                                <span>Testlar</span>
+                                <strong>{% if current_user_row %}{{ current_user_row.tests }}{% else %}0{% endif %}</strong>
                             </div>
                         </div>
                         <div class="progress-track">
@@ -44,27 +59,6 @@
                             {% if level_info.xp_to_next %}<strong>{{ level_info.xp_to_next }} XP qoldi</strong>{% endif %}
                         </p>
                     </div>
-                    <form class="ranking-filters ranking-filters--compact" method="get">
-                        <label>
-                            <span>Fan bo'yicha</span>
-                            <select name="subject">
-                                <option value="">Barcha fanlar</option>
-                                {% for subject in ranking_subjects %}
-                                <option value="{{ subject.id }}" {% if selected_subject == subject.id|stringformat:"s" %}selected{% endif %}>{{ subject.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Ishlagan testlar</span>
-                            <select name="tests">
-                                <option value="all" {% if selected_tests_filter == "all" %}selected{% endif %}>Barchasi</option>
-                                <option value="1_4" {% if selected_tests_filter == "1_4" %}selected{% endif %}>1-4 ta</option>
-                                <option value="5_9" {% if selected_tests_filter == "5_9" %}selected{% endif %}>5-9 ta</option>
-                                <option value="10_plus" {% if selected_tests_filter == "10_plus" %}selected{% endif %}>10+ ta</option>
-                            </select>
-                        </label>
-                        <button type="submit" class="header-link">Filterlash</button>
-                    </form>
                 </section>
 
                 {% if ranking_rows %}
@@ -117,13 +111,15 @@
                                 {% endif %}
                                 <div class="ranking-row-copy">
                                     <strong>{{ row.name }}</strong>
-                                    <span>{{ row.role }} · @{{ row.username }}</span>
+                                    <span>{{ row.role }} | @{{ row.username }}</span>
+                                    <div class="ranking-row-inline">
+                                        <span>{{ row.tests }} ta test</span>
+                                        <span>{{ row.best_score }}% best</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="ranking-row-right">
                                 <span class="ranking-row-pill">{{ row.level }}</span>
-                                <span class="ranking-row-stat">{{ row.tests }} test</span>
-                                <span class="ranking-row-stat">{{ row.best_score }}%</span>
                                 <strong class="ranking-row-xp">{{ row.xp }} XP</strong>
                             </div>
                         </article>
@@ -138,8 +134,8 @@
                 {% else %}
                 <section class="table-panel ranking-empty-panel">
                     <p class="eyebrow">Reyting bo'sh</p>
-                    <h2>Tanlangan filter bo'yicha foydalanuvchi natijalari topilmadi.</h2>
-                    <p>Filterlarni yengillashtiring yoki umumiy ko'rinishga qayting.</p>
+                    <h2>Hozircha reyting uchun ma'lumot topilmadi.</h2>
+                    <p>Yangi urinishlar paydo bo'lgach jadval shu yerda ko'rinadi.</p>
                 </section>
                 {% endif %}
             </div>

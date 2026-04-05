@@ -1,3 +1,4 @@
+{% load static %}
 <aside class="app-sidebar">
     <svg class="ui-icon-sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">
         <defs>
@@ -32,11 +33,15 @@
             </symbol>
         </defs>
     </svg>
-    <a class="app-sidebar-brand app-sidebar-brand-desktop" href="{% url 'index' %}">ILURO</a>
+    <a class="app-sidebar-brand app-sidebar-brand-desktop" href="{% url 'index' %}" aria-label="ILURO bosh sahifa">
+        {% include "partials/brand_logo.html" with logo_width="123" logo_height="28" %}
+    </a>
 
     <input class="app-sidebar-toggle-input" type="checkbox" id="app-sidebar-toggle">
     <label class="app-sidebar-mobilebar" for="app-sidebar-toggle">
-        <span class="app-sidebar-brand app-sidebar-brand-mobile">ILURO</span>
+        <span class="app-sidebar-brand app-sidebar-brand-mobile" aria-label="ILURO">
+            {% include "partials/brand_logo.html" with logo_width="110" logo_height="25" %}
+        </span>
         <span class="app-sidebar-menu-button" aria-hidden="true">
             <span></span>
             <span></span>

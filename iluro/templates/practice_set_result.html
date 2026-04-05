@@ -5,10 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iluro | {{ practice_set.title }} natijasi</title>
+    {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260405b">
 </head>
 <body>
     <div class="flow-shell">
@@ -29,26 +30,26 @@
                     <strong>{{ practice_set.topic|default:"Ko'rsatilmagan" }}</strong>
                 </article>
             </div>
-
-            <div class="review-list">
-                {% for item in review_items %}
-                <article class="review-card {% if item.is_correct %}correct{% else %}wrong{% endif %}">
-                    <p class="question-index">{{ forloop.counter }}-topshiriq</p>
-                    <h2>{{ item.prompt }}</h2>
-                    <div class="review-meta">
-                        {% if item.title %}<p><strong>Ichki nom:</strong> {{ item.title }}</p>{% endif %}
-                        <p><strong>Sizning javobingiz:</strong> {{ item.selected }}</p>
-                        <p><strong>To'g'ri javob:</strong> {{ item.correct }}</p>
-                        {% if item.explanation %}<p><strong>Izoh:</strong> {{ item.explanation }}</p>{% endif %}
-                    </div>
-                </article>
-                {% endfor %}
-            </div>
-
+            <p class="lead">{{ practice_session.total_count }} ta topshiriqdan {{ practice_session.correct_count }} tasi to'g'ri bajarildi. Quyida har bir topshiriq bo'yicha natija ko'rsatilgan.</p>
             <div class="result-actions">
                 <a class="primary-btn link-btn" href="{% url 'practice-set-solve' practice_set.id %}?next={{ next_url|urlencode }}">Qayta ishlash</a>
-                <a class="back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' practice_set.subject.id 'problems' %}{% endif %}">Misol / Masalalarga qaytish</a>
+                <a class="ghost-btn" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' practice_set.subject.id 'problems' %}{% endif %}">Misol / Masalalarga qaytish</a>
             </div>
+        </section>
+
+        <section class="review-list">
+            {% for item in review_items %}
+            <article class="review-card {% if item.is_correct %}correct{% else %}wrong{% endif %}">
+                <p class="question-index">{{ forloop.counter }}-topshiriq</p>
+                <h2>{{ item.prompt }}</h2>
+                <div class="review-meta">
+                    {% if item.title %}<p><strong>Ichki nom:</strong> {{ item.title }}</p>{% endif %}
+                    <p><strong>Sizning javobingiz:</strong> {{ item.selected }}</p>
+                    <p><strong>To'g'ri javob:</strong> {{ item.correct }}</p>
+                    {% if item.explanation %}<p><strong>Izoh:</strong> {{ item.explanation }}</p>{% endif %}
+                </div>
+            </article>
+            {% endfor %}
         </section>
     </div>
 </body>

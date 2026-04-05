@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iluro | Milliy Sertifikat Tayyorlov</title>
+    {% include "partials/favicon.html" %}
     <meta name="description" content="Milliy sertifikat uchun fanlarni o'zingiz tanlaydigan va testlarni real formatda ishlaydigan platforma.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +20,9 @@
                 <span class="utility-pill">Milliy sertifikat</span>
                 <span class="utility-pill">AI yordamchi</span>
             </div>
-            <a class="brand" href="/">ILURO</a>
+            <a class="brand" href="/" aria-label="ILURO bosh sahifa">
+                {% include "partials/brand_logo.html" with logo_width="132" logo_height="30" %}
+            </a>
             <nav class="site-nav">
                 <a href="#overview">Platforma</a>
                 <a href="#subjects">Fanlar</a>

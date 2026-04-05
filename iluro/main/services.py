@@ -1,21 +1,498 @@
+import json
+
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
 from .models import (
+    Choice,
+    EssayTopic,
+    GrammarLessonQuestion,
+    PracticeChoice,
+    PracticeExercise,
+    PracticeSetAttempt,
+    PracticeSet,
+    Question,
     Profile,
+    SubscriptionPlan,
+    SubjectSectionEntry,
+    Subject,
     Subscription,
+    Test,
+    UserAnswer,
+    UserSubscription,
+    UserSubscriptionSubject,
+    UserStatSummary,
+    UserSubjectStat,
     UserSubjectPreference,
     UserPracticeAttempt,
     UserTest,
 )
 from .utils import (
-    XP_PER_CORRECT_PRACTICE_ANSWER,
-    XP_PER_CORRECT_TEST_ANSWER,
+    calculate_practice_set_xp,
+    calculate_single_practice_xp,
+    calculate_test_xp,
     get_allowed_level_labels,
     get_level_info,
     normalize_difficulty_label,
 )
+
+
+ASSESSMENT_HISTORY_LIMIT = 5
+
+
+def rebuild_user_statistics(user):
+    user_tests = list(
+        UserTest.objects.filter(user=user)
+        .select_related("test")
+        .order_by("-finished_at", "-started_at", "-id")
+    )
+    practice_sessions = list(
+        PracticeSetAttempt.objects.filter(user=user)
+        .select_related("practice_set", "practice_set__subject")
+        .order_by("-created_at", "-id")
+    )
+    practice_attempts = list(
+        UserPracticeAttempt.objects.filter(user=user)
+        .select_related("exercise", "exercise__subject", "practice_session")
+        .order_by("-created_at", "-id")
+    )
+
+    total_correct_test_answers = sum(max(0, attempt.correct_count or 0) for attempt in user_tests)
+    total_correct_practice_answers = sum(1 for attempt in practice_attempts if attempt.is_correct)
+    test_xp = 0
+    practice_xp = 0
+    lifetime_xp = test_xp + practice_xp
+    best_test_score = max((attempt.score or 0 for attempt in user_tests), default=0)
+    session_best_practice = max((attempt.score or 0 for attempt in practice_sessions), default=0)
+    single_best_practice = 100 if any(attempt.is_correct for attempt in practice_attempts if attempt.practice_session_id is None) else 0
+    best_practice_score = max(session_best_practice, single_best_practice)
+
+    last_activity_candidates = [
+        attempt.finished_at or attempt.started_at
+        for attempt in user_tests
+        if attempt.finished_at or attempt.started_at
+    ]
+    last_activity_candidates.extend(attempt.created_at for attempt in practice_sessions if attempt.created_at)
+    last_activity_candidates.extend(attempt.created_at for attempt in practice_attempts if attempt.created_at)
+    last_activity_at = max(last_activity_candidates, default=None)
+
+    summary, _ = UserStatSummary.objects.update_or_create(
+        user=user,
+        defaults={
+            "lifetime_xp": lifetime_xp,
+            "lifetime_test_count": len(user_tests),
+            "lifetime_practice_count": len(practice_attempts),
+            "total_correct_answers": total_correct_test_answers + total_correct_practice_answers,
+            "total_correct_test_answers": total_correct_test_answers,
+            "total_correct_practice_answers": total_correct_practice_answers,
+            "best_test_score": best_test_score,
+            "best_practice_score": best_practice_score,
+            "last_activity_at": last_activity_at,
+        },
+    )
+
+    subject_stats = {}
+    for attempt in user_tests:
+        attempt_total_count = attempt.snapshot_json.get("question_count") or Question.objects.filter(test=attempt.test).count()
+        attempt_xp = calculate_test_xp(
+            attempt.correct_count,
+            attempt_total_count,
+            attempt.test.difficulty,
+        )
+        if attempt.snapshot_json.get("xp_awarded") != attempt_xp:
+            attempt.snapshot_json = {**attempt.snapshot_json, "xp_awarded": attempt_xp}
+            attempt.save(update_fields=["snapshot_json"])
+        test_xp += attempt_xp
+        lifetime_xp += attempt_xp
+        subject_id = attempt.test.subject_id
+        stats = subject_stats.setdefault(
+            subject_id,
+            {
+                "subject": attempt.test.subject,
+                "xp": 0,
+                "tests_taken": 0,
+                "practice_taken": 0,
+                "total_correct_test_answers": 0,
+                "total_correct_practice_answers": 0,
+                "best_score": 0,
+                "last_activity_at": None,
+            },
+        )
+        stats["tests_taken"] += 1
+        stats["total_correct_test_answers"] += max(0, attempt.correct_count or 0)
+        stats["xp"] += attempt_xp
+        stats["best_score"] = max(stats["best_score"], attempt.score or 0)
+        attempt_time = attempt.finished_at or attempt.started_at
+        if attempt_time and (stats["last_activity_at"] is None or attempt_time > stats["last_activity_at"]):
+            stats["last_activity_at"] = attempt_time
+
+    for attempt in practice_attempts:
+        subject_id = attempt.exercise.subject_id
+        stats = subject_stats.setdefault(
+            subject_id,
+            {
+                "subject": attempt.exercise.subject,
+                "xp": 0,
+                "tests_taken": 0,
+                "practice_taken": 0,
+                "total_correct_test_answers": 0,
+                "total_correct_practice_answers": 0,
+                "best_score": 0,
+                "last_activity_at": None,
+            },
+        )
+        stats["practice_taken"] += 1
+        if attempt.is_correct:
+            stats["total_correct_practice_answers"] += 1
+            if attempt.practice_session_id is None:
+                attempt_xp = calculate_single_practice_xp(attempt.is_correct, attempt.exercise.difficulty)
+                stats["xp"] += attempt_xp
+                practice_xp += attempt_xp
+                lifetime_xp += attempt_xp
+                stats["best_score"] = max(stats["best_score"], 100)
+        if attempt.created_at and (stats["last_activity_at"] is None or attempt.created_at > stats["last_activity_at"]):
+            stats["last_activity_at"] = attempt.created_at
+
+    for session in practice_sessions:
+        session_xp = calculate_practice_set_xp(
+            session.correct_count,
+            session.total_count,
+            session.practice_set.difficulty,
+        )
+        practice_xp += session_xp
+        lifetime_xp += session_xp
+        subject_id = session.practice_set.subject_id
+        stats = subject_stats.setdefault(
+            subject_id,
+            {
+                "subject": session.practice_set.subject,
+                "xp": 0,
+                "tests_taken": 0,
+                "practice_taken": 0,
+                "total_correct_test_answers": 0,
+                "total_correct_practice_answers": 0,
+                "best_score": 0,
+                "last_activity_at": None,
+            },
+        )
+        stats["xp"] += session_xp
+        stats["best_score"] = max(stats["best_score"], session.score or 0)
+        if session.created_at and (stats["last_activity_at"] is None or session.created_at > stats["last_activity_at"]):
+            stats["last_activity_at"] = session.created_at
+
+    summary.lifetime_xp = lifetime_xp
+    summary.save(update_fields=["lifetime_xp", "updated_at"])
+
+    UserSubjectStat.objects.filter(user=user).exclude(subject_id__in=subject_stats.keys()).delete()
+    for subject_id, stats in subject_stats.items():
+        total_correct_answers = stats["total_correct_test_answers"] + stats["total_correct_practice_answers"]
+        UserSubjectStat.objects.update_or_create(
+            user=user,
+            subject=stats["subject"],
+            defaults={
+                "xp": stats["xp"],
+                "tests_taken": stats["tests_taken"],
+                "practice_taken": stats["practice_taken"],
+                "total_correct_answers": total_correct_answers,
+                "total_correct_test_answers": stats["total_correct_test_answers"],
+                "total_correct_practice_answers": stats["total_correct_practice_answers"],
+                "best_score": stats["best_score"],
+                "last_activity_at": stats["last_activity_at"],
+            },
+        )
+
+    return summary
+
+
+def get_user_stat_summary(user):
+    summary = getattr(user, "stat_summary", None)
+    if summary is not None:
+        return summary
+    return rebuild_user_statistics(user)
+
+
+def record_test_completion_stats(user_test):
+    summary = get_user_stat_summary(user_test.user)
+    correct_count = max(0, user_test.correct_count or 0)
+    total_count = user_test.snapshot_json.get("question_count") or Question.objects.filter(test=user_test.test).count()
+    xp_awarded = calculate_test_xp(correct_count, total_count, user_test.test.difficulty)
+    finished_at = user_test.finished_at or user_test.started_at or timezone.now()
+
+    summary.lifetime_xp += xp_awarded
+    summary.lifetime_test_count += 1
+    summary.total_correct_answers += correct_count
+    summary.total_correct_test_answers += correct_count
+    summary.best_test_score = max(summary.best_test_score, user_test.score or 0)
+    summary.last_activity_at = max(filter(None, [summary.last_activity_at, finished_at]), default=finished_at)
+    summary.save(
+        update_fields=[
+            "lifetime_xp",
+            "lifetime_test_count",
+            "total_correct_answers",
+            "total_correct_test_answers",
+            "best_test_score",
+            "last_activity_at",
+            "updated_at",
+        ]
+    )
+
+    subject_stat, _ = UserSubjectStat.objects.get_or_create(
+        user=user_test.user,
+        subject=user_test.test.subject,
+    )
+    subject_stat.xp += xp_awarded
+    subject_stat.tests_taken += 1
+    subject_stat.total_correct_answers += correct_count
+    subject_stat.total_correct_test_answers += correct_count
+    subject_stat.best_score = max(subject_stat.best_score, user_test.score or 0)
+    subject_stat.last_activity_at = max(filter(None, [subject_stat.last_activity_at, finished_at]), default=finished_at)
+    subject_stat.save(
+        update_fields=[
+            "xp",
+            "tests_taken",
+            "total_correct_answers",
+            "total_correct_test_answers",
+            "best_score",
+            "last_activity_at",
+            "updated_at",
+        ]
+    )
+
+
+def record_practice_session_completion_stats(practice_session):
+    summary = get_user_stat_summary(practice_session.user)
+    correct_count = max(0, practice_session.correct_count or 0)
+    total_count = max(0, practice_session.total_count or 0)
+    xp_awarded = calculate_practice_set_xp(
+        correct_count,
+        total_count,
+        practice_session.practice_set.difficulty,
+    )
+    created_at = practice_session.created_at or timezone.now()
+
+    summary.lifetime_xp += xp_awarded
+    summary.lifetime_practice_count += total_count
+    summary.total_correct_answers += correct_count
+    summary.total_correct_practice_answers += correct_count
+    summary.best_practice_score = max(summary.best_practice_score, practice_session.score or 0)
+    summary.last_activity_at = max(filter(None, [summary.last_activity_at, created_at]), default=created_at)
+    summary.save(
+        update_fields=[
+            "lifetime_xp",
+            "lifetime_practice_count",
+            "total_correct_answers",
+            "total_correct_practice_answers",
+            "best_practice_score",
+            "last_activity_at",
+            "updated_at",
+        ]
+    )
+
+    subject_stat, _ = UserSubjectStat.objects.get_or_create(
+        user=practice_session.user,
+        subject=practice_session.practice_set.subject,
+    )
+    subject_stat.xp += xp_awarded
+    subject_stat.practice_taken += total_count
+    subject_stat.total_correct_answers += correct_count
+    subject_stat.total_correct_practice_answers += correct_count
+    subject_stat.best_score = max(subject_stat.best_score, practice_session.score or 0)
+    subject_stat.last_activity_at = max(filter(None, [subject_stat.last_activity_at, created_at]), default=created_at)
+    subject_stat.save(
+        update_fields=[
+            "xp",
+            "practice_taken",
+            "total_correct_answers",
+            "total_correct_practice_answers",
+            "best_score",
+            "last_activity_at",
+            "updated_at",
+        ]
+    )
+
+
+def record_single_practice_attempt_stats(attempt):
+    summary = get_user_stat_summary(attempt.user)
+    xp_awarded = calculate_single_practice_xp(attempt.is_correct, attempt.exercise.difficulty)
+    created_at = attempt.created_at or timezone.now()
+    score = 100 if attempt.is_correct else 0
+
+    summary.lifetime_xp += xp_awarded
+    summary.lifetime_practice_count += 1
+    summary.total_correct_answers += 1 if attempt.is_correct else 0
+    summary.total_correct_practice_answers += 1 if attempt.is_correct else 0
+    summary.best_practice_score = max(summary.best_practice_score, score)
+    summary.last_activity_at = max(filter(None, [summary.last_activity_at, created_at]), default=created_at)
+    summary.save(
+        update_fields=[
+            "lifetime_xp",
+            "lifetime_practice_count",
+            "total_correct_answers",
+            "total_correct_practice_answers",
+            "best_practice_score",
+            "last_activity_at",
+            "updated_at",
+        ]
+    )
+
+    subject_stat, _ = UserSubjectStat.objects.get_or_create(
+        user=attempt.user,
+        subject=attempt.exercise.subject,
+    )
+    subject_stat.xp += xp_awarded
+    subject_stat.practice_taken += 1
+    subject_stat.total_correct_answers += 1 if attempt.is_correct else 0
+    subject_stat.total_correct_practice_answers += 1 if attempt.is_correct else 0
+    subject_stat.best_score = max(subject_stat.best_score, score)
+    subject_stat.last_activity_at = max(filter(None, [subject_stat.last_activity_at, created_at]), default=created_at)
+    subject_stat.save(
+        update_fields=[
+            "xp",
+            "practice_taken",
+            "total_correct_answers",
+            "total_correct_practice_answers",
+            "best_score",
+            "last_activity_at",
+            "updated_at",
+        ]
+    )
+
+
+def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
+    keep_recent = max(int(keep_recent or ASSESSMENT_HISTORY_LIMIT), 1)
+
+    kept_test_ids = list(
+        UserTest.objects.filter(user=user)
+        .order_by("-finished_at", "-started_at", "-id")
+        .values_list("id", flat=True)[:keep_recent]
+    )
+    if kept_test_ids:
+        UserTest.objects.filter(user=user).exclude(id__in=kept_test_ids).delete()
+        kept_test_subject_ids = UserTest.objects.filter(id__in=kept_test_ids).values_list("test_id", flat=True)
+        kept_question_ids = Question.objects.filter(test_id__in=kept_test_subject_ids).values_list("id", flat=True)
+        UserAnswer.objects.filter(user=user).exclude(question_id__in=kept_question_ids).delete()
+    else:
+        UserTest.objects.filter(user=user).delete()
+        UserAnswer.objects.filter(user=user).delete()
+
+    kept_session_ids = list(
+        PracticeSetAttempt.objects.filter(user=user)
+        .order_by("-created_at", "-id")
+        .values_list("id", flat=True)[:keep_recent]
+    )
+    if kept_session_ids:
+        PracticeSetAttempt.objects.filter(user=user).exclude(id__in=kept_session_ids).delete()
+    else:
+        PracticeSetAttempt.objects.filter(user=user).delete()
+
+    kept_single_attempt_ids = list(
+        UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=True)
+        .order_by("-created_at", "-id")
+        .values_list("id", flat=True)[:keep_recent]
+    )
+    if kept_single_attempt_ids:
+        UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=True).exclude(
+            id__in=kept_single_attempt_ids
+        ).delete()
+    else:
+        UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=True).delete()
+
+
+def ensure_default_subscription_plans():
+    defaults = [
+        {"code": "single-subject", "name": "1 fan", "subject_limit": 1, "is_all_access": False, "price": 30000, "duration_days": 30},
+        {"code": "double-subject", "name": "2 fan", "subject_limit": 2, "is_all_access": False, "price": 55000, "duration_days": 30},
+        {"code": "triple-subject", "name": "3 fan", "subject_limit": 3, "is_all_access": False, "price": 75000, "duration_days": 30},
+        {"code": "all-access", "name": "All access", "subject_limit": None, "is_all_access": True, "price": 90000, "duration_days": 30},
+        {"code": "beta-trial-all-access", "name": "Beta trial", "subject_limit": None, "is_all_access": True, "price": 0, "duration_days": 14},
+    ]
+    plans = {}
+    for item in defaults:
+        plan, _ = SubscriptionPlan.objects.update_or_create(
+            code=item["code"],
+            defaults={
+                "name": item["name"],
+                "subject_limit": item["subject_limit"],
+                "is_all_access": item["is_all_access"],
+                "price": item["price"],
+                "duration_days": item["duration_days"],
+                "is_active": True,
+            },
+        )
+        plans[item["code"]] = plan
+    return plans
+
+
+def create_user_beta_trial_subscription(user, end_at=None):
+    plans = ensure_default_subscription_plans()
+    plan = plans["beta-trial-all-access"]
+    end_at = end_at or (timezone.now() + timedelta(days=plan.duration_days))
+    return UserSubscription.objects.create(
+        user=user,
+        plan=plan,
+        title=plan.name,
+        source="beta_trial",
+        status="active",
+        is_all_access=True,
+        started_at=timezone.now(),
+        end_at=end_at,
+    )
+
+
+def get_user_subject_access_rows(user, active_only=False):
+    now = timezone.now()
+    access_map = {}
+
+    legacy_rows = Subscription.objects.filter(user=user).select_related("subject")
+    if active_only:
+        legacy_rows = legacy_rows.filter(end_date__gte=now)
+
+    for row in legacy_rows:
+        existing = access_map.get(row.subject_id)
+        if existing is None or row.end_date > existing["end_at"]:
+            access_map[row.subject_id] = {
+                "subject": row.subject,
+                "subject_id": row.subject_id,
+                "end_at": row.end_date,
+                "source": "legacy",
+            }
+
+    bundle_rows = UserSubscription.objects.filter(user=user).prefetch_related("subjects__subject")
+    if active_only:
+        bundle_rows = bundle_rows.filter(status="active", end_at__gte=now)
+
+    all_subjects_cache = None
+    for subscription in bundle_rows:
+        if subscription.is_all_access:
+            if all_subjects_cache is None:
+                all_subjects_cache = list(Subject.objects.all())
+            for subject in all_subjects_cache:
+                existing = access_map.get(subject.id)
+                if existing is None or subscription.end_at > existing["end_at"]:
+                    access_map[subject.id] = {
+                        "subject": subject,
+                        "subject_id": subject.id,
+                        "end_at": subscription.end_at,
+                        "source": "bundle",
+                    }
+            continue
+
+        for item in subscription.subjects.all():
+            existing = access_map.get(item.subject_id)
+            if existing is None or subscription.end_at > existing["end_at"]:
+                access_map[item.subject_id] = {
+                    "subject": item.subject,
+                    "subject_id": item.subject_id,
+                    "end_at": subscription.end_at,
+                    "source": "bundle",
+                }
+
+    rows = list(access_map.values())
+    rows.sort(key=lambda item: item["subject"].name)
+    return rows
 
 
 def get_subject_theme(subject_name):
@@ -81,18 +558,536 @@ def get_subject_theme(subject_name):
     }
 
 
+def import_test_from_json_payload(payload, *, subject_override=None, replace=False):
+    if not isinstance(payload, dict):
+        raise ValidationError("JSON top-level dict bo'lishi kerak.")
+
+    title = (payload.get("title") or "").strip()
+    difficulty = (payload.get("difficulty") or "").strip()
+    category = (payload.get("category") or "general").strip() or "general"
+    duration = int(payload.get("duration_minutes") or 40)
+    questions = payload.get("questions") or []
+    derived_answer_key = payload.get("derived_answer_key") or {}
+
+    if not title:
+        raise ValidationError("JSON ichida title majburiy.")
+    if not difficulty:
+        raise ValidationError("JSON ichida difficulty majburiy.")
+    if not questions:
+        raise ValidationError("JSON ichida questions bo'sh.")
+
+    subject_ref = subject_override or payload.get("subject_name") or payload.get("subject_slug")
+    subject = resolve_subject_ref(subject_ref)
+
+    valid_difficulties = {choice[0] for choice in Test._meta.get_field("difficulty").choices}
+    if difficulty not in valid_difficulties:
+        raise ValidationError(
+            f"Noto'g'ri difficulty: {difficulty}. Mavjudlari: {', '.join(sorted(valid_difficulties))}"
+        )
+
+    valid_categories = {choice[0] for choice in Test._meta.get_field("category").choices}
+    if category not in valid_categories:
+        raise ValidationError(
+            f"Noto'g'ri category: {category}. Mavjudlari: {', '.join(sorted(valid_categories))}"
+        )
+
+    with transaction.atomic():
+        test = (
+            Test.objects.filter(subject=subject, title=title, difficulty=difficulty)
+            .order_by("-id")
+            .first()
+        )
+        created = False
+
+        if test:
+            if not replace:
+                raise ValidationError(
+                    "Shu subject/title/difficulty bilan test allaqachon mavjud. "
+                    "Qayta yozish uchun replace yoqing."
+                )
+            test.category = category
+            test.duration = duration
+            test.save(update_fields=["category", "duration"])
+            Question.objects.filter(test=test).delete()
+        else:
+            test = Test.objects.create(
+                subject=subject,
+                title=title,
+                duration=duration,
+                difficulty=difficulty,
+                category=category,
+            )
+            created = True
+
+        created_questions = 0
+        created_choices = 0
+
+        for index, item in enumerate(questions, start=1):
+            if not isinstance(item, dict):
+                raise ValidationError(f"{index}-savol dict emas.")
+
+            number = item.get("number", index)
+            text = (item.get("text") or "").strip()
+            choices_map = item.get("choices") or {}
+            correct_option = (item.get("correct_option") or derived_answer_key.get(str(number)) or "").strip().upper()
+
+            if not text:
+                raise ValidationError(f"{number}-savol uchun text majburiy.")
+            if not isinstance(choices_map, dict) or len(choices_map) < 2:
+                raise ValidationError(f"{number}-savol uchun kamida 2 ta variant kerak.")
+            if correct_option not in choices_map:
+                raise ValidationError(f"{number}-savol uchun correct_option topilmadi yoki variantlarda yo'q.")
+
+            question = Question.objects.create(
+                test=test,
+                text=text,
+                difficulty=difficulty,
+            )
+            created_questions += 1
+
+            for option_key, option_text in choices_map.items():
+                option_key_normalized = str(option_key).strip().upper()
+                Choice.objects.create(
+                    question=question,
+                    text=str(option_text).strip(),
+                    is_correct=option_key_normalized == correct_option,
+                )
+                created_choices += 1
+
+    return {
+        "test": test,
+        "subject": subject,
+        "created": created,
+        "created_questions": created_questions,
+        "created_choices": created_choices,
+    }
+
+
+def load_json_payload_from_text(raw_text):
+    try:
+        payload = json.loads(raw_text)
+    except json.JSONDecodeError as exc:
+        raise ValidationError(f"JSON format xato: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValidationError("JSON top-level dict bo'lishi kerak.")
+    return payload
+
+
+def resolve_subject_ref(subject_ref):
+    if isinstance(subject_ref, Subject):
+        return subject_ref
+
+    if not subject_ref:
+        raise ValidationError("Fan topilmadi. JSON ichida subject_name yoki subject override kerak.")
+
+    if str(subject_ref).isdigit():
+        subject = Subject.objects.filter(id=int(subject_ref)).first()
+    else:
+        subject = Subject.objects.filter(name__iexact=str(subject_ref)).first()
+        if not subject:
+            subject = Subject.objects.filter(name__icontains=str(subject_ref)).first()
+
+    if not subject:
+        raise ValidationError(f"Fan topilmadi: {subject_ref}")
+
+    return subject
+
+
+def import_subject_entries_from_payload(payload, *, subject_override=None, section_key=None, clear_section=False):
+    if isinstance(payload, dict):
+        if "entries" in payload:
+            entries = payload.get("entries") or []
+            subject_ref = subject_override or payload.get("subject") or payload.get("subject_name")
+            section_value = section_key or payload.get("section_key")
+        else:
+            entries = [payload]
+            subject_ref = subject_override
+            section_value = section_key
+    elif isinstance(payload, list):
+        entries = payload
+        subject_ref = subject_override
+        section_value = section_key
+    else:
+        raise ValidationError("Section import uchun JSON dict yoki list bo'lishi kerak.")
+
+    if not entries:
+        raise ValidationError("Import qilinadigan entries topilmadi.")
+
+    subject = resolve_subject_ref(subject_ref)
+    if not section_value:
+        raise ValidationError("section_key topilmadi.")
+
+    valid_sections = {choice[0] for choice in SubjectSectionEntry.SECTION_CHOICES}
+    if section_value not in valid_sections:
+        raise ValidationError(
+            f"Noto'g'ri section key: {section_value}. Mavjudlari: {', '.join(sorted(valid_sections))}"
+        )
+
+    deleted_count = 0
+    if clear_section:
+        deleted_count, _ = SubjectSectionEntry.objects.filter(
+            subject=subject,
+            section_key=section_value,
+        ).delete()
+
+    created_count = 0
+    updated_count = 0
+
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict):
+            raise ValidationError(f"{index}-entry dict emas.")
+
+        title = (entry.get("title") or "").strip()
+        if not title:
+            raise ValidationError(f"{index}-entry uchun title majburiy.")
+
+        defaults = {
+            "summary": (entry.get("summary") or "").strip(),
+            "body": (entry.get("body") or "").strip(),
+            "usage_note": (entry.get("usage_note") or "").strip(),
+            "access_level": (entry.get("access_level") or "S").strip() or "S",
+            "order": entry.get("order", index),
+            "is_featured": bool(entry.get("is_featured", False)),
+        }
+
+        _, created = SubjectSectionEntry.objects.update_or_create(
+            subject=subject,
+            section_key=section_value,
+            title=title,
+            defaults=defaults,
+        )
+
+        if created:
+            created_count += 1
+        else:
+            updated_count += 1
+
+    return {
+        "subject": subject,
+        "section_key": section_value,
+        "created_count": created_count,
+        "updated_count": updated_count,
+        "deleted_count": deleted_count,
+    }
+
+
+def import_grammar_topics_from_payload(payload, *, subject_override=None, clear_existing=False):
+    if not isinstance(payload, dict):
+        raise ValidationError("Grammar import uchun JSON top-level dict bo'lishi kerak.")
+
+    topics = payload.get("topics") or []
+    if not topics:
+        raise ValidationError("JSON ichida topics bo'sh.")
+
+    subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
+    subject = resolve_subject_ref(subject_ref)
+    access_level = (payload.get("access_level") or "S").strip() or "S"
+    valid_levels = {choice[0] for choice in SubjectSectionEntry._meta.get_field("access_level").choices}
+    if access_level not in valid_levels:
+        raise ValidationError(
+            f"Noto'g'ri access_level: {access_level}. Mavjudlari: {', '.join(sorted(valid_levels))}"
+        )
+
+    deleted_count = 0
+    if clear_existing:
+        deleted_count, _ = SubjectSectionEntry.objects.filter(
+            subject=subject,
+            section_key="grammar",
+        ).delete()
+
+    created_count = 0
+    updated_count = 0
+    question_count = 0
+
+    for index, item in enumerate(topics, start=1):
+        if not isinstance(item, dict):
+            raise ValidationError(f"{index}-topic dict emas.")
+
+        title = (item.get("title") or "").strip()
+        summary = (item.get("summary") or "").strip()
+        body = (item.get("body") or "").strip()
+        usage_note = (item.get("usage_note") or "").strip()
+        questions = item.get("questions") or []
+
+        if not title:
+            raise ValidationError(f"{index}-topic uchun title majburiy.")
+        if not questions:
+            raise ValidationError(f"{title} uchun kamida 1 ta savol kerak.")
+
+        lesson, created = SubjectSectionEntry.objects.update_or_create(
+            subject=subject,
+            section_key="grammar",
+            title=title,
+            defaults={
+                "summary": summary,
+                "body": body,
+                "usage_note": usage_note,
+                "access_level": (item.get("access_level") or access_level).strip() or access_level,
+                "order": item.get("order", index),
+                "is_featured": bool(item.get("is_featured", False)),
+            },
+        )
+        if created:
+            created_count += 1
+        else:
+            updated_count += 1
+
+        lesson.grammar_questions.all().delete()
+
+        for question_order, question in enumerate(questions, start=1):
+            if not isinstance(question, dict):
+                raise ValidationError(f"{title} mavzusidagi {question_order}-savol dict emas.")
+
+            prompt = (question.get("prompt") or "").strip()
+            option_a = (question.get("option_a") or "").strip()
+            option_b = (question.get("option_b") or "").strip()
+            option_c = (question.get("option_c") or "").strip()
+            option_d = (question.get("option_d") or "").strip()
+            correct_option = (question.get("correct_option") or "").strip().upper()
+
+            if not prompt:
+                raise ValidationError(f"{title} mavzusidagi {question_order}-savol uchun prompt majburiy.")
+            if not all([option_a, option_b, option_c, option_d]):
+                raise ValidationError(f"{title} mavzusidagi {question_order}-savol uchun barcha 4 variant majburiy.")
+            if correct_option not in {"A", "B", "C", "D"}:
+                raise ValidationError(f"{title} mavzusidagi {question_order}-savol uchun correct_option A/B/C/D bo'lishi kerak.")
+
+            GrammarLessonQuestion.objects.create(
+                lesson=lesson,
+                prompt=prompt,
+                option_a=option_a,
+                option_b=option_b,
+                option_c=option_c,
+                option_d=option_d,
+                correct_option=correct_option,
+                explanation=(question.get("explanation") or "").strip(),
+                order=question.get("order", question_order),
+            )
+            question_count += 1
+
+    return {
+        "subject": subject,
+        "created_count": created_count,
+        "updated_count": updated_count,
+        "question_count": question_count,
+        "deleted_count": deleted_count,
+    }
+
+
+def import_essay_topics_from_payload(payload, *, subject_override=None, clear_existing=False):
+    if isinstance(payload, dict):
+        topics = payload.get("topics") or payload.get("entries") or [payload]
+        subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
+        default_access_level = (payload.get("access_level") or "S").strip() or "S"
+    elif isinstance(payload, list):
+        topics = payload
+        subject_ref = subject_override
+        default_access_level = "S"
+    else:
+        raise ValidationError("Essay import uchun JSON dict yoki list bo'lishi kerak.")
+
+    if not topics:
+        raise ValidationError("Essay topic entries topilmadi.")
+
+    subject = resolve_subject_ref(subject_ref)
+
+    deleted_count = 0
+    if clear_existing:
+        deleted_count, _ = EssayTopic.objects.filter(subject=subject).delete()
+
+    created_count = 0
+    updated_count = 0
+
+    for index, item in enumerate(topics, start=1):
+        if not isinstance(item, dict):
+            raise ValidationError(f"{index}-essay dict emas.")
+
+        title = (item.get("title") or "").strip()
+        prompt_text = (item.get("prompt_text") or item.get("body") or "").strip()
+        if not title or not prompt_text:
+            raise ValidationError(f"{index}-essay uchun title va prompt_text majburiy.")
+
+        _, created = EssayTopic.objects.update_or_create(
+            subject=subject,
+            title=title,
+            defaults={
+                "prompt_text": prompt_text,
+                "thesis_hint": (item.get("thesis_hint") or "").strip(),
+                "outline": (item.get("outline") or "").strip(),
+                "sample_intro": (item.get("sample_intro") or "").strip(),
+                "sample_conclusion": (item.get("sample_conclusion") or "").strip(),
+                "access_level": (item.get("access_level") or default_access_level).strip() or default_access_level,
+                "is_featured": bool(item.get("is_featured", False)),
+            },
+        )
+        if created:
+            created_count += 1
+        else:
+            updated_count += 1
+
+    return {
+        "subject": subject,
+        "created_count": created_count,
+        "updated_count": updated_count,
+        "deleted_count": deleted_count,
+    }
+
+
+def import_practice_sets_from_payload(payload, *, subject_override=None, replace=False):
+    if isinstance(payload, dict):
+        if "sets" in payload:
+            sets = payload.get("sets") or []
+            subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
+            default_difficulty = (payload.get("difficulty") or "S").strip() or "S"
+        else:
+            sets = [payload]
+            subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
+            default_difficulty = (payload.get("difficulty") or "S").strip() or "S"
+    elif isinstance(payload, list):
+        sets = payload
+        subject_ref = subject_override
+        default_difficulty = "S"
+    else:
+        raise ValidationError("Mashqlar importi uchun JSON dict yoki list bo'lishi kerak.")
+
+    if not sets:
+        raise ValidationError("Mashqlar importi uchun sets topilmadi.")
+
+    subject = resolve_subject_ref(subject_ref)
+    valid_difficulties = {choice[0] for choice in PracticeSet._meta.get_field("difficulty").choices}
+
+    created_sets = 0
+    updated_sets = 0
+    created_exercises = 0
+    created_choices = 0
+
+    with transaction.atomic():
+        for index, item in enumerate(sets, start=1):
+            if not isinstance(item, dict):
+                raise ValidationError(f"{index}-set dict emas.")
+
+            title = (item.get("title") or "").strip()
+            if not title:
+                raise ValidationError(f"{index}-set uchun title majburiy.")
+
+            difficulty = (item.get("difficulty") or default_difficulty).strip() or default_difficulty
+            if difficulty not in valid_difficulties:
+                raise ValidationError(
+                    f"Noto'g'ri difficulty: {difficulty}. Mavjudlari: {', '.join(sorted(valid_difficulties))}"
+                )
+
+            exercises = item.get("exercises") or []
+            if not exercises:
+                raise ValidationError(f"{title} uchun kamida 1 ta exercise kerak.")
+
+            practice_set = (
+                PracticeSet.objects.filter(subject=subject, title=title, difficulty=difficulty)
+                .order_by("-id")
+                .first()
+            )
+
+            if practice_set:
+                if not replace:
+                    raise ValidationError(
+                        f"{title} ({difficulty}) allaqachon mavjud. Yangilash uchun replace yoqing."
+                    )
+                practice_set.source_book = (item.get("source_book") or "").strip()
+                practice_set.topic = (item.get("topic") or "").strip()
+                practice_set.description = (item.get("description") or "").strip()
+                practice_set.is_featured = bool(item.get("is_featured", False))
+                practice_set.save(update_fields=["source_book", "topic", "description", "is_featured"])
+                practice_set.exercises.all().delete()
+                updated_sets += 1
+            else:
+                practice_set = PracticeSet.objects.create(
+                    subject=subject,
+                    title=title,
+                    source_book=(item.get("source_book") or "").strip(),
+                    topic=(item.get("topic") or "").strip(),
+                    description=(item.get("description") or "").strip(),
+                    difficulty=difficulty,
+                    is_featured=bool(item.get("is_featured", False)),
+                )
+                created_sets += 1
+
+            for exercise_index, exercise in enumerate(exercises, start=1):
+                if not isinstance(exercise, dict):
+                    raise ValidationError(f"{title} ichidagi {exercise_index}-exercise dict emas.")
+
+                prompt = (exercise.get("prompt") or "").strip()
+                answer_mode = (exercise.get("answer_mode") or "choice").strip() or "choice"
+                if not prompt:
+                    raise ValidationError(f"{title} ichidagi {exercise_index}-exercise uchun prompt majburiy.")
+                if answer_mode not in {"choice", "input"}:
+                    raise ValidationError(f"{title} ichidagi {exercise_index}-exercise uchun answer_mode choice/input bo'lishi kerak.")
+
+                practice_exercise = PracticeExercise.objects.create(
+                    subject=subject,
+                    practice_set=practice_set,
+                    title=(exercise.get("title") or "").strip(),
+                    source_book=(exercise.get("source_book") or item.get("source_book") or "").strip(),
+                    topic=(exercise.get("topic") or item.get("topic") or "").strip(),
+                    prompt=prompt,
+                    answer_mode=answer_mode,
+                    correct_text=(exercise.get("correct_text") or "").strip(),
+                    explanation=(exercise.get("explanation") or "").strip(),
+                    difficulty=(exercise.get("difficulty") or difficulty).strip() or difficulty,
+                    is_featured=bool(exercise.get("is_featured", False)),
+                )
+                created_exercises += 1
+
+                if answer_mode == "choice":
+                    choices = exercise.get("choices") or []
+                    if not choices:
+                        raise ValidationError(f"{title} ichidagi {exercise_index}-exercise uchun choices majburiy.")
+
+                    if isinstance(choices, dict):
+                        correct_option = (exercise.get("correct_option") or "").strip().upper()
+                        if correct_option not in choices:
+                            raise ValidationError(f"{title} ichidagi {exercise_index}-exercise uchun correct_option topilmadi.")
+                        iterable_choices = [
+                            {"text": str(choice_text).strip(), "is_correct": str(choice_key).strip().upper() == correct_option}
+                            for choice_key, choice_text in choices.items()
+                        ]
+                    else:
+                        iterable_choices = choices
+
+                    if len(iterable_choices) < 2:
+                        raise ValidationError(f"{title} ichidagi {exercise_index}-exercise uchun kamida 2 ta variant kerak.")
+
+                    has_correct = False
+                    for choice in iterable_choices:
+                        if not isinstance(choice, dict):
+                            raise ValidationError(f"{title} ichidagi {exercise_index}-exercise varianti dict emas.")
+                        text = (choice.get("text") or "").strip()
+                        is_correct = bool(choice.get("is_correct", False))
+                        if not text:
+                            raise ValidationError(f"{title} ichidagi {exercise_index}-exercise variant matni bo'sh.")
+                        has_correct = has_correct or is_correct
+                        PracticeChoice.objects.create(
+                            exercise=practice_exercise,
+                            text=text,
+                            is_correct=is_correct,
+                        )
+                        created_choices += 1
+
+                    if not has_correct:
+                        raise ValidationError(f"{title} ichidagi {exercise_index}-exercise uchun to'g'ri variant belgilanmagan.")
+                else:
+                    if not practice_exercise.correct_text:
+                        raise ValidationError(f"{title} ichidagi {exercise_index}-input exercise uchun correct_text majburiy.")
+
+    return {
+        "subject": subject,
+        "created_sets": created_sets,
+        "updated_sets": updated_sets,
+        "created_exercises": created_exercises,
+        "created_choices": created_choices,
+    }
+
+
 def get_active_subscription_ids(user):
-    now = timezone.now()
-    latest_subject_subscriptions = (
-        Subscription.objects.filter(user=user)
-        .values("subject_id")
-        .annotate(latest_end_date=Max("end_date"))
-    )
-    return [
-        item["subject_id"]
-        for item in latest_subject_subscriptions
-        if item["latest_end_date"] and item["latest_end_date"] >= now
-    ]
+    return [item["subject_id"] for item in get_user_subject_access_rows(user, active_only=True)]
 
 
 def user_can_access_subject(user, subject_id):
@@ -161,28 +1156,12 @@ def resolve_section_return_url(next_url, fallback_url):
 
 
 def get_user_progress_summary(user):
-    test_attempts = UserTest.objects.filter(user=user)
-    tests_xp = sum(
-        int((attempt.snapshot_json or {}).get("xp_awarded", 0) or 0)
-        for attempt in test_attempts
-    )
-    correct_test_answers = sum(max(0, attempt.correct_count or 0) for attempt in test_attempts)
-
-    correct_practice_answers = (
-        UserPracticeAttempt.objects.filter(
-            user=user,
-            is_correct=True,
-        )
-        .count()
-    )
-
-    practice_xp = correct_practice_answers * XP_PER_CORRECT_PRACTICE_ANSWER
-    xp = tests_xp + practice_xp
+    summary = get_user_stat_summary(user)
 
     return {
-        "xp": xp,
-        "correct_tests": correct_test_answers,
-        "correct_practice": correct_practice_answers,
-        "tests_xp": tests_xp,
-        "practice_xp": practice_xp,
+        "xp": summary.lifetime_xp,
+        "correct_tests": summary.total_correct_test_answers,
+        "correct_practice": summary.total_correct_practice_answers,
+        "tests_xp": 0,
+        "practice_xp": 0,
     }

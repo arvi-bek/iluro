@@ -1,0 +1,110 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; Kontent import markazi
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <form method="post" id="content-import-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <p class="errornote">{{ form.non_field_errors|join:", " }}</p>
+        {% endif %}
+        <fieldset class="module aligned">
+            <h2>Kontent import markazi</h2>
+            <p style="margin:0 0 18px;color:#6b7280;">
+                Fan tanlang, unga mos turini belgilang va JSON matnini kiriting. Shu sahifa test, grammatika, tarix bo'limlari va boshqa section importlar uchun ishlaydi.
+            </p>
+
+            <div class="form-row">
+                <div>
+                    {{ form.subject.errors }}
+                    {{ form.subject.label_tag }}
+                    {{ form.subject }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    {{ form.import_kind.errors }}
+                    {{ form.import_kind.label_tag }}
+                    {{ form.import_kind }}
+                    <div class="help">Tanlangan fanga qarab tur variantlari avtomatik filtrlab ko'rsatiladi.</div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    {{ form.replace_existing.errors }}
+                    {{ form.replace_existing }} {{ form.replace_existing.label_tag }}
+                    {% if form.replace_existing.help_text %}
+                    <div class="help">{{ form.replace_existing.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    {{ form.json_text.errors }}
+                    {{ form.json_text.label_tag }}
+                    {{ form.json_text }}
+                    <div class="help">Faqat JSON matn kiriting. Fayl yuklash shart emas.</div>
+                </div>
+            </div>
+        </fieldset>
+        <div class="submit-row">
+            <a href="{% url 'admin:index' %}" class="button cancel-link">Bekor qilish</a>
+            <input type="submit" value="Import qilish" class="default">
+        </div>
+    </form>
+</div>
+
+{{ import_options_map|json_script:"import-options-map" }}
+<script>
+    (function () {
+        const optionsMap = JSON.parse(document.getElementById("import-options-map").textContent);
+        const subjectSelect = document.getElementById("id_subject");
+        const kindSelect = document.getElementById("id_import_kind");
+        const originalOptions = Array.from(kindSelect.options).map((option) => ({
+            value: option.value,
+            label: option.textContent
+        }));
+
+        function resolveSubjectGroup() {
+            const selectedText = (subjectSelect.options[subjectSelect.selectedIndex]?.textContent || "").toLowerCase();
+            if (selectedText.includes("tarix")) return "history";
+            if (selectedText.includes("matem")) return "math";
+            return "language";
+        }
+
+        function refreshImportKinds() {
+            const group = resolveSubjectGroup();
+            const allowed = new Set(optionsMap[group] || []);
+            const previousValue = kindSelect.value;
+            kindSelect.innerHTML = "";
+
+            originalOptions.forEach((item) => {
+                if (!allowed.has(item.value)) return;
+                const option = document.createElement("option");
+                option.value = item.value;
+                option.textContent = item.label;
+                if (item.value === previousValue) {
+                    option.selected = true;
+                }
+                kindSelect.appendChild(option);
+            });
+
+            if (!kindSelect.value && kindSelect.options.length) {
+                kindSelect.options[0].selected = true;
+            }
+        }
+
+        subjectSelect.addEventListener("change", refreshImportKinds);
+        refreshImportKinds();
+    })();
+</script>
+{% endblock %}

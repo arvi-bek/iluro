@@ -5,22 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Iluro Auth{% endblock %}</title>
+    {% include "partials/favicon.html" %}
     <meta name="description" content="Iluro milliy sertifikat platformasiga kirish va ro'yxatdan o'tish sahifalari.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/auth.css' %}">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     <div class="auth-shell">
         <section class="auth-story">
-            <a class="brand" href="{% url 'index' %}">ILURO</a>
+            {% block auth_story %}
+            <a class="brand" href="{% url 'index' %}" aria-label="ILURO bosh sahifa">
+                {% include "partials/brand_logo.html" with logo_width="123" logo_height="28" %}
+            </a>
             <p class="story-kicker">Milliy sertifikat uchun tartibli tayyorlov</p>
             <h1>Fan tanlashdan natijagacha bo'lgan yo'lni bitta sokin platformada jamlaymiz.</h1>
             <p class="story-text">
-                Iluro foydalanuvchiga o'zi kerakli fanlarni tanlash, testlarni ishlash va rivojlanishini
-                izchil kuzatish uchun yaratilmoqda. Ona tili va adabiyot uchun insho bilan ishlash,
-                AI yordamidan foydalanish va milliy sertifikatga mos tayyorlanish shu yerda jamlanadi.
+                Kerakli fanlarni tanlash, test ishlash va natijani izchil kuzatish uchun sokin, tartibli muhit.
             </p>
 
             <div class="story-points">
@@ -37,6 +39,7 @@
                     <span>Minimal, iliq va e'tiborni chalg'itmaydigan interfeys</span>
                 </div>
             </div>
+            {% endblock %}
         </section>
 
         <section class="auth-panel">

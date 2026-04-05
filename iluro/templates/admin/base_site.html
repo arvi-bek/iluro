@@ -1,8 +1,13 @@
 {% extends "admin/base_site.html" %}
 
+{% block extrahead %}
+{{ block.super }}
+{% include "partials/favicon.html" %}
+{% endblock %}
+
 {% block branding %}
 <a href="{% url 'admin:index' %}" class="brand-link navbar-brand">
-    <span class="brand-text font-weight-light" style="font-weight: 800; letter-spacing: 0.16em;">ILURO</span>
+    {% include "partials/brand_logo.html" with logo_width="132" logo_height="30" %}
 </a>
 {% endblock %}
 

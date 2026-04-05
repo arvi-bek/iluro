@@ -1,5 +1,8 @@
+{% load static %}
 <aside class="app-sidebar">
-    <a class="app-sidebar-brand" href="{% url 'index' %}">ILURO</a>
+    <a class="app-sidebar-brand" href="{% url 'index' %}" aria-label="ILURO bosh sahifa">
+        {% include "partials/brand_logo.html" with logo_width="123" logo_height="28" %}
+    </a>
 
     <nav class="app-sidebar-nav">
         <a class="{% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'subject-workspace' %}is-active{% endif %}" href="{% url 'dashboard' %}">

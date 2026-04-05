@@ -18,6 +18,7 @@ from .models import (
     Test,
     UserTest,
 )
+from .utils import calculate_practice_set_xp, calculate_single_practice_xp, calculate_test_xp
 
 
 class MainSmokeTests(TestCase):
@@ -108,7 +109,7 @@ class MainSmokeTests(TestCase):
             reverse("books"),
             reverse("subject-workspace", args=[self.math.id]),
             reverse("subject-workspace-section", args=[self.math.id, "books"]),
-            reverse("subject-workspace-section", args=[self.math.id, "tests"]),
+            reverse("subject-workspace-section", args=[self.math.id, "problems"]),
             reverse("subject-workspace-section", args=[self.math.id, "problems"]),
         ]
 
@@ -124,6 +125,7 @@ class MainSmokeTests(TestCase):
 
     def test_test_flow_keeps_subject_tests_return_url(self):
         subject_tests_url = reverse("subject-workspace-section", args=[self.math.id, "tests"])
+        expected_return_url = reverse("subject-workspace-section", args=[self.math.id, "problems"])
         start_url = f"{reverse('test-start', args=[self.test.id])}?next={quote(subject_tests_url)}"
 
         response = self.client.get(start_url)
@@ -145,7 +147,7 @@ class MainSmokeTests(TestCase):
 
         result_response = self.client.get(reverse("test-result", args=[user_test.id]))
         self.assertEqual(result_response.status_code, 200)
-        self.assertContains(result_response, subject_tests_url)
+        self.assertContains(result_response, expected_return_url)
 
     def test_practice_set_flow_keeps_subject_problems_return_url(self):
         subject_problems_url = reverse("subject-workspace-section", args=[self.math.id, "problems"])
@@ -166,3 +168,19 @@ class MainSmokeTests(TestCase):
         result_response = self.client.get(submit_response["Location"])
         self.assertEqual(result_response.status_code, 200)
         self.assertContains(result_response, subject_problems_url)
+
+
+class XPEconomyTests(TestCase):
+    def test_harder_test_awards_more_xp_for_same_result(self):
+        medium_xp = calculate_test_xp(correct_count=14, total_count=20, difficulty="S")
+        hard_xp = calculate_test_xp(correct_count=14, total_count=20, difficulty="A")
+        self.assertGreater(hard_xp, medium_xp)
+
+    def test_practice_set_awards_less_than_test_for_same_accuracy(self):
+        test_xp = calculate_test_xp(correct_count=16, total_count=20, difficulty="B")
+        practice_xp = calculate_practice_set_xp(correct_count=16, total_count=20, difficulty="B")
+        self.assertGreater(test_xp, practice_xp)
+
+    def test_single_practice_requires_correct_answer(self):
+        self.assertEqual(calculate_single_practice_xp(False, "A+"), 0)
+        self.assertGreater(calculate_single_practice_xp(True, "A+"), calculate_single_practice_xp(True, "S"))

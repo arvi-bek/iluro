@@ -8,7 +8,9 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Profile, Subject, Subscription, UserSubjectPreference
+from .models import Profile, Subject, UserSubjectPreference
+from .services import create_user_beta_trial_subscription as _create_user_beta_trial_subscription
+from .services import get_user_subject_access_rows as _get_user_subject_access_rows
 from .services import get_or_sync_profile as _get_or_sync_profile
 from .services import sidebar_context as _sidebar_context
 
@@ -69,18 +71,7 @@ def register_view(request):
             role=role,
             premium_until=beta_trial_end,
         )
-        subjects = list(Subject.objects.all())
-        if subjects:
-            Subscription.objects.bulk_create(
-                [
-                    Subscription(
-                        user=user,
-                        subject=subject,
-                        end_date=beta_trial_end,
-                    )
-                    for subject in subjects
-                ]
-            )
+        _create_user_beta_trial_subscription(user, end_at=beta_trial_end)
         request.session["beta_trial_notice"] = True
         request.session["beta_trial_expires_at"] = beta_trial_end.isoformat()
         login(request, user)
@@ -127,16 +118,12 @@ def logout_view(request):
 @login_required
 def settings_view(request):
     profile = _get_or_sync_profile(request.user)
-    active_subscriptions = list(
-        Subscription.objects.filter(user=request.user, end_date__gte=timezone.now())
-        .select_related("subject")
-        .order_by("subject__name")
-    )
+    active_subscriptions = _get_user_subject_access_rows(request.user, active_only=True)
     subject_preferences = {
         item.subject_id: item
         for item in UserSubjectPreference.objects.filter(
             user=request.user,
-            subject_id__in=[subscription.subject_id for subscription in active_subscriptions],
+            subject_id__in=[subscription["subject_id"] for subscription in active_subscriptions],
         )
     }
 
@@ -164,12 +151,12 @@ def settings_view(request):
         request.user.save(update_fields=["first_name"])
 
         for subscription in active_subscriptions:
-            preferred_level = request.POST.get(f"subject_level_{subscription.subject_id}", "S")
+            preferred_level = request.POST.get(f"subject_level_{subscription['subject_id']}", "S")
             if preferred_level not in allowed_levels:
                 continue
             UserSubjectPreference.objects.update_or_create(
                 user=request.user,
-                subject=subscription.subject,
+                subject=subscription["subject"],
                 defaults={"preferred_level": preferred_level},
             )
 
@@ -178,13 +165,13 @@ def settings_view(request):
 
     preferred_subject_levels = []
     for subscription in active_subscriptions:
-        preference = subject_preferences.get(subscription.subject_id)
+        preference = subject_preferences.get(subscription["subject_id"])
         preferred_subject_levels.append(
             {
-                "subject_id": subscription.subject_id,
-                "subject_name": subscription.subject.name,
+                "subject_id": subscription["subject_id"],
+                "subject_name": subscription["subject"].name,
                 "current_level": preference.preferred_level if preference else profile.level,
-                "expires_at": subscription.end_date,
+                "expires_at": subscription["end_at"],
             }
         )
 

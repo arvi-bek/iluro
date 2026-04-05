@@ -34,6 +34,47 @@ SCORE_LEVEL_RULES = [
     {"label": "A+", "min_score": 81, "max_score": 100},
 ]
 
+# Rebalanced XP economy. These later definitions intentionally override the
+# legacy values above so existing imports can keep working.
+TEST_BASE_XP_PER_CORRECT = 2
+PRACTICE_SET_BASE_XP_PER_CORRECT = 1
+
+SINGLE_PRACTICE_XP_BY_DIFFICULTY = {
+    "S": 2,
+    "S+": 2,
+    "B": 3,
+    "B+": 3,
+    "A": 4,
+    "A+": 5,
+}
+
+TEST_DIFFICULTY_XP_BONUS = {
+    "S": 0,
+    "S+": 2,
+    "B": 4,
+    "B+": 6,
+    "A": 8,
+    "A+": 10,
+}
+
+PRACTICE_SET_DIFFICULTY_XP_BONUS = {
+    "S": 0,
+    "S+": 1,
+    "B": 2,
+    "B+": 3,
+    "A": 4,
+    "A+": 5,
+}
+
+XP_LEVEL_RULES = [
+    {"label": "Yangi user", "min_xp": 0, "max_xp": 249},
+    {"label": "O'quvchi", "min_xp": 250, "max_xp": 649},
+    {"label": "Izlanuvchi", "min_xp": 650, "max_xp": 1299},
+    {"label": "Barqaror", "min_xp": 1300, "max_xp": 2199},
+    {"label": "Kuchli", "min_xp": 2200, "max_xp": 3499},
+    {"label": "Ustoz", "min_xp": 3500, "max_xp": None},
+]
+
 
 def clamp_xp(xp: int | None) -> int:
     if xp is None:
@@ -44,6 +85,77 @@ def clamp_xp(xp: int | None) -> int:
 def normalize_difficulty_label(value: str | None) -> str:
     normalized = (value or "").strip().lower()
     return DIFFICULTY_ALIAS_MAP.get(normalized, (value or "B").strip().upper())
+
+
+def calculate_score_percent(correct_count: int | None, total_count: int | None) -> int:
+    normalized_total = max(int(total_count or 0), 0)
+    if normalized_total == 0:
+        return 0
+    normalized_correct = max(0, min(int(correct_count or 0), normalized_total))
+    return round((normalized_correct / normalized_total) * 100)
+
+
+def _get_test_accuracy_bonus(score_percent: int) -> int:
+    if score_percent >= 100:
+        return 20
+    if score_percent >= 95:
+        return 16
+    if score_percent >= 85:
+        return 12
+    if score_percent >= 70:
+        return 8
+    if score_percent >= 55:
+        return 4
+    return 0
+
+
+def _get_practice_accuracy_bonus(score_percent: int) -> int:
+    if score_percent >= 100:
+        return 10
+    if score_percent >= 95:
+        return 8
+    if score_percent >= 85:
+        return 6
+    if score_percent >= 70:
+        return 4
+    if score_percent >= 55:
+        return 2
+    return 0
+
+
+def calculate_test_xp(correct_count: int | None, total_count: int | None, difficulty: str | None) -> int:
+    normalized_correct = max(int(correct_count or 0), 0)
+    score_percent = calculate_score_percent(normalized_correct, total_count)
+    normalized_difficulty = normalize_difficulty_label(difficulty)
+
+    xp = normalized_correct * TEST_BASE_XP_PER_CORRECT
+    if score_percent >= 40 and normalized_correct > 0:
+        xp += 6
+    xp += _get_test_accuracy_bonus(score_percent)
+    if score_percent >= 55:
+        xp += TEST_DIFFICULTY_XP_BONUS.get(normalized_difficulty, 0)
+    return xp
+
+
+def calculate_practice_set_xp(correct_count: int | None, total_count: int | None, difficulty: str | None) -> int:
+    normalized_correct = max(int(correct_count or 0), 0)
+    score_percent = calculate_score_percent(normalized_correct, total_count)
+    normalized_difficulty = normalize_difficulty_label(difficulty)
+
+    xp = normalized_correct * PRACTICE_SET_BASE_XP_PER_CORRECT
+    if score_percent >= 40 and normalized_correct > 0:
+        xp += 4
+    xp += _get_practice_accuracy_bonus(score_percent)
+    if score_percent >= 55:
+        xp += PRACTICE_SET_DIFFICULTY_XP_BONUS.get(normalized_difficulty, 0)
+    return xp
+
+
+def calculate_single_practice_xp(is_correct: bool, difficulty: str | None) -> int:
+    if not is_correct:
+        return 0
+    normalized_difficulty = normalize_difficulty_label(difficulty)
+    return SINGLE_PRACTICE_XP_BY_DIFFICULTY.get(normalized_difficulty, 2)
 
 
 def get_allowed_level_labels(current_level: str | None) -> list[str]:

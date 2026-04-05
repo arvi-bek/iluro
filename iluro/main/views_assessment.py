@@ -7,14 +7,22 @@ from .models import PracticeExercise, PracticeSet, PracticeSetAttempt, Question,
 from .selectors import get_practice_review_items, get_test_answer_review
 from .services import get_effective_subject_level as _get_effective_subject_level
 from .services import get_or_sync_profile as _get_or_sync_profile
+from .services import record_practice_session_completion_stats as _record_practice_session_completion_stats
+from .services import record_single_practice_attempt_stats as _record_single_practice_attempt_stats
+from .services import record_test_completion_stats as _record_test_completion_stats
 from .services import resolve_section_return_url as _resolve_section_return_url
+from .services import trim_user_assessment_history as _trim_user_assessment_history
 from .services import user_can_access_subject as _user_can_access_subject
 from .utils import (
-    XP_PER_CORRECT_TEST_ANSWER,
+    calculate_test_xp,
     get_allowed_level_labels,
     get_level_info,
     normalize_difficulty_label,
 )
+
+
+def _is_math_subject(subject_name):
+    return "matem" in (subject_name or "").lower()
 
 
 @login_required
@@ -22,7 +30,11 @@ def test_start_view(request, test_id):
     test = get_object_or_404(Test.objects.select_related("subject"), id=test_id)
     profile = _get_or_sync_profile(request.user)
     subject_level = _get_effective_subject_level(request.user, subject_id=test.subject_id, profile=profile)
-    subject_tests_url = f"/subjects/{test.subject_id}/tests/"
+    subject_tests_url = (
+        f"/subjects/{test.subject_id}/problems/"
+        if _is_math_subject(test.subject.name)
+        else f"/subjects/{test.subject_id}/tests/"
+    )
     if not _user_can_access_subject(request.user, test.subject_id):
         messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
         return redirect("subject-selection")
@@ -56,6 +68,7 @@ def test_start_view(request, test_id):
                 "next_url": next_url,
             },
         )
+        _trim_user_assessment_history(request.user)
         return redirect("test-solve", user_test_id=user_test.id)
 
     context = {
@@ -64,6 +77,7 @@ def test_start_view(request, test_id):
         "question_count": question_count,
         "next_url": next_url,
         "back_url": next_url or subject_tests_url,
+        "show_timer": not _is_math_subject(test.subject.name),
     }
     return render(request, "test_start.html", context)
 
@@ -84,7 +98,11 @@ def test_solve_view(request, user_test_id):
         .prefetch_related("choice_set")
         .order_by("id")
     )
-    subject_tests_url = f"/subjects/{test.subject_id}/tests/"
+    subject_tests_url = (
+        f"/subjects/{test.subject_id}/problems/"
+        if _is_math_subject(test.subject.name)
+        else f"/subjects/{test.subject_id}/tests/"
+    )
     return_url = _resolve_section_return_url(
         user_test.snapshot_json.get("next_url", ""),
         subject_tests_url,
@@ -134,7 +152,7 @@ def test_solve_view(request, user_test_id):
         user_test.correct_count = correct_count
         user_test.score = score
         user_test.finished_at = timezone.now()
-        xp_awarded = correct_count * XP_PER_CORRECT_TEST_ANSWER
+        xp_awarded = calculate_test_xp(correct_count, total_questions, test.difficulty)
         user_test.snapshot_json = {
             "status": "completed",
             "question_count": total_questions,
@@ -142,6 +160,8 @@ def test_solve_view(request, user_test_id):
             "xp_awarded": xp_awarded,
         }
         user_test.save(update_fields=["correct_count", "score", "finished_at", "snapshot_json"])
+        _record_test_completion_stats(user_test)
+        _trim_user_assessment_history(request.user)
         _get_or_sync_profile(request.user)
         return redirect("test-result", user_test_id=user_test.id)
 
@@ -150,6 +170,7 @@ def test_solve_view(request, user_test_id):
         "test": test,
         "questions": questions,
         "next_url": return_url,
+        "show_timer": not _is_math_subject(test.subject.name),
     }
     return render(request, "test_solve.html", context)
 
@@ -161,7 +182,11 @@ def test_result_view(request, user_test_id):
         id=user_test_id,
         user=request.user,
     )
-    subject_tests_url = f"/subjects/{user_test.test.subject_id}/tests/"
+    subject_tests_url = (
+        f"/subjects/{user_test.test.subject_id}/problems/"
+        if _is_math_subject(user_test.test.subject.name)
+        else f"/subjects/{user_test.test.subject_id}/tests/"
+    )
     return_url = _resolve_section_return_url(
         user_test.snapshot_json.get("next_url", ""),
         subject_tests_url,
@@ -255,6 +280,8 @@ def practice_set_solve_view(request, set_id):
         practice_session.correct_count = correct_count
         practice_session.score = round((correct_count / len(exercises)) * 100) if exercises else 0
         practice_session.save(update_fields=["correct_count", "score"])
+        _record_practice_session_completion_stats(practice_session)
+        _trim_user_assessment_history(request.user)
         _get_or_sync_profile(request.user)
         request.session["practice_next_url"] = next_url
         return redirect("practice-set-result", session_id=practice_session.id)
@@ -339,6 +366,8 @@ def practice_solve_view(request, exercise_id):
             answer_text=answer_text,
             is_correct=is_correct,
         )
+        _record_single_practice_attempt_stats(attempt)
+        _trim_user_assessment_history(request.user)
         _get_or_sync_profile(request.user)
         request.session["practice_next_url"] = next_url
         return redirect("practice-result", attempt_id=attempt.id)

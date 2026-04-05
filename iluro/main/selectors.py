@@ -14,10 +14,18 @@ from .models import (
     Subscription,
     Test,
     UserAnswer,
+    UserStatSummary,
+    UserSubjectStat,
     UserPracticeAttempt,
     UserTest,
 )
-from .services import filter_by_allowed_level, get_active_subscription_ids, get_effective_subject_level
+from .services import (
+    filter_by_allowed_level,
+    get_active_subscription_ids,
+    get_effective_subject_level,
+    get_user_stat_summary,
+    get_user_subject_access_rows,
+)
 from .utils import normalize_difficulty_label
 
 
@@ -159,19 +167,19 @@ def get_tests_listing(user, profile_level):
 
 
 def get_ranking_queryset(subject_filter="", tests_filter="all"):
-    users = User.objects.select_related("profile").annotate(
-        effective_xp=Coalesce("profile__xp", Value(0)),
-    )
+    users = User.objects.select_related("profile", "stat_summary")
 
     if subject_filter.isdigit():
         users = users.annotate(
-            best_score=Coalesce(Max("usertest__score", filter=Q(usertest__test__subject_id=subject_filter)), Value(0)),
-            total_tests=Count("usertest", filter=Q(usertest__test__subject_id=subject_filter), distinct=True),
+            effective_xp=Coalesce(Max("subject_stats__xp", filter=Q(subject_stats__subject_id=subject_filter)), Value(0)),
+            best_score=Coalesce(Max("subject_stats__best_score", filter=Q(subject_stats__subject_id=subject_filter)), Value(0)),
+            total_tests=Coalesce(Max("subject_stats__tests_taken", filter=Q(subject_stats__subject_id=subject_filter)), Value(0)),
         )
     else:
         users = users.annotate(
-            best_score=Coalesce(Max("usertest__score"), Value(0)),
-            total_tests=Count("usertest", distinct=True),
+            effective_xp=Coalesce("stat_summary__lifetime_xp", Value(0)),
+            best_score=Coalesce("stat_summary__best_test_score", Value(0)),
+            total_tests=Coalesce("stat_summary__lifetime_test_count", Value(0)),
         )
 
     if tests_filter == "1_4":
@@ -181,7 +189,7 @@ def get_ranking_queryset(subject_filter="", tests_filter="all"):
     elif tests_filter == "10_plus":
         users = users.filter(total_tests__gte=10)
 
-    return users.order_by("-effective_xp", "-total_tests", "-best_score", "username")
+    return users.order_by("-effective_xp", "-total_tests", "-best_score", "username")[:50]
 
 
 def get_latest_dashboard_resources():
@@ -228,47 +236,45 @@ def get_formula_entries(subject, formula_query="", formula_filter="all"):
 
 
 def get_user_profile_summary(user, current_level_label):
-    subscriptions = list(
-        Subscription.objects.select_related("subject")
-        .filter(user=user)
-        .order_by("-end_date")
-    )
+    subscriptions = get_user_subject_access_rows(user, active_only=False)
 
     subject_statuses = []
     active_count = 0
+    subject_stats_map = {
+        item.subject_id: item
+        for item in UserSubjectStat.objects.filter(user=user).select_related("subject")
+    }
     for subscription in subscriptions:
-        is_active = subscription.end_date >= timezone.now()
+        is_active = subscription["end_at"] >= timezone.now()
         if is_active:
             active_count += 1
-        best_score = (
-            UserTest.objects.filter(user=user, test__subject=subscription.subject)
-            .aggregate(best_score=Max("score"))
-            .get("best_score")
-        )
+        subject_stat = subject_stats_map.get(subscription["subject_id"])
         subject_statuses.append(
             {
-                "subject": subscription.subject.name,
-                "expires_at": subscription.end_date,
+                "subject": subscription["subject"].name,
+                "expires_at": subscription["end_at"],
                 "is_active": is_active,
-                "level": get_effective_subject_level(user, subject_id=subscription.subject_id),
-                "score": best_score or 0,
+                "level": get_effective_subject_level(user, subject_id=subscription["subject_id"]),
+                "score": subject_stat.best_score if subject_stat else 0,
             }
         )
 
     rank_users = (
-        User.objects.select_related("profile")
+        User.objects.select_related("profile", "stat_summary")
         .annotate(
-            best_score=Coalesce(Max("usertest__score"), Value(0)),
-            total_tests=Count("usertest"),
+            effective_xp=Coalesce("stat_summary__lifetime_xp", Value(0)),
+            best_score=Coalesce("stat_summary__best_test_score", Value(0)),
+            total_tests=Coalesce("stat_summary__lifetime_test_count", Value(0)),
         )
-        .order_by("-profile__xp", "-best_score", "-total_tests", "username")
+        .order_by("-effective_xp", "-best_score", "-total_tests", "username")
     )
     rank_position = next(
         (index for index, ranked_user in enumerate(rank_users, start=1) if ranked_user.id == user.id),
         None,
     )
-    total_tests = UserTest.objects.filter(user=user).count()
-    purchased_subject_names = [item.subject.name for item in subscriptions]
+    stat_summary = get_user_stat_summary(user)
+    total_tests = stat_summary.lifetime_test_count
+    purchased_subject_names = [item["subject"].name for item in subscriptions]
 
     return {
         "subject_statuses": subject_statuses,
@@ -281,27 +287,24 @@ def get_user_profile_summary(user, current_level_label):
 
 def get_statistics_payload(user, profile_xp, current_level_label):
     active_subject_ids = set(get_active_subscription_ids(user))
+    stat_summary = get_user_stat_summary(user)
+    subject_stats_map = {
+        item.subject_id: item
+        for item in UserSubjectStat.objects.filter(user=user, subject_id__in=active_subject_ids)
+    }
     user_tests = UserTest.objects.filter(user=user).select_related("test", "test__subject")
-
-    overall = user_tests.aggregate(
-        total_tests=Count("id"),
-        best_score=Max("score"),
-        total_correct=Coalesce(Sum("correct_count"), Value(0)),
-    )
 
     subject_rows = []
     for subject in Subject.objects.filter(id__in=active_subject_ids).annotate(test_count=Count("test")).order_by("name"):
-        subject_tests = user_tests.filter(test__subject=subject)
-        best_score = subject_tests.aggregate(best_score=Max("score")).get("best_score") or 0
-        attempts = subject_tests.count()
+        subject_stat = subject_stats_map.get(subject.id)
         subject_rows.append(
             {
                 "name": subject.name,
                 "is_owned": subject.id in active_subject_ids,
-                "attempts": attempts,
-                "best_score": best_score,
+                "attempts": subject_stat.tests_taken if subject_stat else 0,
+                "best_score": subject_stat.best_score if subject_stat else 0,
                 "level": get_effective_subject_level(user, subject_id=subject.id),
-                "progress_percent": best_score,
+                "progress_percent": subject_stat.best_score if subject_stat else 0,
                 "test_count": subject.test_count,
             }
         )
@@ -314,14 +317,14 @@ def get_statistics_payload(user, profile_xp, current_level_label):
             "correct_count": item.correct_count,
             "finished_at": item.finished_at,
         }
-        for item in user_tests.order_by("-finished_at")[:6]
+        for item in user_tests.order_by("-finished_at")[:10]
     ]
 
     stats = [
-        {"label": "Jami urinish", "value": overall["total_tests"] or 0, "hint": "Ishlangan testlar soni"},
-        {"label": "Eng yaxshi natija", "value": f"{overall['best_score'] or 0}%", "hint": "100 ballik foiz tizimi bo'yicha"},
-        {"label": "To'g'ri javoblar", "value": overall["total_correct"] or 0, "hint": "Barcha urinishlar bo'yicha"},
-        {"label": "XP", "value": profile_xp, "hint": "Umumiy tajriba ochkolari"},
+        {"label": "Jami urinish", "value": stat_summary.lifetime_test_count, "hint": "Ishlangan testlar soni"},
+        {"label": "Eng yaxshi natija", "value": f"{stat_summary.best_test_score}%", "hint": "100 ballik foiz tizimi bo'yicha"},
+        {"label": "To'g'ri javoblar", "value": stat_summary.total_correct_answers, "hint": "Test va mashqlar bo'yicha"},
+        {"label": "XP", "value": stat_summary.lifetime_xp, "hint": "Umumiy tajriba ochkolari"},
     ]
 
     return {

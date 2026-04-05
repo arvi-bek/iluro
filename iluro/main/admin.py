@@ -1,18 +1,198 @@
 
 
 from django.contrib import admin
+from django import forms
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
+from django.urls import reverse
 from datetime import timedelta
 from django.contrib import messages
 from .models import (
-    Subject, Subscription, Test,
+    Subject, Subscription, SubscriptionPlan, UserSubscription, UserSubscriptionSubject, Test,
     Question, Choice, UserTest,
     UserAnswer, Profile, UserSubjectPreference, Book, SubjectSectionEntry, EssayTopic,
     PracticeSet, PracticeExercise, PracticeChoice, UserPracticeAttempt, PracticeSetAttempt, BookView,
     GrammarLessonQuestion, GrammarLessonProgress,
 )
+from .services import (
+    import_essay_topics_from_payload,
+    import_grammar_topics_from_payload,
+    import_practice_sets_from_payload,
+    import_subject_entries_from_payload,
+    import_test_from_json_payload,
+    load_json_payload_from_text,
+    get_user_subject_access_rows,
+)
+
+
+IMPORT_KIND_CHOICES = [
+    ("test", "Test"),
+    ("practice", "Mashqlar"),
+    ("grammar", "Gramatika"),
+    ("terms", "Atamalar"),
+    ("chronology", "Xronologiya"),
+    ("events", "Sanalar / Voqealar"),
+    ("formulas", "Formulalar"),
+    ("rules", "Qoidalar"),
+    ("extras", "Qo'shimcha ma'lumotlar"),
+    ("essay", "Insho"),
+]
+
+
+class ContentImportCenterForm(forms.Form):
+    subject = forms.ModelChoiceField(
+        queryset=Subject.objects.order_by("name"),
+        required=True,
+        label="Fan",
+    )
+    import_kind = forms.ChoiceField(
+        choices=IMPORT_KIND_CHOICES,
+        required=True,
+        label="Import turi",
+    )
+    replace_existing = forms.BooleanField(
+        required=False,
+        label="Mavjud ma'lumotni yangilash / tozalash",
+        help_text="Testlarda replace, section/grammar/inshoda esa eski ma'lumotni tozalash sifatida ishlaydi.",
+    )
+    json_text = forms.CharField(
+        required=True,
+        label="JSON matni",
+        widget=forms.Textarea(attrs={"rows": 22, "class": "vLargeTextField"}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        subject = cleaned_data.get("subject")
+        import_kind = cleaned_data.get("import_kind")
+        json_text = (cleaned_data.get("json_text") or "").strip()
+
+        if not subject or not import_kind or not json_text:
+            return cleaned_data
+
+        try:
+            payload = load_json_payload_from_text(json_text)
+        except Exception as exc:
+            raise forms.ValidationError(str(exc)) from exc
+
+        allowed_kinds = get_allowed_import_kinds(subject.name)
+        if import_kind not in allowed_kinds:
+            raise forms.ValidationError("Tanlangan fan uchun bu import turi mos emas.")
+
+        cleaned_data["payload"] = payload
+        return cleaned_data
+
+
+def get_allowed_import_kinds(subject_name):
+    normalized = (subject_name or "").strip().lower()
+    if "tarix" in normalized:
+        return {"test", "practice", "terms", "chronology", "events"}
+    if "matem" in normalized:
+        return {"test", "practice", "formulas"}
+    return {"test", "practice", "grammar", "rules", "essay", "extras"}
+
+
+def import_center_view(request):
+    if request.method == "POST":
+        form = ContentImportCenterForm(request.POST)
+        if form.is_valid():
+            subject = form.cleaned_data["subject"]
+            payload = form.cleaned_data["payload"]
+            import_kind = form.cleaned_data["import_kind"]
+            replace_existing = form.cleaned_data.get("replace_existing", False)
+
+            try:
+                if import_kind == "test":
+                    result = import_test_from_json_payload(
+                        payload,
+                        subject_override=subject,
+                        replace=replace_existing,
+                    )
+                    messages.success(
+                        request,
+                        (
+                            f"Test {'yaratildi' if result['created'] else 'yangilandi'}: "
+                            f"{result['test'].title} | {result['subject'].name}. "
+                            f"Savollar: {result['created_questions']}, variantlar: {result['created_choices']}."
+                        ),
+                    )
+                elif import_kind == "practice":
+                    result = import_practice_sets_from_payload(
+                        payload,
+                        subject_override=subject,
+                        replace=replace_existing,
+                    )
+                    messages.success(
+                        request,
+                        (
+                            f"Mashqlar import tugadi: {result['created_sets']} ta yangi set, "
+                            f"{result['updated_sets']} ta yangilandi, {result['created_exercises']} ta "
+                            f"topshiriq va {result['created_choices']} ta variant qo'shildi."
+                        ),
+                    )
+                elif import_kind == "grammar":
+                    result = import_grammar_topics_from_payload(
+                        payload,
+                        subject_override=subject,
+                        clear_existing=replace_existing,
+                    )
+                    messages.success(
+                        request,
+                        (
+                            f"Gramatika import tugadi: {result['created_count']} ta yangi, "
+                            f"{result['updated_count']} ta yangilandi, {result['question_count']} ta savol qo'shildi."
+                        ),
+                    )
+                elif import_kind == "essay":
+                    result = import_essay_topics_from_payload(
+                        payload,
+                        subject_override=subject,
+                        clear_existing=replace_existing,
+                    )
+                    messages.success(
+                        request,
+                        (
+                            f"Insho import tugadi: {result['created_count']} ta yangi, "
+                            f"{result['updated_count']} ta yangilandi."
+                        ),
+                    )
+                else:
+                    result = import_subject_entries_from_payload(
+                        payload,
+                        subject_override=subject,
+                        section_key=import_kind,
+                        clear_section=replace_existing,
+                    )
+                    messages.success(
+                        request,
+                        (
+                            f"Section import tugadi: {result['created_count']} ta yangi, "
+                            f"{result['updated_count']} ta yangilandi "
+                            f"(section={result['section_key']})."
+                        ),
+                    )
+            except Exception as exc:
+                form.add_error(None, str(exc))
+            else:
+                return redirect("content_import_center")
+    else:
+        form = ContentImportCenterForm()
+
+    context = {
+        **admin.site.each_context(request),
+        "title": "Kontent import markazi",
+        "subtitle": "Fan tanlang, turini belgilang va JSON matnini kiriting",
+        "form": form,
+        "import_options_map": {
+            "math": ["test", "practice", "formulas"],
+            "history": ["test", "practice", "terms", "chronology", "events"],
+            "language": ["test", "practice", "grammar", "rules", "essay", "extras"],
+        },
+    }
+    return TemplateResponse(request, "admin/import_center.html", context)
 
 
 # ---------------- SUBJECT ----------------
@@ -73,6 +253,39 @@ class SubscriptionAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+class UserSubscriptionSubjectInline(admin.TabularInline):
+    model = UserSubscriptionSubject
+    extra = 1
+    autocomplete_fields = ("subject",)
+
+
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "code", "subject_limit", "is_all_access", "price", "duration_days", "is_active")
+    list_filter = ("is_all_access", "is_active", "duration_days")
+    search_fields = ("name", "code")
+    ordering = ("price", "name")
+
+
+@admin.register(UserSubscription)
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "plan", "title", "status", "is_all_access", "started_at", "end_at")
+    list_filter = ("status", "is_all_access", "plan", "source", "end_at")
+    search_fields = ("user__username", "title", "plan__name")
+    autocomplete_fields = ("user", "plan")
+    inlines = [UserSubscriptionSubjectInline]
+    ordering = ("-end_at", "-created_at")
+
+
+@admin.register(UserSubscriptionSubject)
+class UserSubscriptionSubjectAdmin(admin.ModelAdmin):
+    list_display = ("id", "subscription", "subject", "created_at")
+    list_filter = ("subject", "created_at")
+    search_fields = ("subscription__user__username", "subject__name", "subscription__title")
+    autocomplete_fields = ("subscription", "subject")
+    ordering = ("-created_at",)
+
+
 # ---------------- TEST ----------------
 @admin.register(Test)
 class TestAdmin(admin.ModelAdmin):
@@ -81,6 +294,12 @@ class TestAdmin(admin.ModelAdmin):
     search_fields = ("title",)
     autocomplete_fields = ("subject",)
     ordering = ("-created_at",)
+    change_list_template = "admin/main/test/change_list.html"
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["import_center_url"] = reverse("content_import_center")
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 # ---------------- CHOICE INLINE ----------------
@@ -156,20 +375,20 @@ class ProfileAdmin(admin.ModelAdmin):
     readonly_fields = ("purchased_subjects_summary",)
 
     def subject_count(self, obj):
-        return obj.user.subscription_set.count()
+        return len(get_user_subject_access_rows(obj.user, active_only=False))
     subject_count.short_description = "Fanlar"
 
     def purchased_subjects_summary(self, obj):
-        subscriptions = obj.user.subscription_set.select_related("subject").order_by("-end_date")
+        subscriptions = get_user_subject_access_rows(obj.user, active_only=False)
         if not subscriptions:
             return "Fan biriktirilmagan"
 
         lines = []
         now = timezone.now()
         for subscription in subscriptions:
-            status = "Faol" if subscription.end_date >= now else "Tugagan"
+            status = "Faol" if subscription["end_at"] >= now else "Tugagan"
             lines.append(
-                f"{subscription.subject.name} - {status} - {subscription.end_date:%d.%m.%Y %H:%M}"
+                f"{subscription['subject'].name} - {status} - {subscription['end_at']:%d.%m.%Y %H:%M}"
             )
         return "\n".join(lines)
     purchased_subjects_summary.short_description = "Sotib olingan fanlar"
@@ -327,6 +546,5 @@ class PracticeSetAttemptAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "practice_set__title", "practice_set__topic")
     autocomplete_fields = ("user", "practice_set")
     ordering = ("-created_at",)
-
 
 

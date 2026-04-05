@@ -16,14 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import health_check, index
+from main.admin import import_center_view
 
 handler404 = "iluro.error_views.custom_404"
 handler500 = "iluro.error_views.custom_500"
 
 urlpatterns = [
+    path('favicon.ico', RedirectView.as_view(url='/static/branding/iluro-mark.svg?v=20260405-brand', permanent=False)),
+    path('admin/import-center/', admin.site.admin_view(import_center_view), name='content_import_center'),
     path('admin/', admin.site.urls),
     path('', index, name='index'),
     path('health/', health_check, name='health-check'),

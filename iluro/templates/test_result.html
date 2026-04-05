@@ -5,10 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iluro | Natija</title>
+    {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260405b">
 </head>
 <body>
     <div class="flow-shell">
@@ -34,16 +35,16 @@
                 </article>
             </div>
             <p class="lead">
-                Natija `UserTest` ga yozildi. Endi daraja score bilan emas, yig'ilgan XP orqali o'sadi.
+                Natija saqlandi. Daraja endi score emas, yig'ilgan XP orqali o'sadi.
                 {% if xp_awarded %}
-                Hozir umumiy XP: {{ level_info.xp }}. Bu urinishda to'g'ri javoblaringiz uchun sizga +{{ xp_awarded }} XP berildi.
+                Joriy umumiy XP: {{ level_info.xp }}. Bu urinish uchun +{{ xp_awarded }} XP qo'shildi.
                 {% else %}
-                Hozir umumiy XP: {{ level_info.xp }}. Bu urinishda XP qo'shilmadi.
+                Joriy umumiy XP: {{ level_info.xp }}. Bu urinishda XP qo'shilmadi.
                 {% endif %}
             </p>
             <div class="result-actions">
                 <a class="primary-btn link-btn" href="{% if next_url %}{{ next_url }}{% else %}{{ subject_tests_url }}{% endif %}">Yana test ko'rish</a>
-                <a class="back-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
+                <a class="ghost-btn" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
             </div>
         </section>
 

@@ -1,0 +1,43 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:main_test_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; JSON import
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <p class="errornote">{{ form.non_field_errors|join:", " }}</p>
+        {% endif %}
+        <fieldset class="module aligned">
+            <h2>JSON orqali test yuklash</h2>
+            <p style="margin:0 0 18px;color:#6b7280;">
+                JSON fayl yuklang yoki raw JSON paste qiling. Subject override ixtiyoriy, replace esa mavjud testni qayta yozadi.
+            </p>
+            {% for field in form %}
+            <div class="form-row">
+                <div>
+                    {{ field.errors }}
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}
+                    <div class="help">{{ field.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </fieldset>
+        <div class="submit-row">
+            <a href="{% url 'admin:main_test_changelist' %}" class="button cancel-link">Bekor qilish</a>
+            <input type="submit" value="Import qilish" class="default">
+        </div>
+    </form>
+</div>
+{% endblock %}

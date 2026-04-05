@@ -5,26 +5,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iluro | Testni ishlash</title>
+    {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260405b">
 </head>
 <body>
-    <div class="flow-shell">
-        <header class="solve-header">
+    <div class="flow-shell solve-wizard-shell{% if questions|length == 1 %} is-single-step{% endif %}">
+        <header class="solve-header wizard-header">
             <div>
                 <p class="eyebrow">Test ishlash</p>
                 <h1>{{ test.title }}</h1>
             </div>
             <div class="meta-list solve-meta">
                 <span>{{ test.subject.name }}</span>
+                {% if show_timer %}
                 <span>{{ test.duration }} daqiqa</span>
+                {% else %}
+                <span>Erkin ishlash</span>
+                {% endif %}
                 <span>{{ questions|length }} ta savol</span>
+                {% if show_timer %}
                 <span id="timer" data-seconds="{{ test.duration|add:'0' }}">Vaqt: --:--</span>
+                {% endif %}
             </div>
         </header>
 
+        {% if questions|length > 1 %}
         <div class="progress-wrap">
             <div class="progress-head">
                 <span>Javob berilgan savollar</span>
@@ -34,13 +42,32 @@
                 <div class="progress-fill" id="progressFill"></div>
             </div>
         </div>
+        {% endif %}
 
-        <form method="post" class="solve-form">
+        <form method="post" class="solve-form wizard-form" data-wizard-form>
             {% csrf_token %}
+            {% if questions|length > 1 %}
+            <div class="question-nav" aria-label="Savollar navigatsiyasi">
+                {% for question in questions %}
+                <button class="question-chip {% if forloop.first %}is-current{% endif %}" type="button" data-step-target="{{ forloop.counter0 }}">
+                    {{ forloop.counter }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="wizard-stage-head">
+                <div>
+                    <p class="eyebrow">Joriy savol</p>
+                    <h2 id="currentStepTitle">Savol 1</h2>
+                </div>
+                <span class="wizard-counter" id="wizardCounter">1 / {{ questions|length }}</span>
+            </div>
+            {% endif %}
+
             {% for question in questions %}
-            <section class="question-card">
+            <section class="question-card wizard-step {% if forloop.first %}is-active{% endif %}" data-step="{{ forloop.counter0 }}"{% if not forloop.first %} hidden{% endif %}>
                 <p class="question-index">Savol {{ forloop.counter }}</p>
-                <h2>{{ question.text }}</h2>
+                <h2 class="question-prompt">{{ question.text }}</h2>
                 <div class="choices">
                     {% for choice in question.choice_set.all %}
                     <label class="choice-option">
@@ -51,7 +78,19 @@
                 </div>
             </section>
             {% endfor %}
-            <button class="primary-btn" type="submit">Natijani ko'rish</button>
+
+            <div class="wizard-actions">
+                <a class="ghost-btn wizard-back-link" href="{{ next_url }}">Orqaga</a>
+                <div class="wizard-actions-main">
+                    {% if questions|length > 1 %}
+                    <button class="secondary-btn" type="button" id="prevStepBtn">Oldingi</button>
+                    <button class="primary-btn" type="button" id="nextStepBtn">Keyingi savol</button>
+                    <button class="primary-btn" type="submit" id="submitWizardBtn" hidden>Natijani ko'rish</button>
+                    {% else %}
+                    <button class="primary-btn" type="submit" id="submitWizardBtn">Natijani ko'rish</button>
+                    {% endif %}
+                </div>
+            </div>
         </form>
     </div>
     <script>
@@ -60,18 +99,36 @@
             const progressText = document.getElementById("progressText");
             const progressFill = document.getElementById("progressFill");
             const radioInputs = Array.from(document.querySelectorAll('input[type="radio"]'));
+            const steps = Array.from(document.querySelectorAll("[data-step]"));
+            const chips = Array.from(document.querySelectorAll("[data-step-target]"));
+            const prevBtn = document.getElementById("prevStepBtn");
+            const nextBtn = document.getElementById("nextStepBtn");
+            const submitBtn = document.getElementById("submitWizardBtn");
+            const currentStepTitle = document.getElementById("currentStepTitle");
+            const wizardCounter = document.getElementById("wizardCounter");
+            const stageHead = document.querySelector(".wizard-stage-head");
             const totalQuestions = {{ questions|length }};
-            let remainingSeconds = Number(timerEl.dataset.seconds || 0) * 60;
+            let remainingSeconds = timerEl ? Number(timerEl.dataset.seconds || 0) * 60 : 0;
+            let activeStep = 0;
 
             function updateProgress() {
                 const answered = new Set(
                     radioInputs.filter((input) => input.checked).map((input) => input.name)
                 ).size;
-                progressText.textContent = `${answered} / ${totalQuestions}`;
-                progressFill.style.width = `${totalQuestions ? (answered / totalQuestions) * 100 : 0}%`;
+                if (progressText) {
+                    progressText.textContent = `${answered} / ${totalQuestions}`;
+                }
+                if (progressFill) {
+                    progressFill.style.width = `${totalQuestions ? (answered / totalQuestions) * 100 : 0}%`;
+                }
+                chips.forEach((chip, index) => {
+                    const stepAnswered = radioInputs.some((input) => input.checked && Number(input.closest("[data-step]").dataset.step) === index);
+                    chip.classList.toggle("is-complete", stepAnswered);
+                });
             }
 
             function updateTimer() {
+                if (!timerEl) return;
                 const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
                 const seconds = String(remainingSeconds % 60).padStart(2, "0");
                 timerEl.textContent = `Vaqt: ${minutes}:${seconds}`;
@@ -80,10 +137,74 @@
                 }
             }
 
-            radioInputs.forEach((input) => input.addEventListener("change", updateProgress));
+            function syncChoiceStates() {
+                document.querySelectorAll(".choice-option").forEach((option) => {
+                    const input = option.querySelector("input");
+                    option.classList.toggle("is-selected", Boolean(input && input.checked));
+                });
+            }
+
+            function showStep(index, shouldScroll) {
+                activeStep = index;
+                steps.forEach((step, stepIndex) => {
+                    const isActive = stepIndex === index;
+                    step.hidden = !isActive;
+                    step.classList.toggle("is-active", isActive);
+                });
+                chips.forEach((chip, chipIndex) => {
+                    chip.classList.toggle("is-current", chipIndex === index);
+                });
+                if (currentStepTitle) {
+                    currentStepTitle.textContent = `Savol ${index + 1}`;
+                }
+                if (wizardCounter) {
+                    wizardCounter.textContent = `${index + 1} / ${totalQuestions}`;
+                }
+                if (prevBtn) {
+                    prevBtn.disabled = index === 0;
+                }
+                if (nextBtn) {
+                    nextBtn.hidden = index === totalQuestions - 1;
+                }
+                if (submitBtn && totalQuestions > 1) {
+                    submitBtn.hidden = index !== totalQuestions - 1;
+                }
+                if (shouldScroll && stageHead) {
+                    stageHead.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }
+
+            radioInputs.forEach((input) => input.addEventListener("change", function () {
+                syncChoiceStates();
+                updateProgress();
+            }));
+            chips.forEach((chip) => {
+                chip.addEventListener("click", function () {
+                    showStep(Number(chip.dataset.stepTarget || 0), true);
+                });
+            });
+            if (prevBtn) {
+                prevBtn.addEventListener("click", function () {
+                    if (activeStep > 0) {
+                        showStep(activeStep - 1, true);
+                    }
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener("click", function () {
+                    if (activeStep < totalQuestions - 1) {
+                        showStep(activeStep + 1, true);
+                    }
+                });
+            }
+
+            syncChoiceStates();
             updateProgress();
-            updateTimer();
-            setInterval(updateTimer, 1000);
+            showStep(0, false);
+            if (timerEl) {
+                updateTimer();
+                setInterval(updateTimer, 1000);
+            }
         })();
     </script>
 </body>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ILURO Logo Concepts</title>
+  <style>
+    :root {
+      --bg: #f7f1e8;
+      --panel: #fffaf3;
+      --line: #e7d4bc;
+      --text: #24160d;
+      --muted: #8f735c;
+      --accent: #a86a33;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Manrope, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(168,106,51,.08), transparent 18%),
+        linear-gradient(180deg, #fcf8f2 0%, var(--bg) 100%);
+    }
+    .wrap {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 42px 0 60px;
+    }
+    h1 {
+      margin: 0;
+      font-family: "Space Grotesk", Arial, sans-serif;
+      font-size: 48px;
+      letter-spacing: -0.04em;
+    }
+    .lead {
+      max-width: 760px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 22px;
+      margin-top: 36px;
+    }
+    .card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: rgba(255, 250, 243, .94);
+      box-shadow: 0 16px 36px rgba(90, 56, 28, .08);
+    }
+    .card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+    .eyebrow {
+      margin: 18px 0 8px;
+      color: var(--accent);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      font-family: "Space Grotesk", Arial, sans-serif;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .pick {
+      margin-top: 28px;
+      padding: 20px 22px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255, 248, 239, .94);
+    }
+    .pick strong {
+      color: var(--accent);
+    }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      h1 { font-size: 38px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>ILURO logo concepts</h1>
+    <p class="lead">Yo'nalishlar mahsulotning mavjud ruhiga mos: warm ivory palette, structured learning, progression va AI-assisted flow. Har bir konsept app icon, wordmark va favicon variantga moslab ishlangan.</p>
+
+    <section class="grid">
+      <article class="card">
+        <img src="./iluro_logo_concept_a.svg" alt="ILURO concept A" />
+        <p class="eyebrow">Concept A</p>
+        <h2>Signal mark</h2>
+        <p>Monogram ichidagi plus/signal shakli: learning + AI support + knowledge activation. Eng product-like va zamonaviy yo'nalish.</p>
+      </article>
+
+      <article class="card">
+        <img src="./iluro_logo_concept_b.svg" alt="ILURO concept B" />
+        <p class="eyebrow">Concept B</p>
+        <h2>Target compass</h2>
+        <p>Aniq tayyorlov, exam focus va yo'naltirilgan progress g'oyasiga qurilgan. SAT/mock yo'nalishiga ham yaxshi mos keladi.</p>
+      </article>
+
+      <article class="card">
+        <img src="./iluro_logo_concept_c.svg" alt="ILURO concept C" />
+        <p class="eyebrow">Concept C</p>
+        <h2>Growth bars</h2>
+        <p>Daraja, XP va structured growth mantiqiga eng yaqin. Platformaning "progression engine" tarafini kuchliroq ochadi.</p>
+      </article>
+    </section>
+
+    <section class="pick">
+      <p><strong>Tavsiya:</strong> Concept A. Sabab: u education, AI va product hissini birlashtiradi; favicon va mobil app icon sifatida ham eng toza ishlaydi.</p>
+    </section>
+  </main>
+</body>
+</html>

@@ -200,6 +200,16 @@ JAZZMIN_SETTINGS = {
         {"name": "Asosiy bo'limlar", "app": "main"},
         {"name": "Foydalanuvchilar", "model": "auth.User"},
     ],
+    "custom_links": {
+        "main": [
+            {
+                "name": "Import markazi",
+                "url": "/admin/import-center/",
+                "icon": "fas fa-file-import",
+                "permissions": ["auth.view_user"],
+            },
+        ],
+    },
     "order_with_respect_to": [
         "main",
         "auth",

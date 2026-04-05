@@ -1,19 +1,25 @@
 {% extends "auth/base_auth.html" %}
 
 {% block title %}Iluro | Register{% endblock %}
+{% block body_class %}auth-page-register{% endblock %}
+
+{% block auth_story %}
+    <a class="brand" href="{% url 'index' %}" aria-label="ILURO bosh sahifa">
+        {% include "partials/brand_logo.html" with logo_width="123" logo_height="28" %}
+    </a>
+{% endblock %}
 
 {% block content %}
     <div class="panel-head">
-        <p class="panel-kicker">Yangi hisob</p>
-        <h2>Ro'yxatdan o'tish</h2>
-        <p class="panel-text">Shaxsiy kabinet, fan tanlash va AI bilan boyitilgan tayyorlov oqimi uchun hisob yarating.</p>
+        <h2>Hisob yaratish</h2>
     </div>
 
     <form class="auth-form" method="post">
         {% csrf_token %}
+        <input type="hidden" name="role" value="student">
         <label>
             <span>To'liq ism</span>
-            <input type="text" name="full_name" placeholder="Masalan, Palonchiyev Palonchi " required>
+            <input type="text" name="full_name" placeholder="Ism familiya" required>
         </label>
         <label>
             <span>Username</span>
@@ -21,23 +27,15 @@
         </label>
         <label>
             <span>Email</span>
-            <input type="email" name="email" placeholder="Masalan, example@gmail.com" required>
-        </label>
-        <label>
-            <span>Status</span>
-            <select name="role" required>
-                {% for item in register_role_choices %}
-                <option value="{{ item.value }}">{{ item.emoji }} {{ item.label }}</option>
-                {% endfor %}
-            </select>
+            <input type="email" name="email" placeholder="example@gmail.com" required>
         </label>
         <label>
             <span>Parol</span>
-            <input type="password" name="password" placeholder="Parolingizni kiriting" required>
+            <input type="password" name="password" placeholder="Parol" required>
         </label>
         <label>
-            <span>Parolni tasdiqlang</span>
-            <input type="password" name="password2" placeholder="Parolni qayta kiriting" required>
+            <span>Parolni qayta kiriting</span>
+            <input type="password" name="password2" placeholder="Parolni tasdiqlang" required>
         </label>
         <button type="submit" class="submit-btn">Hisob yaratish</button>
     </form>

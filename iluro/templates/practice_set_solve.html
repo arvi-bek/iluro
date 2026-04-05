@@ -5,14 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iluro | {{ practice_set.title }}</title>
+    {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260405b">
 </head>
 <body>
-    <div class="flow-shell">
-        <section class="solve-header">
+    <div class="flow-shell solve-wizard-shell{% if exercises|length == 1 %} is-single-step{% endif %}">
+        <section class="solve-header wizard-header">
             <p class="eyebrow">Misol / Masala bo'limi</p>
             <h1>{{ practice_set.title }}</h1>
             <div class="meta-list">
@@ -27,17 +28,46 @@
             {% endif %}
         </section>
 
-        <form class="solve-form" method="post">
+        {% if exercises|length > 1 %}
+        <div class="progress-wrap">
+            <div class="progress-head">
+                <span>Bajarilgan topshiriqlar</span>
+                <strong id="progressText">0 / {{ exercises|length }}</strong>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <form class="solve-form wizard-form" method="post" data-wizard-form>
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ next_url }}">
+            {% if exercises|length > 1 %}
+            <div class="question-nav" aria-label="Topshiriqlar navigatsiyasi">
+                {% for exercise in exercises %}
+                <button class="question-chip {% if forloop.first %}is-current{% endif %}" type="button" data-step-target="{{ forloop.counter0 }}">
+                    {{ forloop.counter }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="wizard-stage-head">
+                <div>
+                    <p class="eyebrow">Joriy topshiriq</p>
+                    <h2 id="currentStepTitle">Topshiriq 1</h2>
+                </div>
+                <span class="wizard-counter" id="wizardCounter">1 / {{ exercises|length }}</span>
+            </div>
+            {% endif %}
 
             {% for exercise in exercises %}
-            <article class="question-card">
+            <article class="question-card wizard-step {% if forloop.first %}is-active{% endif %}" data-step="{{ forloop.counter0 }}"{% if not forloop.first %} hidden{% endif %}>
                 <p class="question-index">{{ forloop.counter }}-topshiriq</p>
                 {% if exercise.title %}
                 <p class="eyebrow">{{ exercise.title }}</p>
                 {% endif %}
-                <h2>{{ exercise.prompt }}</h2>
+                <h2 class="question-prompt">{{ exercise.prompt }}</h2>
                 <div class="meta-list">
                     <span>{{ exercise.get_answer_mode_display }}</span>
                 </div>
@@ -53,9 +83,9 @@
                 </div>
                 {% else %}
                 <div class="choices">
-                    <label class="choice-option">
-                        <span style="width:100%;">
-                            <input type="text" name="exercise_{{ exercise.id }}_input" placeholder="Javobni shu yerga yozing" style="width:100%; min-height:48px; border-radius:14px; border:1px solid rgba(138,84,37,.16); padding:0 14px; font:inherit;">
+                    <label class="choice-option choice-option-input">
+                        <span class="answer-field-wrap">
+                            <input class="answer-field" type="text" name="exercise_{{ exercise.id }}_input" placeholder="Javobni shu yerga yozing">
                         </span>
                     </label>
                 </div>
@@ -63,9 +93,131 @@
             </article>
             {% endfor %}
 
-            <button class="primary-btn" type="submit">Bo'limni yakunlash</button>
-            <a class="back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' practice_set.subject.id 'problems' %}{% endif %}">Misol / Masalalarga qaytish</a>
+            <div class="wizard-actions">
+                <a class="ghost-btn wizard-back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' practice_set.subject.id 'problems' %}{% endif %}">Misol / Masalalarga qaytish</a>
+                <div class="wizard-actions-main">
+                    {% if exercises|length > 1 %}
+                    <button class="secondary-btn" type="button" id="prevStepBtn">Oldingi</button>
+                    <button class="primary-btn" type="button" id="nextStepBtn">Keyingi savol</button>
+                    <button class="primary-btn" type="submit" id="submitWizardBtn" hidden>Bo'limni yakunlash</button>
+                    {% else %}
+                    <button class="primary-btn" type="submit" id="submitWizardBtn">Bo'limni yakunlash</button>
+                    {% endif %}
+                </div>
+            </div>
         </form>
     </div>
+    <script>
+        (function () {
+            const steps = Array.from(document.querySelectorAll("[data-step]"));
+            const chips = Array.from(document.querySelectorAll("[data-step-target]"));
+            const radioInputs = Array.from(document.querySelectorAll('input[type="radio"]'));
+            const textInputs = Array.from(document.querySelectorAll(".answer-field"));
+            const progressText = document.getElementById("progressText");
+            const progressFill = document.getElementById("progressFill");
+            const prevBtn = document.getElementById("prevStepBtn");
+            const nextBtn = document.getElementById("nextStepBtn");
+            const submitBtn = document.getElementById("submitWizardBtn");
+            const currentStepTitle = document.getElementById("currentStepTitle");
+            const wizardCounter = document.getElementById("wizardCounter");
+            const stageHead = document.querySelector(".wizard-stage-head");
+            const totalSteps = steps.length;
+            let activeStep = 0;
+
+            function isStepAnswered(index) {
+                const step = steps[index];
+                if (!step) return false;
+                const checkedRadio = step.querySelector('input[type="radio"]:checked');
+                const typedInput = step.querySelector(".answer-field");
+                return Boolean(checkedRadio || (typedInput && typedInput.value.trim()));
+            }
+
+            function syncChoiceStates() {
+                document.querySelectorAll(".choice-option").forEach((option) => {
+                    const radio = option.querySelector('input[type="radio"]');
+                    const text = option.querySelector(".answer-field");
+                    option.classList.toggle("is-selected", Boolean(radio && radio.checked));
+                    option.classList.toggle("has-value", Boolean(text && text.value.trim()));
+                });
+            }
+
+            function updateProgress() {
+                let answered = 0;
+                chips.forEach((chip, index) => {
+                    const completed = isStepAnswered(index);
+                    if (completed) answered += 1;
+                    chip.classList.toggle("is-complete", completed);
+                });
+                if (progressText) {
+                    progressText.textContent = `${answered} / ${totalSteps}`;
+                }
+                if (progressFill) {
+                    progressFill.style.width = `${totalSteps ? (answered / totalSteps) * 100 : 0}%`;
+                }
+            }
+
+            function showStep(index, shouldScroll) {
+                activeStep = index;
+                steps.forEach((step, stepIndex) => {
+                    const isActive = stepIndex === index;
+                    step.hidden = !isActive;
+                    step.classList.toggle("is-active", isActive);
+                });
+                chips.forEach((chip, chipIndex) => {
+                    chip.classList.toggle("is-current", chipIndex === index);
+                });
+                if (currentStepTitle) {
+                    currentStepTitle.textContent = `Topshiriq ${index + 1}`;
+                }
+                if (wizardCounter) {
+                    wizardCounter.textContent = `${index + 1} / ${totalSteps}`;
+                }
+                if (prevBtn) {
+                    prevBtn.disabled = index === 0;
+                }
+                if (nextBtn) {
+                    nextBtn.hidden = index === totalSteps - 1;
+                }
+                if (submitBtn && totalSteps > 1) {
+                    submitBtn.hidden = index !== totalSteps - 1;
+                }
+                if (shouldScroll && stageHead) {
+                    stageHead.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }
+
+            radioInputs.forEach((input) => input.addEventListener("change", function () {
+                syncChoiceStates();
+                updateProgress();
+            }));
+            textInputs.forEach((input) => input.addEventListener("input", function () {
+                syncChoiceStates();
+                updateProgress();
+            }));
+            chips.forEach((chip) => {
+                chip.addEventListener("click", function () {
+                    showStep(Number(chip.dataset.stepTarget || 0), true);
+                });
+            });
+            if (prevBtn) {
+                prevBtn.addEventListener("click", function () {
+                    if (activeStep > 0) {
+                        showStep(activeStep - 1, true);
+                    }
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener("click", function () {
+                    if (activeStep < totalSteps - 1) {
+                        showStep(activeStep + 1, true);
+                    }
+                });
+            }
+
+            syncChoiceStates();
+            updateProgress();
+            showStep(0, false);
+        })();
+    </script>
 </body>
 </html>

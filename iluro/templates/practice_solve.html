@@ -5,14 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iluro | Mashq</title>
+    {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260405b">
 </head>
 <body>
-    <div class="flow-shell">
-        <section class="solve-header">
+    <div class="flow-shell solve-wizard-shell is-single-step">
+        <section class="solve-header wizard-header">
             <p class="eyebrow">Misol / Masala</p>
             <h1>{{ exercise.title }}</h1>
             <div class="meta-list">
@@ -22,15 +23,17 @@
                 {% if exercise.source_book %}<span>Kitob: {{ exercise.source_book }}</span>{% endif %}
                 {% if exercise.topic %}<span>Mavzu: {{ exercise.topic }}</span>{% endif %}
             </div>
-            <p class="lead">{{ exercise.prompt }}</p>
         </section>
 
-        <form class="solve-form" method="post">
+        <form class="solve-form wizard-form" method="post">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ next_url }}">
-            <article class="question-card">
+            <article class="question-card wizard-step is-active">
                 <p class="question-index">Amaliy mashq</p>
-                <h2>Javobingizni kiriting</h2>
+                <h2 class="question-prompt">{{ exercise.prompt }}</h2>
+                <div class="meta-list">
+                    <span>{{ exercise.get_answer_mode_display }}</span>
+                </div>
 
                 {% if exercise.answer_mode == "choice" %}
                 <div class="choices">
@@ -43,18 +46,43 @@
                 </div>
                 {% else %}
                 <div class="choices">
-                    <label class="choice-option">
-                        <span style="width:100%;">
-                            <input type="text" name="answer_text" placeholder="Javobni shu yerga yozing" style="width:100%; min-height:48px; border-radius:14px; border:1px solid rgba(138,84,37,.16); padding:0 14px; font:inherit;">
+                    <label class="choice-option choice-option-input">
+                        <span class="answer-field-wrap">
+                            <input class="answer-field" type="text" name="answer_text" placeholder="Javobni shu yerga yozing">
                         </span>
                     </label>
                 </div>
                 {% endif %}
             </article>
 
-            <button class="primary-btn" type="submit">Yakunlash</button>
-            <a class="back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' exercise.subject.id 'problems' %}{% endif %}">Orqaga qaytish</a>
+            <div class="wizard-actions">
+                <a class="ghost-btn wizard-back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' exercise.subject.id 'problems' %}{% endif %}">Orqaga qaytish</a>
+                <div class="wizard-actions-main">
+                    <button class="primary-btn" type="submit">Yakunlash</button>
+                </div>
+            </div>
         </form>
     </div>
+    <script>
+        (function () {
+            document.querySelectorAll(".choice-option").forEach((option) => {
+                const radio = option.querySelector('input[type="radio"]');
+                const text = option.querySelector(".answer-field");
+
+                function syncState() {
+                    option.classList.toggle("is-selected", Boolean(radio && radio.checked));
+                    option.classList.toggle("has-value", Boolean(text && text.value.trim()));
+                }
+
+                if (radio) {
+                    radio.addEventListener("change", syncState);
+                }
+                if (text) {
+                    text.addEventListener("input", syncState);
+                }
+                syncState();
+            });
+        })();
+    </script>
 </body>
 </html>

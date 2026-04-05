@@ -9,12 +9,15 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .models import (
+    Book,
     EssayTopic,
     GRADE_CHOICES,
     GrammarLessonProgress,
     GrammarLessonQuestion,
+    PracticeSet,
     Subject,
     SubjectSectionEntry,
+    Test,
 )
 from .selectors import (
     get_dashboard_subject_cards,
@@ -132,6 +135,281 @@ def _split_chronology_lines(entry):
     return [line.strip(" -") for line in entry.body.splitlines() if line.strip()]
 
 
+def _is_math_subject(subject_name):
+    return "matem" in (subject_name or "").lower()
+
+
+def _get_workspace_section_catalog(subject_theme_key):
+    tests_description = "Real formatga yaqin testlar, vaqt nazorati va natija ko'rinishi."
+    if subject_theme_key == "history":
+        tests_description = "Atama, yil va umumiy formatdagi tarix testlarini bloklar bo'yicha ishlang."
+    elif subject_theme_key == "math":
+        tests_description = "Tezlik, aniqlik va formulani eslashni bir joyda tekshiradigan testlar."
+    elif subject_theme_key == "language":
+        tests_description = "Grammatika va matn bilan ishlashni yakuniy test ritmiga olib chiqadigan bo'lim."
+
+    return {
+        "books": {
+            "description": "Darsliklar, PDF resurslar va mavzu bo'yicha materiallar.",
+            "cta": "Resurslarni ochish",
+            "unit": "resurs",
+            "empty_note": "Resurslar hali yuklanmagan.",
+        },
+        "tests": {
+            "description": tests_description,
+            "cta": "Testni boshlash",
+            "unit": "test",
+            "empty_note": "Testlar hali qo'shilmagan.",
+        },
+        "formulas": {
+            "description": "Qisqa formulalar, ishlatilish joyi va eslab qolish uchun tayanch blok.",
+            "cta": "Formulalarni ko'rish",
+            "unit": "formula",
+            "empty_note": "Formulalar hali kiritilmagan.",
+        },
+        "problems": {
+            "description": (
+                "Misol, masala va nazorat bloklarini bitta erkin ishlash oqimida birlashtiradigan bo'lim."
+                if subject_theme_key == "math"
+                else "Misol va masala setlari orqali mavzuni mustahkamlash bo'limi."
+            ),
+            "cta": "Setlarni ochish",
+            "unit": "set",
+            "empty_note": "Mashq setlari hali tayyor emas.",
+        },
+        "terms": {
+            "description": "Atamalarni qisqa mazmun va to'liq izoh bilan takrorlash katalogi.",
+            "cta": "Atamalarni ko'rish",
+            "unit": "atama",
+            "empty_note": "Atamalar hali kiritilmagan.",
+        },
+        "events": {
+            "description": "Muhim sana va voqealarni testdan oldin bir oqimda ko'rib chiqing.",
+            "cta": "Sanalarni ochish",
+            "unit": "voqea",
+            "empty_note": "Sanalar hali kiritilmagan.",
+        },
+        "chronology": {
+            "description": "Davrlar va ketma-ket jarayonlarni preview hamda detail ko'rinishida o'rganing.",
+            "cta": "Xronologiyani ko'rish",
+            "unit": "bo'lim",
+            "empty_note": "Xronologiya hali tayyor emas.",
+        },
+        "grammar": {
+            "description": "Daraja bo'yicha darslar, mini test va progress bilan ishlaydigan grammar yo'li.",
+            "cta": "Darslarni ochish",
+            "unit": "dars",
+            "empty_note": "Grammar darslari hali yo'q.",
+        },
+        "rules": {
+            "description": "Qoidalarni tez takrorlash va misollar bilan ko'rish uchun referens blok.",
+            "cta": "Qoidalarni ko'rish",
+            "unit": "qoida",
+            "empty_note": "Qoidalar hali qo'shilmagan.",
+        },
+        "essay": {
+            "description": "Mavzu, tezis, outline va yozish uchun tayyor ish nuqtalari.",
+            "cta": "Insho labini ochish",
+            "unit": "mavzu",
+            "empty_note": "Insho mavzulari hali qo'shilmagan.",
+        },
+        "extras": {
+            "description": "Asosiy darsga yordam beradigan qo'shimcha izoh va materiallar.",
+            "cta": "Qo'shimcha blokni ochish",
+            "unit": "material",
+            "empty_note": "Qo'shimcha materiallar hali yo'q.",
+        },
+        "ai": {
+            "description": "Tushuntirish, xato tahlili va aqlli tavsiya shu bo'limga ulanadi.",
+            "cta": "Tez orada",
+            "unit": "funksiya",
+            "empty_note": "MVPdan keyin ulanadi.",
+        },
+        "chat": {
+            "description": "Mavzu bo'yicha tezkor savol-javob va yo'naltirish moduli shu yerda bo'ladi.",
+            "cta": "Tez orada",
+            "unit": "funksiya",
+            "empty_note": "MVPdan keyin ulanadi.",
+        },
+    }
+
+
+def _build_workspace_flow_steps(subject_theme_key):
+    if subject_theme_key == "math":
+        return [
+            {
+                "step": "01",
+                "title": "Formulani ko'rib chiqing",
+                "text": "Qisqa formula blokidan yozilish va ishlatilish joyini eslang.",
+            },
+            {
+                "step": "02",
+                "title": "Set bilan mustahkamlang",
+                "text": "Misol yoki masala bo'limida shu mavzu bo'yicha amaliy blok ishlang.",
+            },
+            {
+                "step": "03",
+                "title": "Test bilan tekshiring",
+                "text": "Oxirida tezlik va aniqlikni test formatida ko'rib chiqing.",
+            },
+        ]
+
+    if subject_theme_key == "history":
+        return [
+            {
+                "step": "01",
+                "title": "Davrni tushunib oling",
+                "text": "Avval xronologiya yoki voqealar blokidan umumiy oqimni ko'ring.",
+            },
+            {
+                "step": "02",
+                "title": "Atamalarni takrorlang",
+                "text": "Muhim tushunchalarni qisqa mazmun bilan eslab chiqing.",
+            },
+            {
+                "step": "03",
+                "title": "Yil va atama testini ishlang",
+                "text": "Keyin testga o'tib, xotira va bog'lanishni tekshiring.",
+            },
+        ]
+
+    return [
+        {
+            "step": "01",
+            "title": "Grammatik bazani oching",
+            "text": "Darajangizga mos mavzuni tanlab, qoida va misol bilan tanishing.",
+        },
+        {
+            "step": "02",
+            "title": "Insho yoki qoida blokiga o'ting",
+            "text": "Mavzuni yozuv, tezis va reja bilan mustahkamlang.",
+        },
+        {
+            "step": "03",
+            "title": "Mini test va tahrirlash",
+            "text": "Oxirida mini test orqali natijani ko'ring va xatoni toping.",
+        },
+    ]
+
+
+def _build_workspace_focus(subject_theme_key, section_totals):
+    focus_candidates = {
+        "math": [
+            (
+                "formulas",
+                "Formulalar blokidan boshlang",
+                "Asosiy formula va qoida ko'z oldida bo'lsa, keyingi mashq bloklari ancha samarali ishlaydi.",
+            ),
+            (
+                "problems",
+                "Amaliy setga o'ting",
+                "Bir nechta misol yoki masala bilan formulani darhol ishlatib ko'ring.",
+            ),
+            (
+                "tests",
+                "Test ritmiga o'ting",
+                "Tayyorlovni vaqt nazorati bilan tekshirish uchun test blokini oching.",
+            ),
+        ],
+        "history": [
+            (
+                "chronology",
+                "Xronologiya oqimini oching",
+                "Davr va ketma-ketlikni oldin ko'rsangiz, testdagi bog'lanishlar ancha ravshanlashadi.",
+            ),
+            (
+                "terms",
+                "Atamalarni takrorlang",
+                "Qisqa kartalar bilan asosiy tushunchalarni tez tiklab oling.",
+            ),
+            (
+                "tests",
+                "Tarix testiga o'ting",
+                "Atama yoki yil bo'yicha test orqali xotirani sinovdan o'tkazing.",
+            ),
+        ],
+        "language": [
+            (
+                "grammar",
+                "Grammar yo'lidan boshlang",
+                "Darajangizga mos darsni ochib, qoida va mini test bilan ishlang.",
+            ),
+            (
+                "essay",
+                "Insho laboratoriyasiga o'ting",
+                "Mavzu, tezis va reja ustida ishlab yozish oqimini kuchaytiring.",
+            ),
+            (
+                "tests",
+                "Nazorat testini ishlang",
+                "Mavzu ustida ishlagandan keyin yakuniy natijani test orqali tekshiring.",
+            ),
+        ],
+    }
+
+    for section_key, title, description in focus_candidates.get(subject_theme_key, []):
+        if section_totals.get(section_key, 0):
+            return {
+                "key": section_key,
+                "title": title,
+                "description": description,
+                "count": section_totals.get(section_key, 0),
+            }
+
+    for fallback_key in ("tests", "books"):
+        if section_totals.get(fallback_key, 0):
+            return {
+                "key": fallback_key,
+                "title": "Shu bo'limdan boshlash mumkin",
+                "description": "Hozir eng tayyor blokdan kirib, subject workspace ichida ritmni ushlab turing.",
+                "count": section_totals.get(fallback_key, 0),
+            }
+
+    return {
+        "key": "books",
+        "title": "Workspace hali to'ldirilmoqda",
+        "description": "Kontent kiritilgach shu sahifa foydalanuvchini kerakli blokka olib boradi.",
+        "count": 0,
+    }
+
+
+def _build_workspace_module_cards(section_items, section_catalog, section_totals, section_previews, primary_key):
+    cards = []
+    for item in section_items:
+        if item["key"] == "home":
+            continue
+
+        meta = section_catalog.get(item["key"], {})
+        is_coming_soon = item["key"] in {"ai", "chat"}
+        count = section_totals.get(item["key"], 0)
+        preview = section_previews.get(item["key"], "")
+
+        if is_coming_soon:
+            status = "Coming soon"
+            preview_text = meta.get("empty_note", "")
+        elif count:
+            status = f"{count} ta {meta.get('unit', 'material')}"
+            preview_text = preview or meta.get("description", "")
+        else:
+            status = f"0 ta {meta.get('unit', 'material')}"
+            preview_text = meta.get("empty_note", "")
+
+        cards.append(
+            {
+                "key": item["key"],
+                "label": item["label"],
+                "description": meta.get("description", ""),
+                "cta": meta.get("cta", "Ochish"),
+                "status": status,
+                "preview": preview_text,
+                "is_primary": item["key"] == primary_key,
+                "is_coming_soon": is_coming_soon,
+            }
+        )
+
+    return cards
+
+
 @login_required
 def dashboard_view(request):
     profile = _get_or_sync_profile(request.user)
@@ -226,11 +504,14 @@ def subject_workspace_view(request, subject_id, section=None):
 
     current_section = section or request.GET.get("section", "home")
     subject_theme = _get_subject_theme(subject.name)
+    is_math_subject = _is_math_subject(subject.name)
     allowed_sections = {"home", "books", "tests", "ai", "chat"} | {
         item["key"] for item in subject_theme["extra_sections"]
     }
     if current_section not in allowed_sections:
         raise Http404("Bunday bo'lim mavjud emas.")
+    if is_math_subject and current_section == "tests":
+        return redirect("subject-workspace-section", subject_id=subject.id, section="problems")
 
     peer_subjects = get_subject_peer_subjects(request.user, subject.id)
 
@@ -272,8 +553,9 @@ def subject_workspace_view(request, subject_id, section=None):
     section_items = [
         {"key": "home", "label": "Asosiy menyu"},
         {"key": "books", "label": "Kitoblar"},
-        {"key": "tests", "label": "Mashqlar (Test)"},
     ]
+    if not is_math_subject:
+        section_items.append({"key": "tests", "label": "Mashqlar (Test)"})
     section_items.extend(subject_theme["extra_sections"])
     section_items.extend(
         [
@@ -285,10 +567,34 @@ def subject_workspace_view(request, subject_id, section=None):
         item["is_active"] = item["key"] == current_section
 
     user_subject_best = get_user_subject_best_score(request.user, subject)
+    accessible_test_count = _filter_by_allowed_level(
+        Test.objects.filter(subject=subject),
+        "difficulty",
+        subject_level,
+    ).count()
+    total_books_count = Book.objects.filter(subject=subject).count()
+    accessible_practice_count = _filter_by_allowed_level(
+        PracticeSet.objects.filter(subject=subject),
+        "difficulty",
+        subject_level,
+    ).count()
+    combined_problem_count = accessible_practice_count + (accessible_test_count if is_math_subject else 0)
     home_metrics = [
         {"label": "Joriy daraja", "value": subject_level, "hint": "Shu fan uchun tanlangan joriy daraja"},
-        {"label": "Testlar", "value": subject.test_count, "hint": "Mavjud mashqlar soni"},
-        {"label": "Eng yaxshi natija", "value": f"{user_subject_best}%", "hint": "Shu fan bo'yicha eng yaxshi foiz"},
+        {
+            "label": "Ochiq mashqlar" if is_math_subject else "Ochiq testlar",
+            "value": f"{combined_problem_count if is_math_subject else accessible_test_count} ta",
+            "hint": (
+                "Misol, masala va nazorat bloklari birlashtirilgan."
+                if is_math_subject
+                else "Hozirgi darajangizda ochiq bo'lgan testlar"
+            ),
+        },
+        {
+            "label": "Eng yaxshi natija",
+            "value": f"{user_subject_best}%" if user_subject_best else "Hali yo'q",
+            "hint": "Shu fan bo'yicha eng yaxshi foiz",
+        },
     ]
     formula_query = (request.GET.get("q") or "").strip()
     formula_filter = request.GET.get("formula_filter", "all")
@@ -470,6 +776,200 @@ def subject_workspace_view(request, subject_id, section=None):
     essay_topics = list(
         _filter_by_allowed_level(EssayTopic.objects.filter(subject=subject), "access_level", subject_level)[:6]
     )
+    combined_problem_items = []
+    if is_math_subject:
+        for practice_set in practice_sets:
+            combined_problem_items.append(
+                {
+                    "kind": "practice_set",
+                    "badge": "Set",
+                    "title": practice_set.title,
+                    "level": practice_set.get_difficulty_display(),
+                    "description": practice_set.description or "",
+                    "meta_line": " ".join(
+                        item
+                        for item in [
+                            f"Kitob: {practice_set.source_book}." if practice_set.source_book else "",
+                            f"Mavzu: {practice_set.topic}." if practice_set.topic else "",
+                        ]
+                        if item
+                    ),
+                    "stats": [
+                        f"{practice_set.exercise_count} ta topshiriq",
+                        (
+                            f"Eng yaxshi: {practice_set.best_score}%"
+                            if practice_set.best_score is not None
+                            else "Eng yaxshi natija yo'q"
+                        ),
+                        (
+                            f"Oxirgi: {practice_set.last_score}%"
+                            if practice_set.last_score is not None
+                            else "Hali ishlanmagan"
+                        ),
+                        f"{practice_set.attempts} ta urinish",
+                    ],
+                    "href": f"/practice/sets/{practice_set.id}/solve/?next={request.get_full_path()}",
+                    "cta": "Ishlash",
+                }
+            )
+        for test in tests:
+            combined_problem_items.append(
+                {
+                    "kind": "test",
+                    "badge": "Nazorat",
+                    "title": test.title,
+                    "level": test.display_difficulty,
+                    "description": "Timer yo'q. Savollarni bemalol ishlab, keyin natijani ko'ring.",
+                    "meta_line": f"{test.question_count} ta savol",
+                    "stats": [
+                        "Timer yo'q",
+                        (
+                            f"Eng yaxshi: {test.best_score}%"
+                            if test.best_score is not None
+                            else "Eng yaxshi natija yo'q"
+                        ),
+                        (
+                            f"Oxirgi: {test.last_score}%"
+                            if test.last_score is not None
+                            else "Hali ishlanmagan"
+                        ),
+                        f"{test.attempts} ta urinish",
+                    ],
+                    "href": f"/tests/{test.id}/start/?next={request.get_full_path()}",
+                    "cta": "Ishlash",
+                }
+            )
+    section_catalog = _get_workspace_section_catalog(subject_theme["key"])
+    section_totals = {
+        "books": total_books_count,
+        "tests": accessible_test_count,
+        "formulas": SubjectSectionEntry.objects.filter(subject=subject, section_key="formulas").count(),
+        "problems": combined_problem_count if is_math_subject else accessible_practice_count,
+        "terms": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
+            "access_level",
+            subject_level,
+        ).count(),
+        "events": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="events"),
+            "access_level",
+            subject_level,
+        ).count(),
+        "chronology": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology"),
+            "access_level",
+            subject_level,
+        ).count(),
+        "grammar": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="grammar"),
+            "access_level",
+            subject_level,
+        ).count(),
+        "rules": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="rules"),
+            "access_level",
+            subject_level,
+        ).count(),
+        "essay": _filter_by_allowed_level(
+            EssayTopic.objects.filter(subject=subject),
+            "access_level",
+            subject_level,
+        ).count(),
+        "extras": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="extras"),
+            "access_level",
+            subject_level,
+        ).count(),
+        "ai": 0,
+        "chat": 0,
+    }
+    section_previews = {
+        "books": books[0].title if books else "",
+        "tests": tests[0].title if tests else "",
+        "formulas": SubjectSectionEntry.objects.filter(subject=subject, section_key="formulas")
+        .order_by("order", "-is_featured", "-created_at")
+        .values_list("title", flat=True)
+        .first()
+        or "",
+        "problems": (
+            practice_sets[0].title
+            if practice_sets
+            else (tests[0].title if is_math_subject and tests else "")
+        ),
+        "terms": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
+            "access_level",
+            subject_level,
+        )
+        .order_by("order", "-is_featured", "-created_at")
+        .values_list("title", flat=True)
+        .first()
+        or "",
+        "events": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="events"),
+            "access_level",
+            subject_level,
+        )
+        .order_by("order", "-is_featured", "-created_at")
+        .values_list("title", flat=True)
+        .first()
+        or "",
+        "chronology": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology"),
+            "access_level",
+            subject_level,
+        )
+        .order_by("order", "-is_featured", "-created_at")
+        .values_list("title", flat=True)
+        .first()
+        or "",
+        "grammar": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="grammar"),
+            "access_level",
+            subject_level,
+        )
+        .order_by("order", "-is_featured", "-created_at")
+        .values_list("title", flat=True)
+        .first()
+        or "",
+        "rules": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="rules"),
+            "access_level",
+            subject_level,
+        )
+        .order_by("order", "-is_featured", "-created_at")
+        .values_list("title", flat=True)
+        .first()
+        or "",
+        "essay": essay_topics[0].title if essay_topics else "",
+        "extras": _filter_by_allowed_level(
+            SubjectSectionEntry.objects.filter(subject=subject, section_key="extras"),
+            "access_level",
+            subject_level,
+        )
+        .order_by("order", "-is_featured", "-created_at")
+        .values_list("title", flat=True)
+        .first()
+        or "",
+        "ai": "",
+        "chat": "",
+    }
+    workspace_focus = _build_workspace_focus(subject_theme["key"], section_totals)
+    workspace_flow_steps = _build_workspace_flow_steps(subject_theme["key"])
+    workspace_module_cards = _build_workspace_module_cards(
+        section_items,
+        section_catalog,
+        section_totals,
+        section_previews,
+        workspace_focus["key"],
+    )
+    workspace_focus["status"] = (
+        f"{workspace_focus['count']} ta ochiq blok"
+        if workspace_focus["count"]
+        else "Kontent kutilmoqda"
+    )
+    workspace_focus["preview"] = section_previews.get(workspace_focus["key"], "")
+    workspace_focus["cta"] = section_catalog.get(workspace_focus["key"], {}).get("cta", "Ochish")
     current_section_label = next(
         (item["label"] for item in section_items if item["key"] == current_section),
         "Bo'lim",
@@ -487,6 +987,7 @@ def subject_workspace_view(request, subject_id, section=None):
         "tests": tests,
         "practice_sets": practice_sets,
         "subject_theme": subject_theme,
+        "is_math_subject": is_math_subject,
         "home_metrics": home_metrics,
         "section_entries": section_entries,
         "current_section_label": current_section_label,
@@ -517,6 +1018,16 @@ def subject_workspace_view(request, subject_id, section=None):
         "grade_filters": grade_filters,
         "selected_test_filter": selected_test_filter,
         "history_test_filters": history_test_filters,
+        "combined_problem_items": combined_problem_items,
+        "workspace_focus": workspace_focus,
+        "workspace_flow_steps": workspace_flow_steps,
+        "workspace_module_cards": workspace_module_cards,
+        "workspace_available_modules": sum(
+            1
+            for item in section_items
+            if item["key"] not in {"home", "ai", "chat"} and section_totals.get(item["key"], 0)
+        ),
+        "workspace_ready_resources": total_books_count + (combined_problem_count if is_math_subject else accessible_test_count + accessible_practice_count),
         "xp_summary": xp_summary,
     }
     return render(request, "subject_workspace.html", context)
@@ -585,15 +1096,54 @@ def profile_view(request):
 def subject_selection_view(request):
     sidebar = _sidebar_context(request.user)
     subscribed_subject_ids = set(_get_active_subscription_ids(request.user))
-    subjects = Subject.objects.all().annotate(test_count=Count("test")).order_by("name")
+    subjects = list(Subject.objects.all().order_by("name"))
+    subject_ids = [subject.id for subject in subjects]
+
+    test_counts = {
+        row["subject_id"]: row["count"]
+        for row in Test.objects.filter(subject_id__in=subject_ids)
+        .values("subject_id")
+        .annotate(count=Count("id"))
+    }
+    book_counts = {
+        row["subject_id"]: row["count"]
+        for row in Book.objects.filter(subject_id__in=subject_ids)
+        .values("subject_id")
+        .annotate(count=Count("id"))
+    }
+    practice_counts = {
+        row["subject_id"]: row["count"]
+        for row in PracticeSet.objects.filter(subject_id__in=subject_ids)
+        .values("subject_id")
+        .annotate(count=Count("id"))
+    }
+    section_counts = {
+        row["subject_id"]: row["count"]
+        for row in SubjectSectionEntry.objects.filter(subject_id__in=subject_ids)
+        .values("subject_id")
+        .annotate(count=Count("id"))
+    }
+    essay_counts = {
+        row["subject_id"]: row["count"]
+        for row in EssayTopic.objects.filter(subject_id__in=subject_ids)
+        .values("subject_id")
+        .annotate(count=Count("id"))
+    }
 
     subject_cards = [
         {
             "id": subject.id,
             "name": subject.name,
             "price": subject.price,
-            "test_count": subject.test_count,
+            "material_count": (
+                test_counts.get(subject.id, 0)
+                + book_counts.get(subject.id, 0)
+                + practice_counts.get(subject.id, 0)
+                + section_counts.get(subject.id, 0)
+                + essay_counts.get(subject.id, 0)
+            ),
             "is_active": subject.id in subscribed_subject_ids,
+            "status_label": "Faol" if subject.id in subscribed_subject_ids else "Ochiq",
         }
         for subject in subjects
     ]
@@ -602,6 +1152,7 @@ def subject_selection_view(request):
         **sidebar,
         "subject_cards": subject_cards,
         "active_count": len(subscribed_subject_ids),
+        "available_count": len(subject_cards),
     }
     return render(request, "subject_selection.html", context)
 
