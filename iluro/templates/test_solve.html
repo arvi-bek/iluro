@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iluro | Testni ishlash</title>
+    <title>Iluro | Assessment ishlash</title>
     {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,20 +15,13 @@
     <div class="flow-shell solve-wizard-shell{% if questions|length == 1 %} is-single-step{% endif %}">
         <header class="solve-header wizard-header">
             <div>
-                <p class="eyebrow">Test ishlash</p>
+                <p class="eyebrow">Assessment ishlash</p>
                 <h1>{{ test.title }}</h1>
             </div>
             <div class="meta-list solve-meta">
                 <span>{{ test.subject.name }}</span>
-                {% if show_timer %}
-                <span>{{ test.duration }} daqiqa</span>
-                {% else %}
                 <span>Erkin ishlash</span>
-                {% endif %}
                 <span>{{ questions|length }} ta savol</span>
-                {% if show_timer %}
-                <span id="timer" data-seconds="{{ test.duration|add:'0' }}">Vaqt: --:--</span>
-                {% endif %}
             </div>
         </header>
 
@@ -95,7 +88,6 @@
     </div>
     <script>
         (function () {
-            const timerEl = document.getElementById("timer");
             const progressText = document.getElementById("progressText");
             const progressFill = document.getElementById("progressFill");
             const radioInputs = Array.from(document.querySelectorAll('input[type="radio"]'));
@@ -108,7 +100,6 @@
             const wizardCounter = document.getElementById("wizardCounter");
             const stageHead = document.querySelector(".wizard-stage-head");
             const totalQuestions = {{ questions|length }};
-            let remainingSeconds = timerEl ? Number(timerEl.dataset.seconds || 0) * 60 : 0;
             let activeStep = 0;
 
             function updateProgress() {
@@ -125,16 +116,6 @@
                     const stepAnswered = radioInputs.some((input) => input.checked && Number(input.closest("[data-step]").dataset.step) === index);
                     chip.classList.toggle("is-complete", stepAnswered);
                 });
-            }
-
-            function updateTimer() {
-                if (!timerEl) return;
-                const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
-                const seconds = String(remainingSeconds % 60).padStart(2, "0");
-                timerEl.textContent = `Vaqt: ${minutes}:${seconds}`;
-                if (remainingSeconds > 0) {
-                    remainingSeconds -= 1;
-                }
             }
 
             function syncChoiceStates() {
@@ -201,10 +182,6 @@
             syncChoiceStates();
             updateProgress();
             showStep(0, false);
-            if (timerEl) {
-                updateTimer();
-                setInterval(updateTimer, 1000);
-            }
         })();
     </script>
 </body>

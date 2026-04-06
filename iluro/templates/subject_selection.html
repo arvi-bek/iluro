@@ -9,110 +9,103 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260405-subjects2">
+    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260406-subjects3">
 </head>
 <body>
     <div class="app-layout">
         {% include "partials/app_sidebar_v2.html" %}
         <main class="app-main">
             <div class="subjects-shell">
-                <header class="subjects-header subscription-header">
+                <header class="subjects-header subscription-header subscription-header--refined">
                     <div class="subscription-header-copy">
                         <p class="eyebrow">Obunalar</p>
-                        <h1>Kerakli fanlarni oching.</h1>
-                        <p class="lead">Fanlar, mashqlar, testlar va resurslar bitta obuna oqimida boshqariladi.</p>
+                        <h1>{{ access_title }}</h1>
+                        <p class="lead">{{ access_hint }}</p>
                     </div>
                     <a class="header-link secondary-link" href="{% url 'dashboard' %}">Dashboard</a>
                 </header>
 
-                <section class="pricing-stage pricing-stage--minimal">
-                    <article class="pricing-hero pricing-hero--minimal">
-                        <div class="pricing-hero-copy">
-                            <p class="eyebrow">Rejalar</p>
-                            <h2>Oddiy paketlar.</h2>
+                <section class="access-stage">
+                    <article class="access-summary">
+                        <div class="access-summary-copy">
+                            <p class="eyebrow">Holat</p>
+                            <h2>{{ active_count }} ta fan ochiq</h2>
+                            <p>{{ inactive_count }} ta fan hali tanlanmagan. Paketlar fanlar soniga qarab boshqariladi.</p>
                         </div>
-                        <div class="pricing-hero-meta pricing-hero-meta--minimal">
-                            <span>Faol fanlar</span>
-                            <strong>{{ active_count }}</strong>
-                            <small>{{ available_count }} ta fan mavjud</small>
+                        <div class="access-stats">
+                            <article>
+                                <span>Ochiq fanlar</span>
+                                <strong>{{ active_count }}</strong>
+                            </article>
+                            <article>
+                                <span>Mavjud fanlar</span>
+                                <strong>{{ available_count }}</strong>
+                            </article>
+                            <article>
+                                <span>Faollashuv</span>
+                                <strong>Admin orqali</strong>
+                            </article>
                         </div>
                     </article>
 
-                    <div class="pricing-grid pricing-grid--plans">
-                        <article class="plan-card plan-card--compact">
-                            <div class="plan-top">
-                                <span class="plan-pill">1 fan</span>
-                                <strong>30 000 so'm</strong>
+                    <div class="bundle-grid">
+                        {% for plan in plan_cards %}
+                        <article class="bundle-card {% if plan.is_featured %}is-featured{% endif %} {% if plan.is_current %}is-current{% endif %}">
+                            <div class="bundle-card-top">
+                                <span class="plan-pill {% if plan.is_current %}plan-pill-accent{% endif %}">{{ plan.coverage_label }}</span>
+                                <strong>{{ plan.price }} so'm</strong>
                             </div>
-                            <h3>Bitta yo'nalish</h3>
-                            <p>Bir fan uchun to'liq kirish.</p>
+                            <h3>{{ plan.name }}</h3>
+                            <p>{{ plan.status_text }}</p>
+                            <small>{{ plan.duration_days }} kunlik reja</small>
                         </article>
-
-                        <article class="plan-card plan-card--compact">
-                            <div class="plan-top">
-                                <span class="plan-pill">2 fan</span>
-                                <strong>55 000 so'm</strong>
-                            </div>
-                            <h3>Ikki yo'nalish</h3>
-                            <p>Asosiy kombinatsiya uchun.</p>
-                        </article>
-
-                        <article class="plan-card plan-card--compact featured-plan">
-                            <div class="plan-top">
-                                <span class="plan-pill plan-pill-accent">3 fan</span>
-                                <strong>75 000 so'm</strong>
-                            </div>
-                            <h3>Keng paket</h3>
-                            <p>Bir nechta fan bilan ishlash uchun.</p>
-                        </article>
-
-                        <article class="plan-card plan-card--compact">
-                            <div class="plan-top">
-                                <span class="plan-pill">All access</span>
-                                <strong>90 000 so'm</strong>
-                            </div>
-                            <h3>Barcha fanlar</h3>
-                            <p>Hammasi bitta rejada.</p>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="summary-panel summary-panel--minimal">
-                    <div>
-                        <p class="eyebrow">Faol</p>
-                        <strong>{{ active_count }} ta fan</strong>
-                    </div>
-                    <div>
-                        <p class="eyebrow">Mavjud</p>
-                        <strong>{{ available_count }} ta yo'nalish</strong>
-                    </div>
-                    <div>
-                        <p class="eyebrow">Aktivlash</p>
-                        <strong>Admin orqali</strong>
+                        {% endfor %}
                     </div>
                 </section>
 
                 <section class="subjects-head subjects-head--minimal">
                     <div>
-                        <p class="eyebrow">Fanlar</p>
+                        <p class="eyebrow">Sizda ochiq</p>
+                        <h2>Faol fanlar</h2>
+                    </div>
+                </section>
+
+                <section class="subjects-grid subjects-grid--minimal subjects-grid--active">
+                    {% for subject in active_subject_cards %}
+                    <article class="subject-card subject-card--minimal is-active">
+                        <div class="card-top">
+                            <span>{{ subject.source_label }}</span>
+                            <strong>{{ subject.material_count }} ta material</strong>
+                        </div>
+                        <h2>{{ subject.name }}</h2>
+                        <p>{% if subject.end_at %}{{ subject.end_at|date:"d.m.Y" }} gacha ochiq{% else %}Faol kirish mavjud{% endif %}</p>
+                        <div class="status-chip">Sizda ochiq</div>
+                    </article>
+                    {% empty %}
+                    <article class="subject-card subject-card--minimal subject-card--empty">
+                        <h2>Fan hali ochilmagan</h2>
+                        <p>Pastdagi fanlardan keraklisini tanlab, admin orqali aktivlash mumkin.</p>
+                    </article>
+                    {% endfor %}
+                </section>
+
+                <section class="subjects-head subjects-head--minimal">
+                    <div>
+                        <p class="eyebrow">Yana ochish mumkin</p>
                         <h2>Mavjud yo'nalishlar</h2>
                     </div>
                 </section>
 
                 <section class="subjects-grid subjects-grid--minimal">
-                    {% for subject in subject_cards %}
-                    <article class="subject-card subject-card--minimal {% if subject.is_active %}is-active{% endif %}">
+                    {% for subject in locked_subject_cards %}
+                    <article class="subject-card subject-card--minimal">
                         <div class="card-top">
                             <span>{{ subject.status_label }}</span>
                             <strong>{{ subject.price }} so'm</strong>
                         </div>
                         <h2>{{ subject.name }}</h2>
                         <p>{{ subject.material_count }} ta material</p>
-                        {% if subject.is_active %}
-                        <div class="status-chip">Sizda ochiq</div>
-                        {% else %}
-                        <div class="status-chip muted">Obuna mavjud</div>
-                        {% endif %}
+                        <div class="status-chip muted">Tanlash mumkin</div>
                     </article>
                     {% endfor %}
                 </section>

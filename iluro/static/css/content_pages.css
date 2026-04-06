@@ -1889,7 +1889,40 @@ body.theme-forest {
         font-size: 0.88rem;
     }
 
-    .reader-panel iframe {
+.reader-panel iframe {
         display: none;
     }
+}
+
+.level-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 248, 238, 0.96), rgba(248, 236, 221, 0.9));
+    border: 1px solid rgba(138, 84, 37, 0.14);
+    color: var(--accent-strong);
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.level-badge--large {
+    min-height: 40px;
+    padding: 0 16px;
+    font-size: 0.92rem;
+}
+
+.level-badge--podium {
+    margin-top: 10px;
+}
+
+.level-badge--inline {
+    min-height: 30px;
+    padding: 0 12px;
+    font-size: 0.78rem;
 }

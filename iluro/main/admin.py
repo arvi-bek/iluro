@@ -5,6 +5,7 @@ from django import forms
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.utils import timezone
+from django.utils.html import format_html
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
@@ -15,22 +16,21 @@ from .models import (
     Question, Choice, UserTest,
     UserAnswer, Profile, UserSubjectPreference, Book, SubjectSectionEntry, EssayTopic,
     PracticeSet, PracticeExercise, PracticeChoice, UserPracticeAttempt, PracticeSetAttempt, BookView,
-    GrammarLessonQuestion, GrammarLessonProgress,
+    GrammarLessonQuestion, GrammarLessonProgress, UserStatSummary,
 )
 from .services import (
+    import_assessment_from_payload,
     import_essay_topics_from_payload,
     import_grammar_topics_from_payload,
-    import_practice_sets_from_payload,
     import_subject_entries_from_payload,
-    import_test_from_json_payload,
     load_json_payload_from_text,
     get_user_subject_access_rows,
 )
+from .utils import get_level_choices, get_level_info, get_level_min_xp
 
 
 IMPORT_KIND_CHOICES = [
-    ("test", "Test"),
-    ("practice", "Mashqlar"),
+    ("assessment", "Mashqlar"),
     ("grammar", "Gramatika"),
     ("terms", "Atamalar"),
     ("chronology", "Xronologiya"),
@@ -89,10 +89,10 @@ class ContentImportCenterForm(forms.Form):
 def get_allowed_import_kinds(subject_name):
     normalized = (subject_name or "").strip().lower()
     if "tarix" in normalized:
-        return {"test", "practice", "terms", "chronology", "events"}
+        return {"assessment", "terms", "chronology", "events"}
     if "matem" in normalized:
-        return {"test", "practice", "formulas"}
-    return {"test", "practice", "grammar", "rules", "essay", "extras"}
+        return {"assessment", "formulas"}
+    return {"assessment", "grammar", "rules", "essay", "extras"}
 
 
 def import_center_view(request):
@@ -105,22 +105,8 @@ def import_center_view(request):
             replace_existing = form.cleaned_data.get("replace_existing", False)
 
             try:
-                if import_kind == "test":
-                    result = import_test_from_json_payload(
-                        payload,
-                        subject_override=subject,
-                        replace=replace_existing,
-                    )
-                    messages.success(
-                        request,
-                        (
-                            f"Test {'yaratildi' if result['created'] else 'yangilandi'}: "
-                            f"{result['test'].title} | {result['subject'].name}. "
-                            f"Savollar: {result['created_questions']}, variantlar: {result['created_choices']}."
-                        ),
-                    )
-                elif import_kind == "practice":
-                    result = import_practice_sets_from_payload(
+                if import_kind == "assessment":
+                    result = import_assessment_from_payload(
                         payload,
                         subject_override=subject,
                         replace=replace_existing,
@@ -187,12 +173,39 @@ def import_center_view(request):
         "subtitle": "Fan tanlang, turini belgilang va JSON matnini kiriting",
         "form": form,
         "import_options_map": {
-            "math": ["test", "practice", "formulas"],
-            "history": ["test", "practice", "terms", "chronology", "events"],
-            "language": ["test", "practice", "grammar", "rules", "essay", "extras"],
+            "math": ["assessment", "formulas"],
+            "history": ["assessment", "terms", "chronology", "events"],
+            "language": ["assessment", "grammar", "rules", "essay", "extras"],
         },
     }
     return TemplateResponse(request, "admin/import_center.html", context)
+
+
+class HiddenLegacyAdminMixin:
+    def get_model_perms(self, request):
+        return {}
+
+
+class ProfileAdminForm(forms.ModelForm):
+    level_override = forms.ChoiceField(
+        label="Daraja",
+        choices=[],
+        required=False,
+        help_text="Darajani tez almashtirish uchun tanlang. XP o'zgarmasa, shu bosqichning minimal XP qiymati qo'llanadi.",
+    )
+
+    class Meta:
+        model = Profile
+        fields = ("user", "full_name", "role", "theme", "xp", "level_override", "premium_until", "photo")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["level_override"].choices = get_level_choices()
+        if self.instance and self.instance.pk:
+            self.fields["level_override"].initial = get_level_info(self.instance.xp).get("label")
+
+    def clean_xp(self):
+        return max(0, int(self.cleaned_data.get("xp") or 0))
 
 
 # ---------------- SUBJECT ----------------
@@ -288,7 +301,7 @@ class UserSubscriptionSubjectAdmin(admin.ModelAdmin):
 
 # ---------------- TEST ----------------
 @admin.register(Test)
-class TestAdmin(admin.ModelAdmin):
+class TestAdmin(HiddenLegacyAdminMixin, admin.ModelAdmin):
     list_display = ("id", "title", "subject", "category", "duration", "difficulty", "created_at")
     list_filter = ("subject", "category", "difficulty")
     search_fields = ("title",)
@@ -313,6 +326,13 @@ class PracticeChoiceInline(admin.TabularInline):
     extra = 4
 
 
+class PracticeExerciseInline(admin.TabularInline):
+    model = PracticeExercise
+    extra = 1
+    fields = ("title", "prompt", "answer_mode", "correct_text", "difficulty", "is_featured")
+    show_change_link = True
+
+
 class GrammarQuestionInline(admin.TabularInline):
     model = GrammarLessonQuestion
     extra = 2
@@ -320,7 +340,7 @@ class GrammarQuestionInline(admin.TabularInline):
 
 # ---------------- QUESTION ----------------
 @admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
+class QuestionAdmin(HiddenLegacyAdminMixin, admin.ModelAdmin):
     list_display = ("id", "short_text", "test", "difficulty", "correct_answer_preview")
     list_filter = ("difficulty", "test__subject")
     search_fields = ("text",)
@@ -339,7 +359,7 @@ class QuestionAdmin(admin.ModelAdmin):
 
 # ---------------- CHOICE ----------------
 @admin.register(Choice)
-class ChoiceAdmin(admin.ModelAdmin):
+class ChoiceAdmin(HiddenLegacyAdminMixin, admin.ModelAdmin):
     list_display = ("id", "text", "question", "is_correct")
     list_filter = ("is_correct", "question__test__subject")
     search_fields = ("text",)
@@ -369,10 +389,68 @@ class UserAnswerAdmin(admin.ModelAdmin):
 # ---------------- PROFILE ----------------
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "full_name", "role", "theme", "level", "xp", "subject_count", "premium_until", "created_at")
+    form = ProfileAdminForm
+    list_display = (
+        "id",
+        "user",
+        "full_name",
+        "role_badge",
+        "theme",
+        "level_badge",
+        "xp_badge",
+        "subject_count",
+        "premium_until",
+        "created_at",
+    )
+    list_filter = ("role", "theme", "premium_until", "created_at")
     search_fields = ("user__username", "full_name")
     autocomplete_fields = ("user",)
     readonly_fields = ("purchased_subjects_summary",)
+    fieldsets = (
+        ("Asosiy", {"fields": ("user", "full_name", "role", "theme", "photo")}),
+        (
+            "Progress",
+            {
+                "fields": ("xp", "level_override", "premium_until"),
+                "description": "XP ni qo'lda kiriting yoki daraja tanlab tez o'tkazing. Agar ikkalasi ham o'zgarsa, XP ustun turadi.",
+            },
+        ),
+        ("Obuna", {"fields": ("purchased_subjects_summary",)}),
+    )
+
+    @admin.display(description="Rol")
+    def role_badge(self, obj):
+        role_map = {
+            "student": ("📘", "#2563eb", "#dbeafe"),
+            "university": ("🎒", "#7c3aed", "#ede9fe"),
+            "teacher": ("🧑‍🏫", "#059669", "#d1fae5"),
+            "admin": ("🛠️", "#b45309", "#fef3c7"),
+        }
+        emoji, color, bg = role_map.get(obj.role, ("👤", "#6b7280", "#f3f4f6"))
+        return format_html(
+            '<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:{};color:{};font-weight:700;">{} {}</span>',
+            bg,
+            color,
+            emoji,
+            obj.get_role_display(),
+        )
+
+    @admin.display(description="Daraja", ordering="xp")
+    def level_badge(self, obj):
+        info = get_level_info(obj.xp)
+        return format_html(
+            '<span style="display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#fff7ed;color:#9a5b22;font-weight:800;">{}</span>',
+            info["label"],
+        )
+
+    @admin.display(description="XP", ordering="xp")
+    def xp_badge(self, obj):
+        info = get_level_info(obj.xp)
+        return format_html(
+            '<div style="display:grid;gap:3px;"><strong style="font-size:0.95rem;color:#24160d;">{} XP</strong><span style="font-size:0.78rem;color:#8f735c;">{}</span></div>',
+            obj.xp,
+            info["range_text"],
+        )
 
     def subject_count(self, obj):
         return len(get_user_subject_access_rows(obj.user, active_only=False))
@@ -392,6 +470,28 @@ class ProfileAdmin(admin.ModelAdmin):
             )
         return "\n".join(lines)
     purchased_subjects_summary.short_description = "Sotib olingan fanlar"
+
+    def save_model(self, request, obj, form, change):
+        level_override = form.cleaned_data.get("level_override")
+        xp_changed = "xp" in form.changed_data
+        level_changed = "level_override" in form.changed_data
+
+        if level_changed and not xp_changed:
+            obj.xp = get_level_min_xp(level_override)
+        obj.level = get_level_info(obj.xp)["label"]
+
+        super().save_model(request, obj, form, change)
+
+        summary, _ = UserStatSummary.objects.get_or_create(user=obj.user)
+        summary.lifetime_xp = obj.xp
+        summary.save(update_fields=["lifetime_xp", "updated_at"])
+
+        if level_changed and xp_changed and level_override != obj.level:
+            self.message_user(
+                request,
+                "Daraja XP bo'yicha qayta hisoblandi. Agar aniq darajani xohlasangiz, XP ni o'zgartirmasdan darajani tanlang.",
+                level=messages.WARNING,
+            )
 
 
 @admin.register(UserSubjectPreference)
@@ -490,7 +590,7 @@ class EssayTopicAdmin(admin.ModelAdmin):
 
 
 @admin.register(PracticeExercise)
-class PracticeExerciseAdmin(admin.ModelAdmin):
+class PracticeExerciseAdmin(HiddenLegacyAdminMixin, admin.ModelAdmin):
     list_display = ("id", "display_label", "practice_set", "subject", "answer_mode", "difficulty", "is_featured", "created_at")
     list_filter = ("subject", "practice_set", "answer_mode", "difficulty", "is_featured", "created_at")
     search_fields = ("title", "prompt", "practice_set__title", "subject__name")
@@ -511,6 +611,8 @@ class PracticeSetAdmin(admin.ModelAdmin):
     search_fields = ("title", "topic", "source_book", "description", "subject__name")
     autocomplete_fields = ("subject",)
     ordering = ("-is_featured", "-created_at")
+    inlines = [PracticeExerciseInline]
+    fields = ("subject", "title", "topic", "source_book", "difficulty", "description", "is_featured")
 
     @admin.display(description="Misollar soni")
     def exercise_count(self, obj):
@@ -518,7 +620,7 @@ class PracticeSetAdmin(admin.ModelAdmin):
 
 
 @admin.register(PracticeChoice)
-class PracticeChoiceAdmin(admin.ModelAdmin):
+class PracticeChoiceAdmin(HiddenLegacyAdminMixin, admin.ModelAdmin):
     list_display = ("id", "short_text", "exercise", "is_correct")
     list_filter = ("is_correct", "exercise__subject", "exercise__difficulty")
     search_fields = ("text", "exercise__title", "exercise__topic")

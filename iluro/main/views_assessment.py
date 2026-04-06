@@ -20,21 +20,12 @@ from .utils import (
     normalize_difficulty_label,
 )
 
-
-def _is_math_subject(subject_name):
-    return "matem" in (subject_name or "").lower()
-
-
 @login_required
 def test_start_view(request, test_id):
     test = get_object_or_404(Test.objects.select_related("subject"), id=test_id)
     profile = _get_or_sync_profile(request.user)
     subject_level = _get_effective_subject_level(request.user, subject_id=test.subject_id, profile=profile)
-    subject_tests_url = (
-        f"/subjects/{test.subject_id}/problems/"
-        if _is_math_subject(test.subject.name)
-        else f"/subjects/{test.subject_id}/tests/"
-    )
+    subject_tests_url = f"/subjects/{test.subject_id}/problems/"
     if not _user_can_access_subject(request.user, test.subject_id):
         messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
         return redirect("subject-selection")
@@ -77,7 +68,6 @@ def test_start_view(request, test_id):
         "question_count": question_count,
         "next_url": next_url,
         "back_url": next_url or subject_tests_url,
-        "show_timer": not _is_math_subject(test.subject.name),
     }
     return render(request, "test_start.html", context)
 
@@ -98,11 +88,7 @@ def test_solve_view(request, user_test_id):
         .prefetch_related("choice_set")
         .order_by("id")
     )
-    subject_tests_url = (
-        f"/subjects/{test.subject_id}/problems/"
-        if _is_math_subject(test.subject.name)
-        else f"/subjects/{test.subject_id}/tests/"
-    )
+    subject_tests_url = f"/subjects/{test.subject_id}/problems/"
     return_url = _resolve_section_return_url(
         user_test.snapshot_json.get("next_url", ""),
         subject_tests_url,
@@ -170,7 +156,6 @@ def test_solve_view(request, user_test_id):
         "test": test,
         "questions": questions,
         "next_url": return_url,
-        "show_timer": not _is_math_subject(test.subject.name),
     }
     return render(request, "test_solve.html", context)
 
@@ -182,11 +167,7 @@ def test_result_view(request, user_test_id):
         id=user_test_id,
         user=request.user,
     )
-    subject_tests_url = (
-        f"/subjects/{user_test.test.subject_id}/problems/"
-        if _is_math_subject(user_test.test.subject.name)
-        else f"/subjects/{user_test.test.subject_id}/tests/"
-    )
+    subject_tests_url = f"/subjects/{user_test.test.subject_id}/problems/"
     return_url = _resolve_section_return_url(
         user_test.snapshot_json.get("next_url", ""),
         subject_tests_url,

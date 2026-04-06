@@ -17,7 +17,7 @@
         <fieldset class="module aligned">
             <h2>Kontent import markazi</h2>
             <p style="margin:0 0 18px;color:#6b7280;">
-                Fan tanlang, unga mos turini belgilang va JSON matnini kiriting. Shu sahifa test, grammatika, tarix bo'limlari va boshqa section importlar uchun ishlaydi.
+                Fan tanlang, unga mos turini belgilang va JSON matnini kiriting. Assessment JSON endi eski test formatini ham, yangi mashq set formatini ham bitta oqimda qabul qiladi.
             </p>
 
             <div class="form-row">
@@ -33,7 +33,7 @@
                     {{ form.import_kind.errors }}
                     {{ form.import_kind.label_tag }}
                     {{ form.import_kind }}
-                    <div class="help">Tanlangan fanga qarab tur variantlari avtomatik filtrlab ko'rsatiladi.</div>
+                    <div class="help">Tanlangan fanga qarab variantlar avtomatik filtrlab ko'rsatiladi.</div>
                 </div>
             </div>
 
@@ -52,7 +52,7 @@
                     {{ form.json_text.errors }}
                     {{ form.json_text.label_tag }}
                     {{ form.json_text }}
-                    <div class="help">Faqat JSON matn kiriting. Fayl yuklash shart emas.</div>
+                    <div class="help">JSON top-level dict yoki list bo'lishi mumkin. Fayl yuklash shart emas.</div>
                 </div>
             </div>
         </fieldset>

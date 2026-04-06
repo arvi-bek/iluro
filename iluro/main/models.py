@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
 
@@ -525,8 +524,8 @@ class PracticeSet(models.Model):
 
     class Meta:
         ordering = ("-is_featured", "-created_at")
-        verbose_name = "Misol / Masala bo'limi"
-        verbose_name_plural = "Misol / Masala bo'limlari"
+        verbose_name = "Mashq"
+        verbose_name_plural = "Mashqlar"
 
     def __str__(self):
         return f"{self.subject.name} - {self.title}"
@@ -566,12 +565,6 @@ class PracticeExercise(models.Model):
             models.Index(fields=("practice_set", "created_at"), name="main_pexpr_set_created_idx"),
             models.Index(fields=("subject", "difficulty"), name="main_pexpr_subject_diff_idx"),
         ]
-
-    def clean(self):
-        if self.practice_set:
-            existing_count = self.practice_set.exercises.exclude(pk=self.pk).count()
-            if existing_count >= 20:
-                raise ValidationError("Bitta misol / masala bo'limiga ko'pi bilan 20 ta topshiriq qo'shish mumkin.")
 
     def save(self, *args, **kwargs):
         if self.practice_set:

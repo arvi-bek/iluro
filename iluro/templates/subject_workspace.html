@@ -376,13 +376,10 @@
                     </div>
                     {% elif current_section == "problems" %}
                     <div class="content-panel">
-                        <p class="eyebrow">Misol / Masalalar</p>
-                        <h2>{% if is_math_subject %}{{ subject.name }} uchun yagona mashq bo'limi{% else %}{{ subject.name }} uchun amaliy mashq bo'limlari{% endif %}</h2>
-                        {% if is_math_subject %}
-                        <p>Test va misol / masala bloklari shu yerga birlashtirildi. Matematikada timer olib tashlandi, savollarni bemalol ishlab keyin natijani ko'rasiz.</p>
-                        {% endif %}
+                        <p class="eyebrow">Mashqlar</p>
+                        <h2>{{ subject.name }} uchun yagona assessment bo'limi</h2>
+                        <p>Test va mashq bloklari shu yerga birlashtirildi. Timer olib tashlandi, savollarni bemalol ishlab keyin natijani ko'rasiz.</p>
                         <div class="content-grid">
-                            {% if is_math_subject %}
                             {% for item in combined_problem_items %}
                             <article class="mini-card">
                                 <div class="mini-card-top">
@@ -409,36 +406,6 @@
                                 <p>Test yoki practice set qo'shilgach shu yerda bitta bo'lim sifatida ko'rinadi.</p>
                             </article>
                             {% endfor %}
-                            {% else %}
-                            {% for practice_set in practice_sets %}
-                            <article class="mini-card">
-                                <div class="mini-card-top">
-                                    <span>{{ practice_set.get_difficulty_display }}</span>
-                                    <strong class="card-state">Set</strong>
-                                </div>
-                                <h3>{{ practice_set.title }}</h3>
-                                <p>
-                                    {% if practice_set.source_book %}<strong>Kitob:</strong> {{ practice_set.source_book }}. {% endif %}
-                                    {% if practice_set.topic %}<strong>Mavzu:</strong> {{ practice_set.topic }}.{% endif %}
-                                </p>
-                                {% if practice_set.description %}
-                                <p>{{ practice_set.description|truncatechars:120 }}</p>
-                                {% endif %}
-                                <div class="test-stat-stack">
-                                    <small>{{ practice_set.exercise_count }} ta topshiriq</small>
-                                    <small>{% if practice_set.best_score is not None %}Eng yaxshi: {{ practice_set.best_score }}%{% else %}Eng yaxshi natija yo'q{% endif %}</small>
-                                    <small>{% if practice_set.last_score is not None %}Oxirgi: {{ practice_set.last_score }}%{% else %}Hali ishlanmagan{% endif %}</small>
-                                    <small>{{ practice_set.attempts }} ta urinish</small>
-                                </div>
-                                <a class="mini-link" href="{% url 'practice-set-solve' practice_set.id %}?next={{ current_path|urlencode }}">Boshlash</a>
-                            </article>
-                            {% empty %}
-                            <article class="mini-card empty-card">
-                                <h3>Misol / Masala bo'limlari yo'q</h3>
-                                <p>Admin paneldan avval bo'lim yarating, keyin ichiga topshiriqlar qo'shing.</p>
-                            </article>
-                            {% endfor %}
-                            {% endif %}
                         </div>
                     </div>
                     {% elif current_section == "ai" %}

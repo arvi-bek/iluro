@@ -67,12 +67,12 @@ PRACTICE_SET_DIFFICULTY_XP_BONUS = {
 }
 
 XP_LEVEL_RULES = [
-    {"label": "Yangi user", "min_xp": 0, "max_xp": 249},
-    {"label": "O'quvchi", "min_xp": 250, "max_xp": 649},
-    {"label": "Izlanuvchi", "min_xp": 650, "max_xp": 1299},
-    {"label": "Barqaror", "min_xp": 1300, "max_xp": 2199},
-    {"label": "Kuchli", "min_xp": 2200, "max_xp": 3499},
-    {"label": "Ustoz", "min_xp": 3500, "max_xp": None},
+    {"label": "✨ Yangi User", "min_xp": 0, "max_xp": 249},
+    {"label": "🎓 O'quvchi", "min_xp": 250, "max_xp": 649},
+    {"label": "🔥 Izlanuvchi", "min_xp": 650, "max_xp": 1299},
+    {"label": "🧭 Barqaror", "min_xp": 1300, "max_xp": 2199},
+    {"label": "⚡ Kuchli", "min_xp": 2200, "max_xp": 3499},
+    {"label": "👑 Ustoz", "min_xp": 3500, "max_xp": None},
 ]
 
 
@@ -80,6 +80,18 @@ def clamp_xp(xp: int | None) -> int:
     if xp is None:
         return 0
     return max(0, xp)
+
+
+def get_level_min_xp(level_label: str | None) -> int:
+    normalized_label = (level_label or "").strip()
+    for rule in XP_LEVEL_RULES:
+        if rule["label"] == normalized_label:
+            return rule["min_xp"]
+    return 0
+
+
+def get_level_choices() -> list[tuple[str, str]]:
+    return [(rule["label"], rule["label"]) for rule in XP_LEVEL_RULES]
 
 
 def normalize_difficulty_label(value: str | None) -> str:

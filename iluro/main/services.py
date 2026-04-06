@@ -531,6 +531,7 @@ def get_subject_theme(subject_name):
                 {"title": "AI yo'nalishi", "text": "Voqealar ketma-ketligini soddalashtirib tushuntirish va solishtirish."},
             ],
             "extra_sections": [
+                {"key": "problems", "label": "Mashqlar"},
                 {"key": "chronology", "label": "Xronologiya"},
                 {"key": "terms", "label": "Atamalar"},
                 {"key": "events", "label": "Sanalar / Voqealar"},
@@ -550,6 +551,7 @@ def get_subject_theme(subject_name):
             {"title": "AI yo'nalishi", "text": "Insho uchun reja, xato tahlili va jumla takomillashtirish."},
         ],
         "extra_sections": [
+            {"key": "problems", "label": "Mashqlar"},
             {"key": "grammar", "label": "Gramatika"},
             {"key": "rules", "label": "Qoidalar"},
             {"key": "essay", "label": "Insho"},
@@ -663,13 +665,80 @@ def import_test_from_json_payload(payload, *, subject_override=None, replace=Fal
     }
 
 
+def _convert_test_payload_to_practice_payload(payload):
+    if not isinstance(payload, dict):
+        raise ValidationError("Assessment import uchun JSON dict bo'lishi kerak.")
+
+    title = (payload.get("title") or "").strip()
+    difficulty = (payload.get("difficulty") or "S").strip() or "S"
+    questions = payload.get("questions") or []
+    derived_answer_key = payload.get("derived_answer_key") or {}
+
+    if not title:
+        raise ValidationError("JSON ichida title majburiy.")
+    if not questions:
+        raise ValidationError("JSON ichida questions bo'sh.")
+
+    exercises = []
+    for index, item in enumerate(questions, start=1):
+        if not isinstance(item, dict):
+            raise ValidationError(f"{index}-savol dict emas.")
+
+        prompt = (item.get("text") or "").strip()
+        if not prompt:
+            raise ValidationError(f"{index}-savol uchun text majburiy.")
+
+        choices_map = item.get("choices") or {}
+        correct_option = (
+            (item.get("correct_option") or derived_answer_key.get(str(item.get("number", index))) or "")
+            .strip()
+            .upper()
+        )
+        if not isinstance(choices_map, dict) or len(choices_map) < 2:
+            raise ValidationError(f"{index}-savol uchun kamida 2 ta variant kerak.")
+        if correct_option not in choices_map:
+            raise ValidationError(f"{index}-savol uchun correct_option variantlarda topilmadi.")
+
+        exercises.append(
+            {
+                "title": f"{index}-topshiriq",
+                "prompt": prompt,
+                "answer_mode": "choice",
+                "difficulty": difficulty,
+                "choices": [
+                    {
+                        "text": str(choice_text).strip(),
+                        "is_correct": str(choice_key).strip().upper() == correct_option,
+                    }
+                    for choice_key, choice_text in choices_map.items()
+                ],
+            }
+        )
+
+    return {
+        "title": title,
+        "difficulty": difficulty,
+        "topic": (payload.get("topic") or title).strip(),
+        "description": (payload.get("description") or "Assessment import orqali yuklandi.").strip(),
+        "source_book": (payload.get("source_book") or "").strip(),
+        "is_featured": bool(payload.get("is_featured", False)),
+        "exercises": exercises,
+    }
+
+
+def import_assessment_from_payload(payload, *, subject_override=None, replace=False):
+    if isinstance(payload, dict) and "questions" in payload:
+        payload = _convert_test_payload_to_practice_payload(payload)
+    return import_practice_sets_from_payload(payload, subject_override=subject_override, replace=replace)
+
+
 def load_json_payload_from_text(raw_text):
     try:
         payload = json.loads(raw_text)
     except json.JSONDecodeError as exc:
         raise ValidationError(f"JSON format xato: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise ValidationError("JSON top-level dict bo'lishi kerak.")
+    if not isinstance(payload, (dict, list)):
+        raise ValidationError("JSON top-level dict yoki list bo'lishi kerak.")
     return payload
 
 

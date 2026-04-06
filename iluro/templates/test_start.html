@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iluro | Testni boshlash</title>
+    <title>Iluro | Assessmentni boshlash</title>
     {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,31 +14,23 @@
 <body>
     <div class="flow-shell">
         <section class="flow-panel compact">
-            <p class="eyebrow">Testni boshlash</p>
+            <p class="eyebrow">Assessmentni boshlash</p>
             <h1>{{ test.title }}</h1>
             <div class="meta-list">
                 <span>Fan: {{ test.subject.name }}</span>
                 <span>Qiyinlik: {{ test_difficulty }}</span>
-                {% if show_timer %}
-                <span>Davomiylik: {{ test.duration }} daqiqa</span>
-                {% else %}
-                <span>Timer yo'q</span>
-                {% endif %}
+                <span>Erkin ishlash</span>
                 <span>Savollar: {{ question_count }} ta</span>
             </div>
             <p class="lead">
-                {% if show_timer %}
-                Test savollari birma-bir chiqadi. Javoblarni bosqichma-bosqich berib, oxirida natijani ko'rasiz.
-                {% else %}
-                Bu matematikadagi erkin ishlash rejimi. Savollarni bemalol ishlab, tayyor bo'lgach natijani ko'rasiz.
-                {% endif %}
+                Savollar birma-bir chiqadi. Timer yo'q. Javoblarni bemalol ishlab, tayyor bo'lgach natijani ko'rasiz.
             </p>
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ next_url }}">
-                <button class="primary-btn" type="submit">Testni boshlash</button>
+                <button class="primary-btn" type="submit">Boshlash</button>
             </form>
-            <a class="ghost-btn" href="{{ back_url }}">{% if show_timer %}Testlar sahifasiga qaytish{% else %}Mashqlar sahifasiga qaytish{% endif %}</a>
+            <a class="ghost-btn" href="{{ back_url }}">Mashqlar sahifasiga qaytish</a>
         </section>
     </div>
 </body>

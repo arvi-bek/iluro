@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260405-ranking2">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260406-ranking3">
 </head>
 <body>
     <div class="app-layout">
@@ -40,7 +40,7 @@
                         <div class="ranking-summary-stats">
                             <div class="ranking-summary-stat">
                                 <span>Daraja</span>
-                                <strong>{{ level_info.label }}</strong>
+                                <strong class="level-badge level-badge--large">{{ level_info.label }}</strong>
                             </div>
                             <div class="ranking-summary-stat">
                                 <span>XP</span>
@@ -82,6 +82,7 @@
                             </div>
                             <strong>{{ row.name }}</strong>
                             <span>{{ row.role }}</span>
+                            <span class="level-badge level-badge--podium">{{ row.level }}</span>
                             <div class="ranking-podium-stats">
                                 <span>{{ row.xp }} XP</span>
                                 <span>{{ row.best_score }}%</span>
@@ -119,7 +120,7 @@
                                 </div>
                             </div>
                             <div class="ranking-row-right">
-                                <span class="ranking-row-pill">{{ row.level }}</span>
+                                <span class="ranking-row-pill level-badge level-badge--inline">{{ row.level }}</span>
                                 <strong class="ranking-row-xp">{{ row.xp }} XP</strong>
                             </div>
                         </article>

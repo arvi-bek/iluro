@@ -1980,3 +1980,46 @@ body {
         font-size: 0.76rem;
     }
 }
+
+.header-pills--refined {
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.profile-level-badge,
+.profile-role-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.profile-level-badge {
+    background: linear-gradient(135deg, rgba(255, 247, 235, 0.96), rgba(245, 229, 208, 0.9));
+    border: 1px solid rgba(138, 84, 37, 0.14);
+    color: var(--accent-strong);
+}
+
+.profile-level-badge--rail {
+    min-height: 40px;
+    padding: 0 16px;
+    font-size: 0.9rem;
+}
+
+.profile-level-badge--compact {
+    min-height: 30px;
+    padding: 0 12px;
+    font-size: 0.76rem;
+}
+
+.profile-role-pill {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    color: var(--muted);
+}

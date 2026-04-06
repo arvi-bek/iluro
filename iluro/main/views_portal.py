@@ -15,6 +15,7 @@ from .models import (
     GrammarLessonProgress,
     GrammarLessonQuestion,
     PracticeSet,
+    SubscriptionPlan,
     Subject,
     SubjectSectionEntry,
     Test,
@@ -38,6 +39,7 @@ from .services import (
     get_effective_subject_level as _get_effective_subject_level,
     get_or_sync_profile as _get_or_sync_profile,
     get_subject_theme as _get_subject_theme,
+    get_user_subject_access_rows as _get_user_subject_access_rows,
     get_user_progress_summary as _get_user_progress_summary,
     sidebar_context as _sidebar_context,
     user_can_access_subject as _user_can_access_subject,
@@ -140,26 +142,12 @@ def _is_math_subject(subject_name):
 
 
 def _get_workspace_section_catalog(subject_theme_key):
-    tests_description = "Real formatga yaqin testlar, vaqt nazorati va natija ko'rinishi."
-    if subject_theme_key == "history":
-        tests_description = "Atama, yil va umumiy formatdagi tarix testlarini bloklar bo'yicha ishlang."
-    elif subject_theme_key == "math":
-        tests_description = "Tezlik, aniqlik va formulani eslashni bir joyda tekshiradigan testlar."
-    elif subject_theme_key == "language":
-        tests_description = "Grammatika va matn bilan ishlashni yakuniy test ritmiga olib chiqadigan bo'lim."
-
     return {
         "books": {
             "description": "Darsliklar, PDF resurslar va mavzu bo'yicha materiallar.",
             "cta": "Resurslarni ochish",
             "unit": "resurs",
             "empty_note": "Resurslar hali yuklanmagan.",
-        },
-        "tests": {
-            "description": tests_description,
-            "cta": "Testni boshlash",
-            "unit": "test",
-            "empty_note": "Testlar hali qo'shilmagan.",
         },
         "formulas": {
             "description": "Qisqa formulalar, ishlatilish joyi va eslab qolish uchun tayanch blok.",
@@ -171,7 +159,7 @@ def _get_workspace_section_catalog(subject_theme_key):
             "description": (
                 "Misol, masala va nazorat bloklarini bitta erkin ishlash oqimida birlashtiradigan bo'lim."
                 if subject_theme_key == "math"
-                else "Misol va masala setlari orqali mavzuni mustahkamlash bo'limi."
+                else "Test va mashqlarni bitta assessment oqimida ishlash bo'limi."
             ),
             "cta": "Setlarni ochish",
             "unit": "set",
@@ -244,13 +232,13 @@ def _build_workspace_flow_steps(subject_theme_key):
             },
             {
                 "step": "02",
-                "title": "Set bilan mustahkamlang",
-                "text": "Misol yoki masala bo'limida shu mavzu bo'yicha amaliy blok ishlang.",
+                "title": "Assessment blokini ishlang",
+                "text": "Misol, masala va nazorat savollarini bitta oqimda ishlab chiqing.",
             },
             {
                 "step": "03",
-                "title": "Test bilan tekshiring",
-                "text": "Oxirida tezlik va aniqlikni test formatida ko'rib chiqing.",
+                "title": "Natijani tahlil qiling",
+                "text": "Oxirida qaysi savollarda qiynalganingizni ko'rib, keyingi blokka o'ting.",
             },
         ]
 
@@ -268,8 +256,8 @@ def _build_workspace_flow_steps(subject_theme_key):
             },
             {
                 "step": "03",
-                "title": "Yil va atama testini ishlang",
-                "text": "Keyin testga o'tib, xotira va bog'lanishni tekshiring.",
+                "title": "Assessment blokini ishlang",
+                "text": "Keyin mashqlar bo'limida xotira va bog'lanishni tekshiring.",
             },
         ]
 
@@ -286,8 +274,8 @@ def _build_workspace_flow_steps(subject_theme_key):
         },
         {
             "step": "03",
-            "title": "Mini test va tahrirlash",
-            "text": "Oxirida mini test orqali natijani ko'ring va xatoni toping.",
+            "title": "Assessment bilan tekshiring",
+            "text": "Oxirida mashqlar bo'limi orqali natijani ko'ring va xatoni toping.",
         },
     ]
 
@@ -306,9 +294,9 @@ def _build_workspace_focus(subject_theme_key, section_totals):
                 "Bir nechta misol yoki masala bilan formulani darhol ishlatib ko'ring.",
             ),
             (
-                "tests",
-                "Test ritmiga o'ting",
-                "Tayyorlovni vaqt nazorati bilan tekshirish uchun test blokini oching.",
+                "problems",
+                "Assessment blokiga o'ting",
+                "Misol, masala va nazorat savollarini bitta joyda ishlab ritmni ushlang.",
             ),
         ],
         "history": [
@@ -323,9 +311,9 @@ def _build_workspace_focus(subject_theme_key, section_totals):
                 "Qisqa kartalar bilan asosiy tushunchalarni tez tiklab oling.",
             ),
             (
-                "tests",
-                "Tarix testiga o'ting",
-                "Atama yoki yil bo'yicha test orqali xotirani sinovdan o'tkazing.",
+                "problems",
+                "Tarix mashqlariga o'ting",
+                "Atama va yil savollarini bitta assessment oqimida ishlab chiqing.",
             ),
         ],
         "language": [
@@ -340,9 +328,9 @@ def _build_workspace_focus(subject_theme_key, section_totals):
                 "Mavzu, tezis va reja ustida ishlab yozish oqimini kuchaytiring.",
             ),
             (
-                "tests",
-                "Nazorat testini ishlang",
-                "Mavzu ustida ishlagandan keyin yakuniy natijani test orqali tekshiring.",
+                "problems",
+                "Assessment blokini ishlang",
+                "Mavzu ustida ishlagandan keyin amaliy savollar bilan natijani tekshiring.",
             ),
         ],
     }
@@ -356,7 +344,7 @@ def _build_workspace_focus(subject_theme_key, section_totals):
                 "count": section_totals.get(section_key, 0),
             }
 
-    for fallback_key in ("tests", "books"):
+    for fallback_key in ("problems", "books"):
         if section_totals.get(fallback_key, 0):
             return {
                 "key": fallback_key,
@@ -510,7 +498,7 @@ def subject_workspace_view(request, subject_id, section=None):
     }
     if current_section not in allowed_sections:
         raise Http404("Bunday bo'lim mavjud emas.")
-    if is_math_subject and current_section == "tests":
+    if current_section == "tests":
         return redirect("subject-workspace-section", subject_id=subject.id, section="problems")
 
     peer_subjects = get_subject_peer_subjects(request.user, subject.id)
@@ -554,8 +542,6 @@ def subject_workspace_view(request, subject_id, section=None):
         {"key": "home", "label": "Asosiy menyu"},
         {"key": "books", "label": "Kitoblar"},
     ]
-    if not is_math_subject:
-        section_items.append({"key": "tests", "label": "Mashqlar (Test)"})
     section_items.extend(subject_theme["extra_sections"])
     section_items.extend(
         [
@@ -578,17 +564,13 @@ def subject_workspace_view(request, subject_id, section=None):
         "difficulty",
         subject_level,
     ).count()
-    combined_problem_count = accessible_practice_count + (accessible_test_count if is_math_subject else 0)
+    combined_problem_count = accessible_practice_count + accessible_test_count
     home_metrics = [
         {"label": "Joriy daraja", "value": subject_level, "hint": "Shu fan uchun tanlangan joriy daraja"},
         {
-            "label": "Ochiq mashqlar" if is_math_subject else "Ochiq testlar",
-            "value": f"{combined_problem_count if is_math_subject else accessible_test_count} ta",
-            "hint": (
-                "Misol, masala va nazorat bloklari birlashtirilgan."
-                if is_math_subject
-                else "Hozirgi darajangizda ochiq bo'lgan testlar"
-            ),
+            "label": "Ochiq assessment",
+            "value": f"{combined_problem_count} ta",
+            "hint": "Misol, masala va nazorat bloklari bitta bo'limda ko'rsatiladi.",
         },
         {
             "label": "Eng yaxshi natija",
@@ -777,74 +759,73 @@ def subject_workspace_view(request, subject_id, section=None):
         _filter_by_allowed_level(EssayTopic.objects.filter(subject=subject), "access_level", subject_level)[:6]
     )
     combined_problem_items = []
-    if is_math_subject:
-        for practice_set in practice_sets:
-            combined_problem_items.append(
-                {
-                    "kind": "practice_set",
-                    "badge": "Set",
-                    "title": practice_set.title,
-                    "level": practice_set.get_difficulty_display(),
-                    "description": practice_set.description or "",
-                    "meta_line": " ".join(
-                        item
-                        for item in [
-                            f"Kitob: {practice_set.source_book}." if practice_set.source_book else "",
-                            f"Mavzu: {practice_set.topic}." if practice_set.topic else "",
-                        ]
-                        if item
+    for practice_set in practice_sets:
+        combined_problem_items.append(
+            {
+                "kind": "practice_set",
+                "badge": "Mashq",
+                "title": practice_set.title,
+                "level": practice_set.get_difficulty_display(),
+                "description": practice_set.description or "",
+                "meta_line": " ".join(
+                    item
+                    for item in [
+                        f"Kitob: {practice_set.source_book}." if practice_set.source_book else "",
+                        f"Mavzu: {practice_set.topic}." if practice_set.topic else "",
+                    ]
+                    if item
+                ),
+                "stats": [
+                    f"{practice_set.exercise_count} ta topshiriq",
+                    (
+                        f"Eng yaxshi: {practice_set.best_score}%"
+                        if practice_set.best_score is not None
+                        else "Eng yaxshi natija yo'q"
                     ),
-                    "stats": [
-                        f"{practice_set.exercise_count} ta topshiriq",
-                        (
-                            f"Eng yaxshi: {practice_set.best_score}%"
-                            if practice_set.best_score is not None
-                            else "Eng yaxshi natija yo'q"
-                        ),
-                        (
-                            f"Oxirgi: {practice_set.last_score}%"
-                            if practice_set.last_score is not None
-                            else "Hali ishlanmagan"
-                        ),
-                        f"{practice_set.attempts} ta urinish",
-                    ],
-                    "href": f"/practice/sets/{practice_set.id}/solve/?next={request.get_full_path()}",
-                    "cta": "Ishlash",
-                }
-            )
-        for test in tests:
-            combined_problem_items.append(
-                {
-                    "kind": "test",
-                    "badge": "Nazorat",
-                    "title": test.title,
-                    "level": test.display_difficulty,
-                    "description": "Timer yo'q. Savollarni bemalol ishlab, keyin natijani ko'ring.",
-                    "meta_line": f"{test.question_count} ta savol",
-                    "stats": [
-                        "Timer yo'q",
-                        (
-                            f"Eng yaxshi: {test.best_score}%"
-                            if test.best_score is not None
-                            else "Eng yaxshi natija yo'q"
-                        ),
-                        (
-                            f"Oxirgi: {test.last_score}%"
-                            if test.last_score is not None
-                            else "Hali ishlanmagan"
-                        ),
-                        f"{test.attempts} ta urinish",
-                    ],
-                    "href": f"/tests/{test.id}/start/?next={request.get_full_path()}",
-                    "cta": "Ishlash",
-                }
-            )
+                    (
+                        f"Oxirgi: {practice_set.last_score}%"
+                        if practice_set.last_score is not None
+                        else "Hali ishlanmagan"
+                    ),
+                    f"{practice_set.attempts} ta urinish",
+                ],
+                "href": f"/practice/sets/{practice_set.id}/solve/?next={request.get_full_path()}",
+                "cta": "Ishlash",
+            }
+        )
+    for test in tests:
+        combined_problem_items.append(
+            {
+                "kind": "test",
+                "badge": "Assessment",
+                "title": test.title,
+                "level": test.display_difficulty,
+                "description": "Timer yo'q. Savollarni bemalol ishlab, keyin natijani ko'ring.",
+                "meta_line": f"{test.question_count} ta savol",
+                "stats": [
+                    "Erkin ishlash",
+                    (
+                        f"Eng yaxshi: {test.best_score}%"
+                        if test.best_score is not None
+                        else "Eng yaxshi natija yo'q"
+                    ),
+                    (
+                        f"Oxirgi: {test.last_score}%"
+                        if test.last_score is not None
+                        else "Hali ishlanmagan"
+                    ),
+                    f"{test.attempts} ta urinish",
+                ],
+                "href": f"/tests/{test.id}/start/?next={request.get_full_path()}",
+                "cta": "Boshlash",
+            }
+        )
     section_catalog = _get_workspace_section_catalog(subject_theme["key"])
     section_totals = {
         "books": total_books_count,
         "tests": accessible_test_count,
         "formulas": SubjectSectionEntry.objects.filter(subject=subject, section_key="formulas").count(),
-        "problems": combined_problem_count if is_math_subject else accessible_practice_count,
+        "problems": combined_problem_count,
         "terms": _filter_by_allowed_level(
             SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
             "access_level",
@@ -891,11 +872,7 @@ def subject_workspace_view(request, subject_id, section=None):
         .values_list("title", flat=True)
         .first()
         or "",
-        "problems": (
-            practice_sets[0].title
-            if practice_sets
-            else (tests[0].title if is_math_subject and tests else "")
-        ),
+        "problems": practice_sets[0].title if practice_sets else (tests[0].title if tests else ""),
         "terms": _filter_by_allowed_level(
             SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
             "access_level",
@@ -1027,7 +1004,7 @@ def subject_workspace_view(request, subject_id, section=None):
             for item in section_items
             if item["key"] not in {"home", "ai", "chat"} and section_totals.get(item["key"], 0)
         ),
-        "workspace_ready_resources": total_books_count + (combined_problem_count if is_math_subject else accessible_test_count + accessible_practice_count),
+        "workspace_ready_resources": total_books_count + combined_problem_count,
         "xp_summary": xp_summary,
     }
     return render(request, "subject_workspace.html", context)
@@ -1095,7 +1072,9 @@ def profile_view(request):
 @login_required
 def subject_selection_view(request):
     sidebar = _sidebar_context(request.user)
-    subscribed_subject_ids = set(_get_active_subscription_ids(request.user))
+    access_rows = _get_user_subject_access_rows(request.user, active_only=True)
+    subscribed_subject_ids = {row["subject_id"] for row in access_rows}
+    access_map = {row["subject_id"]: row for row in access_rows}
     subjects = list(Subject.objects.all().order_by("name"))
     subject_ids = [subject.id for subject in subjects]
 
@@ -1130,29 +1109,88 @@ def subject_selection_view(request):
         .annotate(count=Count("id"))
     }
 
-    subject_cards = [
-        {
-            "id": subject.id,
-            "name": subject.name,
-            "price": subject.price,
-            "material_count": (
-                test_counts.get(subject.id, 0)
-                + book_counts.get(subject.id, 0)
-                + practice_counts.get(subject.id, 0)
-                + section_counts.get(subject.id, 0)
-                + essay_counts.get(subject.id, 0)
-            ),
-            "is_active": subject.id in subscribed_subject_ids,
-            "status_label": "Faol" if subject.id in subscribed_subject_ids else "Ochiq",
-        }
-        for subject in subjects
-    ]
+    subject_cards = []
+    for subject in subjects:
+        access_row = access_map.get(subject.id)
+        subject_cards.append(
+            {
+                "id": subject.id,
+                "name": subject.name,
+                "price": subject.price,
+                "material_count": (
+                    test_counts.get(subject.id, 0)
+                    + book_counts.get(subject.id, 0)
+                    + practice_counts.get(subject.id, 0)
+                    + section_counts.get(subject.id, 0)
+                    + essay_counts.get(subject.id, 0)
+                ),
+                "is_active": subject.id in subscribed_subject_ids,
+                "status_label": "Faol" if subject.id in subscribed_subject_ids else "Mavjud",
+                "source_label": "Bundle" if access_row and access_row["source"] == "bundle" else "Fan obunasi",
+                "end_at": access_row["end_at"] if access_row else None,
+            }
+        )
+
+    active_subject_cards = [card for card in subject_cards if card["is_active"]]
+    locked_subject_cards = [card for card in subject_cards if not card["is_active"]]
+    available_count = len(subject_cards)
+    active_count = len(active_subject_cards)
+
+    plan_cards = []
+    plan_queryset = (
+        SubscriptionPlan.objects.filter(is_active=True)
+        .exclude(code="beta-trial-all-access")
+        .order_by("price", "duration_days", "name")
+    )
+    for plan in plan_queryset:
+        if plan.is_all_access:
+            coverage_label = "Barcha fanlar"
+            status_text = "Hamma fanlarni ochadi" if active_count < available_count else "Sizda eng keng kirish ochiq"
+            is_current = active_count >= available_count and available_count > 0
+        else:
+            coverage_label = f"{plan.subject_limit} fan"
+            if active_count < (plan.subject_limit or 0):
+                status_text = f"{(plan.subject_limit or 0) - active_count} ta slot qoladi"
+            elif active_count == (plan.subject_limit or 0):
+                status_text = "Hozirgi holatingizga mos"
+            else:
+                status_text = "Kamroq fan uchun"
+            is_current = active_count == (plan.subject_limit or 0)
+
+        plan_cards.append(
+            {
+                "name": plan.name,
+                "price": plan.price,
+                "coverage_label": coverage_label,
+                "status_text": status_text,
+                "duration_days": plan.duration_days,
+                "is_all_access": plan.is_all_access,
+                "is_current": is_current,
+                "is_featured": plan.code in {"triple-subject", "all-access"},
+            }
+        )
+
+    if active_count == 0:
+        access_title = "Fan tanlanmagan"
+        access_hint = "Kerakli fanlarni ochib, materiallarni bitta joyda boshqaring."
+    elif active_count >= available_count and available_count > 0:
+        access_title = "All access ochiq"
+        access_hint = "Hozir sizda barcha fanlar ochiq."
+    else:
+        access_title = f"{active_count} ta fan ochiq"
+        access_hint = f"Yana {max(available_count - active_count, 0)} ta fan qo'shish mumkin."
 
     context = {
         **sidebar,
         "subject_cards": subject_cards,
-        "active_count": len(subscribed_subject_ids),
-        "available_count": len(subject_cards),
+        "active_subject_cards": active_subject_cards,
+        "locked_subject_cards": locked_subject_cards,
+        "active_count": active_count,
+        "available_count": available_count,
+        "inactive_count": max(available_count - active_count, 0),
+        "plan_cards": plan_cards,
+        "access_title": access_title,
+        "access_hint": access_hint,
     }
     return render(request, "subject_selection.html", context)
 
