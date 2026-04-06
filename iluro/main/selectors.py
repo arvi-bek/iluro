@@ -37,7 +37,7 @@ def get_dashboard_subject_cards(user):
     for subject in subject_queryset:
         subject_name_lower = subject.name.lower()
         if "ona tili" in subject_name_lower or "adab" in subject_name_lower:
-            meta = "Matn, grammatika va AI yordamida insho ustida ishlash"
+            meta = "Matn, grammatika va AI yordamida esse ustida ishlash"
         elif "tarix" in subject_name_lower:
             meta = "Tarixiy jarayonlar, sanalar va manbalar tahlili"
         elif "matem" in subject_name_lower:

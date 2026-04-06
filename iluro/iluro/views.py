@@ -6,7 +6,7 @@ def index(request: HttpRequest):
     subjects = [
         {"name": "Tarix", "accent": "Milliy sertifikat savollari uchun tarixiy tafakkur va tezkor tahlil"},
         {"name": "Matematika", "accent": "Masala, formulalar va vaqtni boshqarish bo'yicha qat'iy mashq"},
-        {"name": "Ona tili va adabiyot", "accent": "Matn, grammatika va AI yordamida insho ustida ishlash"},
+        {"name": "Ona tili va adabiyot", "accent": "Matn, grammatika va AI yordamida esse ustida ishlash"},
     ]
     resource_metrics = [
         {"value": "70+", "label": "Gramatika darslari"},
@@ -33,7 +33,7 @@ def index(request: HttpRequest):
             "text": "AI bilan ishlash ko'nikmalarini rivojlantirish uchun tahliliy fikrlash va mustaqil ishlash muhiti yaratiladi.",
         },
         {
-            "title": "Insho ustida ishlash",
+            "title": "Esse ustida ishlash",
             "text": "Ona tili va adabiyot fanida mavzu, tuzilma va ifodani yaxshilash uchun AI yordamchi oqimi qo'shiladi.",
         },
     ]

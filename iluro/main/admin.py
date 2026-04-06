@@ -28,6 +28,9 @@ from .services import (
 )
 from .utils import get_level_choices, get_level_info, get_level_min_xp
 
+EssayTopic._meta.verbose_name = "Esse mavzusi"
+EssayTopic._meta.verbose_name_plural = "Esse mavzulari"
+
 
 IMPORT_KIND_CHOICES = [
     ("assessment", "Mashqlar"),
@@ -38,7 +41,7 @@ IMPORT_KIND_CHOICES = [
     ("formulas", "Formulalar"),
     ("rules", "Qoidalar"),
     ("extras", "Qo'shimcha ma'lumotlar"),
-    ("essay", "Insho"),
+    ("essay", "Esse"),
 ]
 
 
@@ -56,7 +59,7 @@ class ContentImportCenterForm(forms.Form):
     replace_existing = forms.BooleanField(
         required=False,
         label="Mavjud ma'lumotni yangilash / tozalash",
-        help_text="Testlarda replace, section/grammar/inshoda esa eski ma'lumotni tozalash sifatida ishlaydi.",
+        help_text="Assessmentlarda replace, qolgan bloklarda esa eski ma'lumotni tozalash sifatida ishlaydi.",
     )
     json_text = forms.CharField(
         required=True,
@@ -141,7 +144,7 @@ def import_center_view(request):
                     messages.success(
                         request,
                         (
-                            f"Insho import tugadi: {result['created_count']} ta yangi, "
+                            f"Esse import tugadi: {result['created_count']} ta yangi, "
                             f"{result['updated_count']} ta yangilandi."
                         ),
                     )

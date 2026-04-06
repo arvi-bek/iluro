@@ -18,7 +18,13 @@ from .models import (
     Test,
     UserTest,
 )
-from .utils import calculate_practice_set_xp, calculate_single_practice_xp, calculate_test_xp
+from .utils import (
+    calculate_essay_topic_xp,
+    calculate_grammar_lesson_xp,
+    calculate_practice_set_xp,
+    calculate_single_practice_xp,
+    calculate_test_xp,
+)
 
 
 class MainSmokeTests(TestCase):
@@ -184,3 +190,13 @@ class XPEconomyTests(TestCase):
     def test_single_practice_requires_correct_answer(self):
         self.assertEqual(calculate_single_practice_xp(False, "A+"), 0)
         self.assertGreater(calculate_single_practice_xp(True, "A+"), calculate_single_practice_xp(True, "S"))
+
+    def test_grammar_completion_rewards_more_than_simple_attempt(self):
+        attempted_xp = calculate_grammar_lesson_xp(best_score=55, difficulty="S", is_completed=False, has_attempt=True)
+        completed_xp = calculate_grammar_lesson_xp(best_score=85, difficulty="S", is_completed=True, has_attempt=True)
+        self.assertGreater(completed_xp, attempted_xp)
+
+    def test_featured_essay_rewards_more_xp(self):
+        normal_xp = calculate_essay_topic_xp("S", is_completed=True, is_featured=False)
+        featured_xp = calculate_essay_topic_xp("S", is_completed=True, is_featured=True)
+        self.assertGreater(featured_xp, normal_xp)

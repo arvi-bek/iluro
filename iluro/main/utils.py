@@ -66,6 +66,24 @@ PRACTICE_SET_DIFFICULTY_XP_BONUS = {
     "A+": 5,
 }
 
+GRAMMAR_COMPLETION_XP_BY_DIFFICULTY = {
+    "S": 6,
+    "S+": 7,
+    "B": 8,
+    "B+": 9,
+    "A": 10,
+    "A+": 11,
+}
+
+ESSAY_TOPIC_XP_BY_DIFFICULTY = {
+    "S": 8,
+    "S+": 10,
+    "B": 12,
+    "B+": 14,
+    "A": 16,
+    "A+": 18,
+}
+
 XP_LEVEL_RULES = [
     {"label": "✨ Yangi User", "min_xp": 0, "max_xp": 249},
     {"label": "🎓 O'quvchi", "min_xp": 250, "max_xp": 649},
@@ -168,6 +186,46 @@ def calculate_single_practice_xp(is_correct: bool, difficulty: str | None) -> in
         return 0
     normalized_difficulty = normalize_difficulty_label(difficulty)
     return SINGLE_PRACTICE_XP_BY_DIFFICULTY.get(normalized_difficulty, 2)
+
+
+def calculate_grammar_lesson_xp(
+    best_score: int | None,
+    difficulty: str | None,
+    is_completed: bool,
+    has_attempt: bool,
+) -> int:
+    if not has_attempt:
+        return 0
+
+    normalized_score = max(0, min(int(best_score or 0), 100))
+    normalized_difficulty = normalize_difficulty_label(difficulty)
+    xp = 2
+
+    if normalized_score >= 100:
+        xp += 10
+    elif normalized_score >= 90:
+        xp += 8
+    elif normalized_score >= 80:
+        xp += 6
+    elif normalized_score >= 65:
+        xp += 4
+    elif normalized_score >= 50:
+        xp += 2
+
+    if is_completed:
+        xp += GRAMMAR_COMPLETION_XP_BY_DIFFICULTY.get(normalized_difficulty, 6)
+
+    return xp
+
+
+def calculate_essay_topic_xp(difficulty: str | None, is_completed: bool, is_featured: bool = False) -> int:
+    if not is_completed:
+        return 0
+    normalized_difficulty = normalize_difficulty_label(difficulty)
+    xp = ESSAY_TOPIC_XP_BY_DIFFICULTY.get(normalized_difficulty, 8)
+    if is_featured:
+        xp += 2
+    return xp
 
 
 def get_allowed_level_labels(current_level: str | None) -> list[str]:

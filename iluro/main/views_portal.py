@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 from .models import (
     Book,
     EssayTopic,
+    EssayTopicProgress,
     GRADE_CHOICES,
     GrammarLessonProgress,
     GrammarLessonQuestion,
@@ -38,13 +39,20 @@ from .services import (
     get_active_subscription_ids as _get_active_subscription_ids,
     get_effective_subject_level as _get_effective_subject_level,
     get_or_sync_profile as _get_or_sync_profile,
+    rebuild_user_statistics as _rebuild_user_statistics,
     get_subject_theme as _get_subject_theme,
     get_user_subject_access_rows as _get_user_subject_access_rows,
     get_user_progress_summary as _get_user_progress_summary,
     sidebar_context as _sidebar_context,
     user_can_access_subject as _user_can_access_subject,
 )
-from .utils import LEVEL_ORDER, get_allowed_level_labels, get_level_info
+from .utils import (
+    LEVEL_ORDER,
+    calculate_essay_topic_xp,
+    calculate_grammar_lesson_xp,
+    get_allowed_level_labels,
+    get_level_info,
+)
 
 
 def _build_grammar_groups(entries, progress_map, allowed_levels, selected_level):
@@ -196,10 +204,10 @@ def _get_workspace_section_catalog(subject_theme_key):
             "empty_note": "Qoidalar hali qo'shilmagan.",
         },
         "essay": {
-            "description": "Mavzu, tezis, outline va yozish uchun tayyor ish nuqtalari.",
-            "cta": "Insho labini ochish",
+            "description": "Mavzu, tezis, outline va milliy sertifikat formatidagi esse yozish uchun tayyor ish nuqtalari.",
+            "cta": "Esse bo'limini ochish",
             "unit": "mavzu",
-            "empty_note": "Insho mavzulari hali qo'shilmagan.",
+            "empty_note": "Esse mavzulari hali qo'shilmagan.",
         },
         "extras": {
             "description": "Asosiy darsga yordam beradigan qo'shimcha izoh va materiallar.",
@@ -269,8 +277,8 @@ def _build_workspace_flow_steps(subject_theme_key):
         },
         {
             "step": "02",
-            "title": "Insho yoki qoida blokiga o'ting",
-            "text": "Mavzuni yozuv, tezis va reja bilan mustahkamlang.",
+            "title": "Esse yoki qoida blokiga o'ting",
+            "text": "Mavzuni yozuv, tezis va aniq struktura bilan mustahkamlang.",
         },
         {
             "step": "03",
@@ -324,8 +332,8 @@ def _build_workspace_focus(subject_theme_key, section_totals):
             ),
             (
                 "essay",
-                "Insho laboratoriyasiga o'ting",
-                "Mavzu, tezis va reja ustida ishlab yozish oqimini kuchaytiring.",
+                "Esse bo'limiga o'ting",
+                "Mavzu, tezis va outline ustida ishlab yozish oqimini kuchaytiring.",
             ),
             (
                 "problems",
@@ -599,6 +607,11 @@ def subject_workspace_view(request, subject_id, section=None):
     grammar_quiz_result = None
     grammar_selected_level = subject_level
     grammar_allowed_levels = get_allowed_level_labels(subject_level)
+    selected_reference_entry = None
+    reference_page_obj = None
+    reference_entries = []
+    essay_progress_map = {}
+    selected_essay_progress = None
 
     base_section_entries_queryset = SubjectSectionEntry.objects.filter(subject=subject, section_key=current_section)
     if current_section == "grammar":
@@ -639,6 +652,16 @@ def subject_workspace_view(request, subject_id, section=None):
             selected_history_entry = next((entry for entry in section_entries if entry.id == int(selected_entry_id)), None)
         if selected_history_entry is None:
             selected_history_entry = section_entries[0]
+    if current_section in {"rules", "extras"}:
+        reference_paginator = Paginator(section_entries, 15)
+        reference_page_number = request.GET.get("page") or 1
+        reference_page_obj = reference_paginator.get_page(reference_page_number)
+        reference_entries = list(reference_page_obj.object_list)
+        selected_entry_id = request.GET.get("entry", "").strip()
+        if selected_entry_id.isdigit():
+            selected_reference_entry = next((entry for entry in reference_entries if entry.id == int(selected_entry_id)), None)
+        if selected_reference_entry is None:
+            selected_reference_entry = reference_entries[0] if reference_entries else None
     if current_section == "grammar" and section_entries:
         requested_grammar_level = (request.GET.get("grammar_level") or "").strip().replace(" ", "+")
         available_grammar_levels = [
@@ -718,13 +741,23 @@ def subject_workspace_view(request, subject_id, section=None):
                 user=request.user,
                 lesson=selected_grammar_entry,
             )
+            previous_grammar_xp = grammar_progress.xp_awarded
             grammar_progress.last_score = score
             grammar_progress.best_score = max(grammar_progress.best_score, score)
             grammar_progress.attempts_count += 1
             if passed and not grammar_progress.is_completed:
                 grammar_progress.is_completed = True
                 grammar_progress.completed_at = timezone.now()
+            grammar_progress.xp_awarded = calculate_grammar_lesson_xp(
+                grammar_progress.best_score,
+                selected_grammar_entry.access_level,
+                grammar_progress.is_completed,
+                grammar_progress.attempts_count > 0,
+            )
             grammar_progress.save()
+            xp_awarded = max(0, grammar_progress.xp_awarded - previous_grammar_xp)
+            _rebuild_user_statistics(request.user)
+            _get_or_sync_profile(request.user)
 
             grammar_progress_map[selected_grammar_entry.id] = grammar_progress
             grammar_lesson_rows = _build_grammar_lesson_rows(filtered_grammar_entries, grammar_progress_map)
@@ -733,6 +766,7 @@ def subject_workspace_view(request, subject_id, section=None):
                 "correct_count": correct_count,
                 "total_questions": total_questions,
                 "passed": passed,
+                "xp_awarded": xp_awarded,
                 "review_items": review_items,
             }
 
@@ -755,8 +789,131 @@ def subject_workspace_view(request, subject_id, section=None):
         grammar_selected_level,
     ) if current_section == "grammar" else []
     grammar_points = _build_grammar_points(selected_grammar_entry) if current_section == "grammar" else []
-    essay_topics = list(
-        _filter_by_allowed_level(EssayTopic.objects.filter(subject=subject), "access_level", subject_level)[:6]
+    essay_queryset = _filter_by_allowed_level(
+        EssayTopic.objects.filter(subject=subject),
+        "access_level",
+        subject_level,
+    )
+    essay_topics = []
+    selected_essay_topic = None
+    essay_page_obj = None
+    if current_section == "essay":
+        essay_progress_map = {
+            progress.topic_id: progress
+            for progress in EssayTopicProgress.objects.filter(
+                user=request.user,
+                topic__in=essay_queryset,
+            )
+        }
+        essay_page_obj = Paginator(essay_queryset, 15).get_page(request.GET.get("essay_page") or 1)
+        essay_topics = list(essay_page_obj.object_list)
+        selected_essay_id = request.GET.get("essay")
+        if selected_essay_id:
+            selected_essay_topic = next(
+                (topic for topic in essay_topics if str(topic.id) == str(selected_essay_id)),
+                None,
+            ) or essay_queryset.filter(id=selected_essay_id).first()
+        if selected_essay_topic is None and essay_topics:
+            selected_essay_topic = essay_topics[0]
+        if selected_essay_topic is not None:
+            selected_essay_progress = essay_progress_map.get(selected_essay_topic.id)
+
+        if (
+            request.method == "POST"
+            and request.POST.get("essay_action") == "mark_complete"
+            and selected_essay_topic is not None
+        ):
+            essay_progress, _ = EssayTopicProgress.objects.get_or_create(
+                user=request.user,
+                topic=selected_essay_topic,
+            )
+            previous_essay_xp = essay_progress.xp_awarded
+            essay_progress.is_completed = True
+            if essay_progress.completed_at is None:
+                essay_progress.completed_at = timezone.now()
+            essay_progress.xp_awarded = calculate_essay_topic_xp(
+                selected_essay_topic.access_level,
+                essay_progress.is_completed,
+                selected_essay_topic.is_featured,
+            )
+            essay_progress.save()
+            selected_essay_progress = essay_progress
+            essay_progress_map[selected_essay_topic.id] = essay_progress
+            earned_xp = max(0, essay_progress.xp_awarded - previous_essay_xp)
+            _rebuild_user_statistics(request.user)
+            _get_or_sync_profile(request.user)
+            if earned_xp:
+                messages.success(request, f"Esse mavzusi yakunlandi. +{earned_xp} XP qo'shildi.")
+            else:
+                messages.info(request, "Bu esse mavzusi allaqachon yakunlangan.")
+            return redirect(
+                f"{request.path}?essay={selected_essay_topic.id}&essay_page={essay_page_obj.number}"
+            )
+
+    essay_highlights = [
+        {"value": "24 ball", "label": "maksimal yozma ish bahosi"},
+        {"value": "12 mezon", "label": "tekshiruv markazidagi asosiy mezonlar"},
+        {"value": "100+ so'z", "label": "minimum hajmga yaqin xavfsiz ritm"},
+        {"value": "3 xatboshi", "label": "kirish, asosiy qism va xulosa"},
+    ]
+    essay_writing_steps = [
+        {
+            "step": "01",
+            "title": "Pozitsiyani aniqlang",
+            "text": "Mavzuga bir aniq nuqtayi nazar tanlang va uni boshidan oxirigacha ushlab boring.",
+        },
+        {
+            "step": "02",
+            "title": "Struktura tuzing",
+            "text": "Kirish, asosiy qism va xulosani kamida 3 xatboshida tarqating.",
+        },
+        {
+            "step": "03",
+            "title": "Dalil bilan yoping",
+            "text": "Har asosiy fikrga misol, kuzatuv yoki mantiqiy asos qo'shing.",
+        },
+        {
+            "step": "04",
+            "title": "Tinish va imloni tekshiring",
+            "text": "Oxirida uslub, savodxonlik va mantiqiy bog'lanishni alohida ko'zdan kechiring.",
+        },
+    ]
+    essay_exam_rules = [
+        "Publitsistik uslubda, ravon va tushunarli yozing.",
+        "Reja va epigrafni alohida yozmang, asosiy matnga o'ting.",
+        "Hajmni 100+ so'z atrofida xavfsiz ushlang.",
+        "Kamida 3 xatboshi bilan kirish, asosiy qism va xulosa quring.",
+    ]
+    essay_review_focus = [
+        "Mavzu to'liq ochilganmi",
+        "Fikrlar izchil bog'langanmi",
+        "Dalillar yetarlimi",
+        "Savodxonlik va tinish belgisi tozami",
+    ]
+    essay_self_check_cards = [
+        {
+            "title": "Mazmun va pozitsiya",
+            "score": "0-6 ball",
+            "text": "Mavzu aniq ochilganmi, pozitsiya ravshanmi va asosiy fikr esse davomida saqlanganmi.",
+        },
+        {
+            "title": "Tuzilish va mantiq",
+            "score": "0-6 ball",
+            "text": "Kirish, asosiy qism va xulosa mantiqan ulanadimi, xatboshilar o'z o'rnida turibdimi.",
+        },
+        {
+            "title": "Dalil va misollar",
+            "score": "0-6 ball",
+            "text": "Asosiy fikrlar quruq qolmay, misol, kuzatuv yoki ishonarli asos bilan yopilganmi.",
+        },
+        {
+            "title": "Savodxonlik va uslub",
+            "score": "0-6 ball",
+            "text": "Imloviy, uslubiy va tinish belgisi xatolari fikrni buzmaydigan darajadami.",
+        },
+    ]
+    essay_self_check_note = (
+        "Bu rasmiy tekshiruv emas, lekin yozib bo'lgach 24 ballik ritmga yaqin ichki self-check sifatida ishlatishingiz mumkin."
     )
     combined_problem_items = []
     for practice_set in practice_sets:
@@ -851,11 +1008,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "access_level",
             subject_level,
         ).count(),
-        "essay": _filter_by_allowed_level(
-            EssayTopic.objects.filter(subject=subject),
-            "access_level",
-            subject_level,
-        ).count(),
+        "essay": essay_queryset.count(),
         "extras": _filter_by_allowed_level(
             SubjectSectionEntry.objects.filter(subject=subject, section_key="extras"),
             "access_level",
@@ -918,7 +1071,7 @@ def subject_workspace_view(request, subject_id, section=None):
         .values_list("title", flat=True)
         .first()
         or "",
-        "essay": essay_topics[0].title if essay_topics else "",
+        "essay": essay_queryset.values_list("title", flat=True).first() or "",
         "extras": _filter_by_allowed_level(
             SubjectSectionEntry.objects.filter(subject=subject, section_key="extras"),
             "access_level",
@@ -969,12 +1122,24 @@ def subject_workspace_view(request, subject_id, section=None):
         "section_entries": section_entries,
         "current_section_label": current_section_label,
         "essay_topics": essay_topics,
+        "selected_essay_progress": selected_essay_progress,
+        "selected_essay_topic": selected_essay_topic,
+        "essay_page_obj": essay_page_obj,
+        "essay_highlights": essay_highlights,
+        "essay_writing_steps": essay_writing_steps,
+        "essay_exam_rules": essay_exam_rules,
+        "essay_review_focus": essay_review_focus,
+        "essay_self_check_cards": essay_self_check_cards,
+        "essay_self_check_note": essay_self_check_note,
         "current_path": request.get_full_path(),
         "formula_entries": formula_entries,
         "formula_query": formula_query,
         "formula_filter": formula_filter,
         "selected_formula": selected_formula,
         "selected_history_entry": selected_history_entry,
+        "selected_reference_entry": selected_reference_entry,
+        "reference_page_obj": reference_page_obj,
+        "reference_entries": reference_entries,
         "chronology_cards": chronology_cards,
         "selected_grammar_entry": selected_grammar_entry,
         "grammar_featured_count": grammar_featured_count,

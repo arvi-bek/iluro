@@ -9,6 +9,8 @@ from django.utils import timezone
 from .models import (
     Choice,
     EssayTopic,
+    EssayTopicProgress,
+    GrammarLessonProgress,
     GrammarLessonQuestion,
     PracticeChoice,
     PracticeExercise,
@@ -31,6 +33,8 @@ from .models import (
     UserTest,
 )
 from .utils import (
+    calculate_essay_topic_xp,
+    calculate_grammar_lesson_xp,
     calculate_practice_set_xp,
     calculate_single_practice_xp,
     calculate_test_xp,
@@ -59,16 +63,30 @@ def rebuild_user_statistics(user):
         .select_related("exercise", "exercise__subject", "practice_session")
         .order_by("-created_at", "-id")
     )
+    grammar_progress_rows = list(
+        GrammarLessonProgress.objects.filter(user=user)
+        .select_related("lesson", "lesson__subject")
+        .order_by("-updated_at", "-id")
+    )
+    essay_progress_rows = list(
+        EssayTopicProgress.objects.filter(user=user)
+        .select_related("topic", "topic__subject")
+        .order_by("-updated_at", "-id")
+    )
 
     total_correct_test_answers = sum(max(0, attempt.correct_count or 0) for attempt in user_tests)
     total_correct_practice_answers = sum(1 for attempt in practice_attempts if attempt.is_correct)
     test_xp = 0
     practice_xp = 0
-    lifetime_xp = test_xp + practice_xp
+    grammar_xp = 0
+    essay_xp = 0
+    lifetime_xp = 0
     best_test_score = max((attempt.score or 0 for attempt in user_tests), default=0)
     session_best_practice = max((attempt.score or 0 for attempt in practice_sessions), default=0)
     single_best_practice = 100 if any(attempt.is_correct for attempt in practice_attempts if attempt.practice_session_id is None) else 0
     best_practice_score = max(session_best_practice, single_best_practice)
+    grammar_completed_count = sum(1 for progress in grammar_progress_rows if progress.is_completed)
+    essay_completed_count = sum(1 for progress in essay_progress_rows if progress.is_completed)
 
     last_activity_candidates = [
         attempt.finished_at or attempt.started_at
@@ -77,14 +95,22 @@ def rebuild_user_statistics(user):
     ]
     last_activity_candidates.extend(attempt.created_at for attempt in practice_sessions if attempt.created_at)
     last_activity_candidates.extend(attempt.created_at for attempt in practice_attempts if attempt.created_at)
+    last_activity_candidates.extend(progress.updated_at for progress in grammar_progress_rows if progress.updated_at)
+    last_activity_candidates.extend(progress.updated_at for progress in essay_progress_rows if progress.updated_at)
     last_activity_at = max(last_activity_candidates, default=None)
 
     summary, _ = UserStatSummary.objects.update_or_create(
         user=user,
         defaults={
             "lifetime_xp": lifetime_xp,
+            "test_xp_total": 0,
+            "practice_xp_total": 0,
+            "grammar_xp_total": 0,
+            "essay_xp_total": 0,
             "lifetime_test_count": len(user_tests),
             "lifetime_practice_count": len(practice_attempts),
+            "total_grammar_lessons_completed": grammar_completed_count,
+            "total_essay_topics_completed": essay_completed_count,
             "total_correct_answers": total_correct_test_answers + total_correct_practice_answers,
             "total_correct_test_answers": total_correct_test_answers,
             "total_correct_practice_answers": total_correct_practice_answers,
@@ -183,8 +209,85 @@ def rebuild_user_statistics(user):
         if session.created_at and (stats["last_activity_at"] is None or session.created_at > stats["last_activity_at"]):
             stats["last_activity_at"] = session.created_at
 
+    for progress in grammar_progress_rows:
+        progress_xp = calculate_grammar_lesson_xp(
+            progress.best_score,
+            progress.lesson.access_level,
+            progress.is_completed,
+            progress.attempts_count > 0,
+        )
+        if progress.xp_awarded != progress_xp:
+            progress.xp_awarded = progress_xp
+            progress.save(update_fields=["xp_awarded", "updated_at"])
+        grammar_xp += progress_xp
+        lifetime_xp += progress_xp
+        subject_id = progress.lesson.subject_id
+        stats = subject_stats.setdefault(
+            subject_id,
+            {
+                "subject": progress.lesson.subject,
+                "xp": 0,
+                "tests_taken": 0,
+                "practice_taken": 0,
+                "total_correct_test_answers": 0,
+                "total_correct_practice_answers": 0,
+                "best_score": 0,
+                "last_activity_at": None,
+            },
+        )
+        stats["xp"] += progress_xp
+        stats["best_score"] = max(stats["best_score"], progress.best_score or 0)
+        if progress.updated_at and (stats["last_activity_at"] is None or progress.updated_at > stats["last_activity_at"]):
+            stats["last_activity_at"] = progress.updated_at
+
+    for progress in essay_progress_rows:
+        progress_xp = calculate_essay_topic_xp(
+            progress.topic.access_level,
+            progress.is_completed,
+            progress.topic.is_featured,
+        )
+        if progress.xp_awarded != progress_xp:
+            progress.xp_awarded = progress_xp
+            progress.save(update_fields=["xp_awarded", "updated_at"])
+        essay_xp += progress_xp
+        lifetime_xp += progress_xp
+        subject_id = progress.topic.subject_id
+        stats = subject_stats.setdefault(
+            subject_id,
+            {
+                "subject": progress.topic.subject,
+                "xp": 0,
+                "tests_taken": 0,
+                "practice_taken": 0,
+                "total_correct_test_answers": 0,
+                "total_correct_practice_answers": 0,
+                "best_score": 0,
+                "last_activity_at": None,
+            },
+        )
+        stats["xp"] += progress_xp
+        if progress.updated_at and (stats["last_activity_at"] is None or progress.updated_at > stats["last_activity_at"]):
+            stats["last_activity_at"] = progress.updated_at
+
     summary.lifetime_xp = lifetime_xp
-    summary.save(update_fields=["lifetime_xp", "updated_at"])
+    summary.test_xp_total = test_xp
+    summary.practice_xp_total = practice_xp
+    summary.grammar_xp_total = grammar_xp
+    summary.essay_xp_total = essay_xp
+    summary.total_grammar_lessons_completed = grammar_completed_count
+    summary.total_essay_topics_completed = essay_completed_count
+    summary.save(
+        update_fields=[
+            "lifetime_xp",
+            "test_xp_total",
+            "practice_xp_total",
+            "grammar_xp_total",
+            "essay_xp_total",
+            "total_grammar_lessons_completed",
+            "total_essay_topics_completed",
+            "updated_at",
+        ]
+    )
 
     UserSubjectStat.objects.filter(user=user).exclude(subject_id__in=subject_stats.keys()).delete()
     for subject_id, stats in subject_stats.items():
@@ -215,150 +318,15 @@ def get_user_stat_summary(user):
 
 
 def record_test_completion_stats(user_test):
-    summary = get_user_stat_summary(user_test.user)
-    correct_count = max(0, user_test.correct_count or 0)
-    total_count = user_test.snapshot_json.get("question_count") or Question.objects.filter(test=user_test.test).count()
-    xp_awarded = calculate_test_xp(correct_count, total_count, user_test.test.difficulty)
-    finished_at = user_test.finished_at or user_test.started_at or timezone.now()
-
-    summary.lifetime_xp += xp_awarded
-    summary.lifetime_test_count += 1
-    summary.total_correct_answers += correct_count
-    summary.total_correct_test_answers += correct_count
-    summary.best_test_score = max(summary.best_test_score, user_test.score or 0)
-    summary.last_activity_at = max(filter(None, [summary.last_activity_at, finished_at]), default=finished_at)
-    summary.save(
-        update_fields=[
-            "lifetime_xp",
-            "lifetime_test_count",
-            "total_correct_answers",
-            "total_correct_test_answers",
-            "best_test_score",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
-
-    subject_stat, _ = UserSubjectStat.objects.get_or_create(
-        user=user_test.user,
-        subject=user_test.test.subject,
-    )
-    subject_stat.xp += xp_awarded
-    subject_stat.tests_taken += 1
-    subject_stat.total_correct_answers += correct_count
-    subject_stat.total_correct_test_answers += correct_count
-    subject_stat.best_score = max(subject_stat.best_score, user_test.score or 0)
-    subject_stat.last_activity_at = max(filter(None, [subject_stat.last_activity_at, finished_at]), default=finished_at)
-    subject_stat.save(
-        update_fields=[
-            "xp",
-            "tests_taken",
-            "total_correct_answers",
-            "total_correct_test_answers",
-            "best_score",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
+    return rebuild_user_statistics(user_test.user)
 
 
 def record_practice_session_completion_stats(practice_session):
-    summary = get_user_stat_summary(practice_session.user)
-    correct_count = max(0, practice_session.correct_count or 0)
-    total_count = max(0, practice_session.total_count or 0)
-    xp_awarded = calculate_practice_set_xp(
-        correct_count,
-        total_count,
-        practice_session.practice_set.difficulty,
-    )
-    created_at = practice_session.created_at or timezone.now()
-
-    summary.lifetime_xp += xp_awarded
-    summary.lifetime_practice_count += total_count
-    summary.total_correct_answers += correct_count
-    summary.total_correct_practice_answers += correct_count
-    summary.best_practice_score = max(summary.best_practice_score, practice_session.score or 0)
-    summary.last_activity_at = max(filter(None, [summary.last_activity_at, created_at]), default=created_at)
-    summary.save(
-        update_fields=[
-            "lifetime_xp",
-            "lifetime_practice_count",
-            "total_correct_answers",
-            "total_correct_practice_answers",
-            "best_practice_score",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
-
-    subject_stat, _ = UserSubjectStat.objects.get_or_create(
-        user=practice_session.user,
-        subject=practice_session.practice_set.subject,
-    )
-    subject_stat.xp += xp_awarded
-    subject_stat.practice_taken += total_count
-    subject_stat.total_correct_answers += correct_count
-    subject_stat.total_correct_practice_answers += correct_count
-    subject_stat.best_score = max(subject_stat.best_score, practice_session.score or 0)
-    subject_stat.last_activity_at = max(filter(None, [subject_stat.last_activity_at, created_at]), default=created_at)
-    subject_stat.save(
-        update_fields=[
-            "xp",
-            "practice_taken",
-            "total_correct_answers",
-            "total_correct_practice_answers",
-            "best_score",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
+    return rebuild_user_statistics(practice_session.user)
 
 
 def record_single_practice_attempt_stats(attempt):
-    summary = get_user_stat_summary(attempt.user)
-    xp_awarded = calculate_single_practice_xp(attempt.is_correct, attempt.exercise.difficulty)
-    created_at = attempt.created_at or timezone.now()
-    score = 100 if attempt.is_correct else 0
-
-    summary.lifetime_xp += xp_awarded
-    summary.lifetime_practice_count += 1
-    summary.total_correct_answers += 1 if attempt.is_correct else 0
-    summary.total_correct_practice_answers += 1 if attempt.is_correct else 0
-    summary.best_practice_score = max(summary.best_practice_score, score)
-    summary.last_activity_at = max(filter(None, [summary.last_activity_at, created_at]), default=created_at)
-    summary.save(
-        update_fields=[
-            "lifetime_xp",
-            "lifetime_practice_count",
-            "total_correct_answers",
-            "total_correct_practice_answers",
-            "best_practice_score",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
-
-    subject_stat, _ = UserSubjectStat.objects.get_or_create(
-        user=attempt.user,
-        subject=attempt.exercise.subject,
-    )
-    subject_stat.xp += xp_awarded
-    subject_stat.practice_taken += 1
-    subject_stat.total_correct_answers += 1 if attempt.is_correct else 0
-    subject_stat.total_correct_practice_answers += 1 if attempt.is_correct else 0
-    subject_stat.best_score = max(subject_stat.best_score, score)
-    subject_stat.last_activity_at = max(filter(None, [subject_stat.last_activity_at, created_at]), default=created_at)
-    subject_stat.save(
-        update_fields=[
-            "xp",
-            "practice_taken",
-            "total_correct_answers",
-            "total_correct_practice_answers",
-            "best_score",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
+    return rebuild_user_statistics(attempt.user)
 
 
 def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
@@ -540,21 +508,21 @@ def get_subject_theme(subject_name):
 
     return {
         "key": "language",
-        "eyebrow": "Matn va insho",
-        "headline": "Grammatika, tahlil va insho ustida ishlashga mos ijodiy workspace.",
-        "description": "Ona tili va adabiyot bo'limida matn bilan ishlash, grammatik tozalikni oshirish va insho strukturasini kuchaytirish asosiy yo'nalish bo'ladi.",
+        "eyebrow": "Matn va esse",
+        "headline": "Grammatika, tahlil va esse yozishga mos sokin workspace.",
+        "description": "Ona tili va adabiyot bo'limida matn bilan ishlash, grammatik tozalikni oshirish va milliy sertifikat uchun esse strukturasini kuchaytirish asosiy yo'nalish bo'ladi.",
         "stat_label": "Matn rejimi",
-        "stat_value": "Insho",
+        "stat_value": "Esse",
         "cards": [
             {"title": "Bugungi fokus", "text": "Matnni to'g'ri qurish, uslubni silliqlash va fikrni ravshan berish."},
-            {"title": "Mashq usuli", "text": "Grammatika testlari va insho rejasini parallel ishlatish."},
-            {"title": "AI yo'nalishi", "text": "Insho uchun reja, xato tahlili va jumla takomillashtirish."},
+            {"title": "Mashq usuli", "text": "Grammatika testlari va esse outline'ini parallel ishlatish."},
+            {"title": "AI yo'nalishi", "text": "Esse uchun reja, xato tahlili va jumla takomillashtirish."},
         ],
         "extra_sections": [
             {"key": "problems", "label": "Mashqlar"},
             {"key": "grammar", "label": "Gramatika"},
             {"key": "rules", "label": "Qoidalar"},
-            {"key": "essay", "label": "Insho"},
+            {"key": "essay", "label": "Esse"},
             {"key": "extras", "label": "Qo'shimcha ma'lumotlar"},
         ],
     }
@@ -1231,6 +1199,10 @@ def get_user_progress_summary(user):
         "xp": summary.lifetime_xp,
         "correct_tests": summary.total_correct_test_answers,
         "correct_practice": summary.total_correct_practice_answers,
-        "tests_xp": 0,
-        "practice_xp": 0,
+        "tests_xp": summary.test_xp_total,
+        "practice_xp": summary.practice_xp_total,
+        "grammar_xp": summary.grammar_xp_total,
+        "essay_xp": summary.essay_xp_total,
+        "grammar_completed": summary.total_grammar_lessons_completed,
+        "essay_completed": summary.total_essay_topics_completed,
     }

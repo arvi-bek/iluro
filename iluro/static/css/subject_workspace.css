@@ -2090,6 +2090,248 @@ body {
     font-weight: 800;
 }
 
+.reference-panel {
+    background:
+        radial-gradient(circle at top right, rgba(180, 126, 92, 0.1), transparent 34%),
+        linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(255, 249, 242, 0.94)),
+        var(--panel);
+}
+
+.reference-shell {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 22px;
+}
+
+.reference-sidebar {
+    padding-right: 22px;
+    border-right: 1px solid rgba(138, 84, 37, 0.08);
+}
+
+.reference-sidebar-head h2,
+.reference-detail-head h2,
+.reference-rule-head h3 {
+    margin: 0;
+    font-size: 1.45rem;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+}
+
+.reference-sidebar-head p {
+    margin: 12px 0 0;
+    color: var(--muted);
+}
+
+.reference-topic-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.reference-empty-sidebar {
+    display: block;
+}
+
+.reference-empty-sidebar strong {
+    display: block;
+    font-size: 1rem;
+}
+
+.reference-empty-sidebar p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.reference-topic-item,
+.reference-empty-sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.reference-topic-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(138, 84, 37, 0.22);
+    box-shadow: 0 16px 28px rgba(103, 69, 38, 0.08);
+}
+
+.reference-topic-item.is-active {
+    border-color: rgba(138, 84, 37, 0.32);
+    background: rgba(255, 253, 249, 0.98);
+    box-shadow: 0 18px 30px rgba(103, 69, 38, 0.1);
+}
+
+.reference-topic-copy strong {
+    display: block;
+    font-size: 0.96rem;
+}
+
+.reference-topic-copy span {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.reference-topic-level,
+.reference-level-pill,
+.reference-rule-count,
+.reference-formula-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(249, 241, 228, 0.96);
+    color: var(--accent-strong);
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.reference-level-pill.is-soft {
+    background: rgba(168, 106, 51, 0.08);
+}
+
+.reference-detail-stage {
+    display: grid;
+    gap: 18px;
+}
+
+.reference-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.reference-page-link,
+.reference-page-meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.reference-page-link {
+    background: rgba(249, 241, 228, 0.96);
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    color: var(--accent-strong);
+    text-decoration: none;
+}
+
+.reference-page-link.is-disabled {
+    opacity: 0.48;
+    pointer-events: none;
+}
+
+.reference-page-meta {
+    color: var(--muted);
+}
+
+.reference-detail-head,
+.reference-rule-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.reference-detail-lead {
+    margin: 14px 0 0;
+    max-width: 48rem;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.72;
+}
+
+.reference-level-stack {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.reference-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.reference-info-card,
+.reference-explanation-card,
+.reference-rule-card,
+.reference-formula-card,
+.reference-detail-empty {
+    padding: 22px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    box-shadow: 0 16px 30px rgba(103, 69, 38, 0.08);
+}
+
+.reference-info-card span {
+    display: inline-block;
+    margin-bottom: 10px;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.reference-detail-body {
+    color: var(--text);
+    font-size: 0.98rem;
+    line-height: 1.86;
+}
+
+.reference-explanation-card h3,
+.reference-detail-empty h3 {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+}
+
+.reference-rule-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.reference-rule-item {
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: rgba(249, 244, 236, 0.94);
+    border: 1px solid rgba(138, 84, 37, 0.08);
+}
+
+.reference-rule-item strong {
+    display: block;
+    font-size: 0.96rem;
+    line-height: 1.68;
+    color: var(--text);
+}
+
+.reference-formula-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
 .grammar-quiz-launcher {
     display: flex;
     align-items: center;
@@ -2525,50 +2767,557 @@ body {
 
 .essay-panel {
     background:
-        radial-gradient(circle at top right, rgba(180, 126, 92, 0.12), transparent 34%),
+        radial-gradient(circle at top right, rgba(180, 126, 92, 0.16), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(255, 222, 189, 0.16), transparent 28%),
         var(--panel);
 }
 
-.essay-guide-grid {
+.essay-simple-hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.essay-simple-copy {
+    max-width: 760px;
+}
+
+.essay-simple-copy p:last-child {
+    margin-bottom: 0;
+    color: var(--muted);
+}
+
+.essay-hero-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
+    justify-items: end;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.essay-hero-actions .primary-button {
+    min-height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 22px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff9f3;
+    text-decoration: none;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    box-shadow: 0 18px 34px rgba(107, 64, 33, 0.14);
+}
+
+.essay-hero-actions .primary-button.is-disabled {
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.78;
+}
+
+.essay-soon-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(168, 106, 51, 0.1);
+    color: var(--accent-strong);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.essay-simple-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.essay-simple-stat {
+    padding: 16px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    background: rgba(255, 251, 246, 0.82);
+}
+
+.essay-simple-stat strong {
+    display: block;
+    font-size: 1.18rem;
+    line-height: 1.1;
+}
+
+.essay-simple-stat span {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.essay-simple-rules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
     margin-top: 18px;
 }
 
-.essay-guide-card {
-    padding: 20px;
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.6);
+.essay-simple-rule {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 246, 237, 0.92);
+    border: 1px solid rgba(168, 106, 51, 0.12);
+    color: var(--accent-strong);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.essay-simple-layout {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 20px;
+    margin-top: 22px;
+}
+
+.essay-topic-browser--simple {
+    align-self: start;
+}
+
+.essay-prompt-card--simple {
+    padding: 24px;
+}
+
+.essay-detail-grid--simple {
+    margin-top: 0;
+}
+
+.essay-hero-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.essay-hero-copy p:last-child {
+    max-width: 72ch;
+}
+
+.essay-stat-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.essay-stat-chip {
+    min-height: 108px;
+    padding: 18px 18px 16px;
+    border-radius: 24px;
+    border: 1px solid rgba(138, 84, 37, 0.14);
+    background: rgba(255, 250, 244, 0.82);
+    box-shadow: 0 16px 36px rgba(107, 64, 33, 0.08);
+}
+
+.essay-stat-chip strong {
+    display: block;
+    font-size: 1.5rem;
+    line-height: 1.1;
+    color: var(--ink);
+}
+
+.essay-stat-chip span {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+
+.essay-layout {
+    display: grid;
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    gap: 22px;
+    margin-top: 24px;
+}
+
+.essay-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.essay-checklist-card,
+.essay-topic-browser,
+.essay-prompt-card,
+.essay-detail-card,
+.essay-empty-state {
+    border-radius: 28px;
     border: 1px solid rgba(138, 84, 37, 0.12);
+    background: rgba(255, 252, 248, 0.86);
+    box-shadow: 0 18px 42px rgba(107, 64, 33, 0.08);
 }
 
-.essay-guide-card span {
+.essay-checklist-card,
+.essay-topic-browser,
+.essay-empty-state {
+    padding: 22px;
+}
+
+.essay-block-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.essay-block-eyebrow {
     color: var(--accent);
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
 }
 
-.essay-guide-card h3 {
-    margin: 10px 0 8px;
-    font-size: 1.08rem;
-}
-
-.essay-guide-card p {
+.essay-block-head h3 {
     margin: 0;
+    font-size: 1.18rem;
+}
+
+.essay-block-head p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.essay-rule-stack,
+.essay-step-list,
+.essay-topic-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.essay-rule-pill {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 246, 237, 0.9);
+    border: 1px solid rgba(168, 106, 51, 0.12);
+    color: var(--accent-strong);
+    font-weight: 600;
+    line-height: 1.55;
+}
+
+.essay-rule-pill::before {
+    content: "•";
+    color: var(--accent);
+    font-size: 1.08rem;
+    line-height: 1.2;
+}
+
+.essay-step-card {
+    padding: 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.64);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+}
+
+.essay-step-card span {
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.essay-step-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 1rem;
+    color: var(--ink);
+}
+
+.essay-step-card p {
+    margin: 8px 0 0;
+    color: var(--muted);
     font-size: 0.94rem;
 }
 
-.essay-topic-card .essay-detail {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(138, 84, 37, 0.12);
+.essay-topic-link {
+    display: block;
+    padding: 16px 18px;
+    border-radius: 20px;
+    text-decoration: none;
+    border: 1px solid rgba(138, 84, 37, 0.09);
+    background: rgba(255, 255, 255, 0.7);
+    color: inherit;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.essay-topic-card .essay-detail strong {
+.essay-topic-link:hover,
+.essay-topic-link:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(168, 106, 51, 0.28);
+    box-shadow: 0 14px 28px rgba(107, 64, 33, 0.08);
+}
+
+.essay-topic-link.is-active {
+    border-color: rgba(168, 106, 51, 0.36);
+    background: linear-gradient(135deg, rgba(255, 248, 239, 0.96), rgba(255, 252, 247, 0.9));
+    box-shadow: 0 18px 32px rgba(107, 64, 33, 0.1);
+}
+
+.essay-topic-meta {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.essay-topic-link strong {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.35;
+}
+
+.essay-topic-link small {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.essay-topic-empty {
+    padding: 18px;
+    border-radius: 20px;
+    background: rgba(255, 247, 239, 0.72);
+    border: 1px dashed rgba(168, 106, 51, 0.24);
+}
+
+.essay-topic-empty strong,
+.essay-topic-empty p {
+    display: block;
+    margin: 0;
+}
+
+.essay-topic-empty p {
+    margin-top: 8px;
+    color: var(--muted);
+}
+
+.essay-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.essay-page-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 999px;
+    text-decoration: none;
+    background: rgba(168, 106, 51, 0.12);
+    color: var(--accent-strong);
+    font-weight: 700;
+    border: 1px solid rgba(138, 84, 37, 0.1);
+}
+
+.essay-page-meta {
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.essay-detail-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.essay-prompt-card {
+    padding: 26px;
+}
+
+.essay-prompt-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.essay-prompt-head h3 {
+    margin: 8px 0 0;
+    font-size: clamp(1.55rem, 2vw, 2rem);
+}
+
+.essay-prompt-tags {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.essay-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(168, 106, 51, 0.12);
+    color: var(--accent-strong);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    font-weight: 700;
+}
+
+.essay-tag--accent {
+    background: linear-gradient(135deg, rgba(168, 106, 51, 0.16), rgba(221, 159, 87, 0.18));
+}
+
+.essay-tag--success {
+    background: rgba(121, 186, 128, 0.14);
+    color: #2c6a35;
+    border-color: rgba(44, 106, 53, 0.12);
+}
+
+.essay-prompt-body {
+    margin-top: 18px;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--ink-soft);
+}
+
+.essay-complete-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(138, 84, 37, 0.08);
+}
+
+.essay-complete-button {
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff8f2;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 14px 26px rgba(107, 64, 33, 0.14);
+}
+
+.essay-complete-button.is-complete {
+    background: rgba(121, 186, 128, 0.14);
+    color: #2c6a35;
+    box-shadow: none;
+}
+
+.essay-complete-hint {
+    color: var(--muted);
     font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.essay-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.essay-detail-card {
+    padding: 22px;
+}
+
+.essay-detail-card--wide {
+    grid-column: 1 / -1;
+}
+
+.essay-detail-card h4 {
+    margin: 10px 0 10px;
+    font-size: 1.05rem;
+}
+
+.essay-detail-card p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.essay-focus-list {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+    line-height: 1.8;
+}
+
+.essay-empty-state h3 {
+    margin: 0 0 8px;
+}
+
+.essay-empty-state p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.essay-self-check-card {
+    padding: 24px;
+    border-radius: 28px;
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    background: linear-gradient(180deg, rgba(255, 251, 246, 0.94), rgba(255, 246, 236, 0.82));
+    box-shadow: 0 18px 42px rgba(107, 64, 33, 0.08);
+}
+
+.essay-self-check-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.essay-self-check-item {
+    padding: 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.68);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+}
+
+.essay-self-check-item span {
+    display: block;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.essay-self-check-item strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 1rem;
+}
+
+.essay-self-check-item p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    line-height: 1.65;
+}
+
+.essay-self-check-note {
+    margin: 16px 0 0;
+    color: var(--muted);
+    line-height: 1.65;
 }
 
 .coming-soon-panel {
@@ -2616,11 +3365,33 @@ body {
         border-bottom: 1px solid var(--line);
     }
 
-    .essay-guide-grid,
     .content-grid,
     .formula-detail-grid,
     .workspace-home-map {
         grid-template-columns: 1fr;
+    }
+
+    .essay-simple-hero,
+    .essay-simple-layout,
+    .essay-hero-shell,
+    .essay-layout,
+    .essay-detail-grid,
+    .essay-self-check-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .essay-simple-hero {
+        display: grid;
+    }
+
+    .essay-prompt-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .essay-complete-bar {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .metric-grid {
@@ -2646,6 +3417,27 @@ body {
 
     .history-panel-head,
     .history-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .reference-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .reference-sidebar {
+        padding-right: 0;
+        padding-bottom: 18px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(138, 84, 37, 0.08);
+    }
+
+    .reference-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reference-detail-head,
+    .reference-rule-head {
         flex-direction: column;
         align-items: flex-start;
     }
@@ -3095,6 +3887,75 @@ body {
     .grammar-quiz-launcher-copy span {
         font-size: 0.8rem;
     }
+
+    .essay-stat-strip,
+    .essay-detail-grid {
+        gap: 12px;
+    }
+
+    .essay-simple-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .essay-simple-rules {
+        gap: 8px;
+    }
+
+    .essay-simple-rule {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 0.8rem;
+    }
+
+    .essay-checklist-card,
+    .essay-topic-browser,
+    .essay-prompt-card,
+    .essay-detail-card,
+    .essay-empty-state,
+    .essay-self-check-card {
+        padding: 18px 16px;
+        border-radius: 22px;
+        box-shadow: none;
+    }
+
+    .essay-prompt-head h3 {
+        font-size: 1.32rem;
+    }
+
+    .essay-stat-chip {
+        min-height: 0;
+        padding: 16px 14px;
+        border-radius: 20px;
+        box-shadow: none;
+    }
+
+    .essay-stat-chip strong {
+        font-size: 1.2rem;
+    }
+
+    .essay-topic-link {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .essay-hero-actions {
+        justify-items: stretch;
+    }
+
+    .essay-hero-actions .primary-button {
+        width: 100%;
+    }
+
+    .essay-complete-button {
+        width: 100%;
+    }
+
+    .essay-rule-pill,
+    .essay-step-card {
+        padding: 14px;
+        border-radius: 16px;
+    }
 }
 
 @media (max-width: 520px) {
@@ -3418,6 +4279,42 @@ body {
         min-height: 62px;
         padding: 10px 11px;
         border-radius: 14px;
+    }
+
+    .reference-info-card,
+    .reference-explanation-card,
+    .reference-rule-card,
+    .reference-formula-card,
+    .reference-detail-empty,
+    .reference-topic-item,
+    .reference-empty-sidebar,
+    .reference-rule-item {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .reference-sidebar-head h2,
+    .reference-detail-head h2,
+    .reference-rule-head h3 {
+        font-size: 0.98rem;
+        line-height: 1.12;
+    }
+
+    .reference-detail-lead,
+    .reference-detail-body,
+    .reference-topic-copy span,
+    .reference-rule-item strong {
+        font-size: 0.76rem;
+        line-height: 1.55;
+    }
+
+    .reference-topic-level,
+    .reference-level-pill,
+    .reference-rule-count,
+    .reference-formula-pill {
+        min-height: 28px;
+        padding: 0 10px;
+        font-size: 0.68rem;
     }
 
     .workspace-home-note {

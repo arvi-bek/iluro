@@ -293,8 +293,14 @@ class Profile(models.Model):
 class UserStatSummary(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="stat_summary")
     lifetime_xp = models.IntegerField(default=0)
+    test_xp_total = models.PositiveIntegerField(default=0)
+    practice_xp_total = models.PositiveIntegerField(default=0)
+    grammar_xp_total = models.PositiveIntegerField(default=0)
+    essay_xp_total = models.PositiveIntegerField(default=0)
     lifetime_test_count = models.PositiveIntegerField(default=0)
     lifetime_practice_count = models.PositiveIntegerField(default=0)
+    total_grammar_lessons_completed = models.PositiveIntegerField(default=0)
+    total_essay_topics_completed = models.PositiveIntegerField(default=0)
     total_correct_answers = models.PositiveIntegerField(default=0)
     total_correct_test_answers = models.PositiveIntegerField(default=0)
     total_correct_practice_answers = models.PositiveIntegerField(default=0)
@@ -476,6 +482,7 @@ class GrammarLessonProgress(models.Model):
     best_score = models.PositiveIntegerField(default=0)
     last_score = models.PositiveIntegerField(default=0)
     attempts_count = models.PositiveIntegerField(default=0)
+    xp_awarded = models.PositiveIntegerField(default=0)
     is_completed = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -510,6 +517,30 @@ class EssayTopic(models.Model):
 
     def __str__(self):
         return f"{self.subject.name} - {self.title}"
+
+
+class EssayTopicProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
+    topic = models.ForeignKey(
+        EssayTopic,
+        on_delete=models.CASCADE,
+        related_name="progress_rows",
+        db_index=True,
+    )
+    xp_awarded = models.PositiveIntegerField(default=0)
+    is_completed = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Esse mavzu progressi"
+        verbose_name_plural = "Esse mavzu progresslari"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "topic"), name="unique_user_essay_topic_progress"),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.topic}"
 
 
 class PracticeSet(models.Model):

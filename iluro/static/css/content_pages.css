@@ -228,6 +228,45 @@ body.theme-forest {
     font-weight: 700;
 }
 
+.app-sidebar-mini-links {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.app-sidebar-mini-links--footer {
+    margin-top: 4px;
+}
+
+.app-sidebar-mini-link {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    background: rgba(255, 255, 255, 0.66);
+    color: var(--text);
+    text-decoration: none;
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.app-sidebar-mini-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(168, 106, 51, 0.22);
+    background: rgba(255, 252, 246, 0.88);
+}
+
+.app-sidebar-mini-link strong {
+    font-size: 0.84rem;
+    line-height: 1.2;
+}
+
+.app-sidebar-mini-link span {
+    color: var(--muted);
+    font-size: 0.74rem;
+    line-height: 1.35;
+}
+
 .app-sidebar-beta-link {
     display: grid;
     grid-template-columns: auto 1fr auto;

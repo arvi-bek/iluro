@@ -1,5 +1,6 @@
 ﻿{% load static %}
 <!DOCTYPE html>
+{% load content_formatters %}
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
@@ -9,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260404-6">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260406-essay2">
 </head>
 <body>
     <div class="workspace-shell">
@@ -619,6 +620,9 @@
                                             <div class="grammar-quiz-result-hero">
                                                 <strong>Natija: {{ grammar_quiz_result.score }}%</strong>
                                                 <span>{{ grammar_quiz_result.correct_count }}/{{ grammar_quiz_result.total_questions }} ta to'g'ri</span>
+                                                {% if grammar_quiz_result.xp_awarded %}
+                                                <span>+{{ grammar_quiz_result.xp_awarded }} XP</span>
+                                                {% endif %}
                                                 <p>
                                                     {% if grammar_quiz_result.passed %}
                                                     Ajoyib. Bu mavzu tugallandi va keyingi dars ochildi.
@@ -709,56 +713,144 @@
                     </div>
                     {% elif current_section == "essay" %}
                     <div class="content-panel essay-panel">
-                        <p class="eyebrow">Insho</p>
-                        <h2>{{ subject.name }} uchun insho laboratoriyasi</h2>
-                        <p>
-                            Bu yerda mavzu, tezis, reja, kirish va xulosa bilan ishlaysiz.
-                            Keyingi bosqichda AI yordamchi shu bo'limga insho tahlili va baholash oqimini ham qo'shamiz.
-                        </p>
-
-                        <div class="essay-guide-grid">
-                            <article class="essay-guide-card">
-                                <span>1-bosqich</span>
-                                <h3>Mavzuni ochish</h3>
-                                <p>Mavzudagi asosiy g'oyani toping va pozitsiyangizni bir jumlada aniqlang.</p>
-                            </article>
-                            <article class="essay-guide-card">
-                                <span>2-bosqich</span>
-                                <h3>Reja tuzish</h3>
-                                <p>Kirish, 2-3 ta asosiy fikr va xulosani oldindan yozib chiqing.</p>
-                            </article>
-                            <article class="essay-guide-card">
-                                <span>3-bosqich</span>
-                                <h3>Tahrirlash</h3>
-                                <p>Grammatika, uslub va mantiqiy bog'lanishni qayta tekshiring.</p>
-                            </article>
+                        <div class="essay-simple-hero">
+                            <div class="essay-simple-copy">
+                                <p class="eyebrow">Esse</p>
+                                <h2>{{ subject.name }} uchun esse yozish bo'limi</h2>
+                                <p>Bir mavzuni tanlang, tezisni ushlang va 3 qismli toza esse yozing. Ortig'i yo'q, faqat kerakli yo'nalish.</p>
+                            </div>
+                            <div class="essay-hero-actions">
+                                <a class="primary-button is-disabled" href="#" aria-disabled="true">Online esse yozish</a>
+                                <span class="essay-soon-pill">Tez orada</span>
+                            </div>
                         </div>
 
-                        <div class="content-grid">
-                            {% for topic in essay_topics %}
-                            <article class="mini-card essay-topic-card">
-                                <span>{% if topic.is_featured %}Tavsiya etiladi{% else %}Insho mavzusi{% endif %} · {{ topic.get_access_level_display }}</span>
-                                <h3>{{ topic.title }}</h3>
-                                <p>{{ topic.prompt_text|truncatechars:180 }}</p>
-                                {% if topic.thesis_hint %}
-                                <div class="essay-detail">
-                                    <strong>Tezis g'oyasi</strong>
-                                    <p>{{ topic.thesis_hint|truncatechars:120 }}</p>
-                                </div>
-                                {% endif %}
-                                {% if topic.outline %}
-                                <div class="essay-detail">
-                                    <strong>Qisqa reja</strong>
-                                    <p>{{ topic.outline|truncatechars:120 }}</p>
-                                </div>
-                                {% endif %}
-                            </article>
-                            {% empty %}
-                            <article class="mini-card empty-card">
-                                <h3>Insho mavzulari hali qo'shilmagan</h3>
-                                <p>Admin paneldagi `EssayTopic` orqali mavzular, tezis va reja namunalarini kiritasiz.</p>
+                        <div class="essay-simple-stats">
+                            {% for item in essay_highlights %}
+                            <article class="essay-simple-stat">
+                                <strong>{{ item.value }}</strong>
+                                <span>{{ item.label }}</span>
                             </article>
                             {% endfor %}
+                        </div>
+
+                        <div class="essay-simple-rules">
+                            {% for rule in essay_exam_rules %}
+                            <span class="essay-simple-rule">{{ rule }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="essay-simple-layout">
+                            <aside class="essay-topic-browser essay-topic-browser--simple">
+                                <div class="essay-block-head">
+                                    <span class="essay-block-eyebrow">Mavzular</span>
+                                    <h3>Tanlab ishlang</h3>
+                                    {% if essay_page_obj %}
+                                    <p>{{ essay_page_obj.paginator.count }} ta esse mavzusi</p>
+                                    {% endif %}
+                                </div>
+                                <div class="essay-topic-list">
+                                    {% for topic in essay_topics %}
+                                    <a class="essay-topic-link {% if selected_essay_topic and selected_essay_topic.id == topic.id %}is-active{% endif %}"
+                                       href="{% url 'subject-workspace-section' subject.id 'essay' %}?essay={{ topic.id }}{% if essay_page_obj and essay_page_obj.number > 1 %}&essay_page={{ essay_page_obj.number }}{% endif %}">
+                                        <span class="essay-topic-meta">
+                                            {% if topic.is_featured %}Tavsiya{% else %}Esse{% endif %} · {{ topic.get_access_level_display }}
+                                        </span>
+                                        <strong>{{ topic.title }}</strong>
+                                        <small>{{ topic.prompt_text|truncatechars:90 }}</small>
+                                    </a>
+                                    {% empty %}
+                                    <div class="essay-topic-empty">
+                                        <strong>Esse mavzulari hali qo'shilmagan</strong>
+                                        <p>Admin paneldagi `EssayTopic` orqali mavzu va outline kiriting.</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if essay_page_obj and essay_page_obj.has_other_pages %}
+                                <div class="essay-pagination">
+                                    {% if essay_page_obj.has_previous %}
+                                    <a class="essay-page-link" href="{% url 'subject-workspace-section' subject.id 'essay' %}?essay_page={{ essay_page_obj.previous_page_number }}{% if selected_essay_topic %}&essay={{ selected_essay_topic.id }}{% endif %}">Oldingi</a>
+                                    {% endif %}
+                                    <span class="essay-page-meta">{{ essay_page_obj.number }} / {{ essay_page_obj.paginator.num_pages }}</span>
+                                    {% if essay_page_obj.has_next %}
+                                    <a class="essay-page-link" href="{% url 'subject-workspace-section' subject.id 'essay' %}?essay_page={{ essay_page_obj.next_page_number }}{% if selected_essay_topic %}&essay={{ selected_essay_topic.id }}{% endif %}">Keyingi</a>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </aside>
+
+                            <section class="essay-detail-stage">
+                                {% if selected_essay_topic %}
+                                <article class="essay-prompt-card essay-prompt-card--simple">
+                                    <div class="essay-prompt-head">
+                                        <div>
+                                            <span class="essay-block-eyebrow">Tanlangan mavzu</span>
+                                            <h3>{{ selected_essay_topic.title }}</h3>
+                                        </div>
+                                        <div class="essay-prompt-tags">
+                                            <span class="essay-tag">{{ selected_essay_topic.get_access_level_display }}</span>
+                                            {% if selected_essay_topic.is_featured %}
+                                            <span class="essay-tag essay-tag--accent">Tavsiya etiladi</span>
+                                            {% endif %}
+                                            {% if selected_essay_progress and selected_essay_progress.is_completed %}
+                                            <span class="essay-tag essay-tag--success">Yakunlandi · {{ selected_essay_progress.xp_awarded }} XP</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="essay-prompt-body">
+                                        {{ selected_essay_topic.prompt_text|linebreaksbr }}
+                                    </div>
+                                    <div class="essay-complete-bar">
+                                        <form method="post" action="{% url 'subject-workspace-section' subject.id 'essay' %}?essay={{ selected_essay_topic.id }}{% if essay_page_obj %}&essay_page={{ essay_page_obj.number }}{% endif %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="essay_action" value="mark_complete">
+                                            <button class="essay-complete-button {% if selected_essay_progress and selected_essay_progress.is_completed %}is-complete{% endif %}" type="submit">
+                                                {% if selected_essay_progress and selected_essay_progress.is_completed %}
+                                                Esse mavzusi yakunlangan
+                                                {% else %}
+                                                Mavzu bilan ishladim
+                                                {% endif %}
+                                            </button>
+                                        </form>
+                                        <span class="essay-complete-hint">
+                                            {% if selected_essay_progress and selected_essay_progress.is_completed %}
+                                            Bu mavzu uchun XP berilgan.
+                                            {% else %}
+                                            Mavzuni o'qib chiqib, tezis va outline bilan tanishganingizdan keyin belgilang.
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </article>
+
+                                <div class="essay-detail-grid essay-detail-grid--simple">
+                                    <article class="essay-detail-card">
+                                        <span class="essay-block-eyebrow">Tezis</span>
+                                        <h4>Bitta aniq pozitsiya</h4>
+                                        <p>{% if selected_essay_topic.thesis_hint %}{{ selected_essay_topic.thesis_hint }}{% else %}Mavzu bo'yicha bitta aniq fikr tanlang va butun esse davomida shu chiziqni ushlang.{% endif %}</p>
+                                    </article>
+                                    <article class="essay-detail-card">
+                                        <span class="essay-block-eyebrow">Struktura</span>
+                                        <h4>Qisqa outline</h4>
+                                        <p>{% if selected_essay_topic.outline %}{{ selected_essay_topic.outline }}{% else %}Kirish, 2 ta asosiy dalil va qisqa xulosa bilan 3-4 xatboshilik oqim tuzing.{% endif %}</p>
+                                    </article>
+                                    <article class="essay-detail-card essay-detail-card--wide">
+                                        <span class="essay-block-eyebrow">Self-check</span>
+                                        <h4>Yuborishdan oldin tekshiring</h4>
+                                        <ul class="essay-focus-list">
+                                            {% for item in essay_review_focus %}
+                                            <li>{{ item }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        <p class="essay-self-check-note">{{ essay_self_check_note }}</p>
+                                    </article>
+                                </div>
+                                {% else %}
+                                <article class="essay-empty-state">
+                                    <h3>Esse mavzusi tanlanmagan</h3>
+                                    <p>Chap tomondagi ro'yxatdan bitta mavzuni tanlang yoki admin paneldan yangi esse mavzusi qo'shing.</p>
+                                </article>
+                                {% endif %}
+                            </section>
                         </div>
                     </div>
                     {% elif current_section == "chronology" %}
@@ -927,6 +1019,145 @@
                             </div>
                         </div>
                         {% endif %}
+                    </div>
+                    {% elif current_section == "rules" or current_section == "extras" %}
+                    <div class="content-panel reference-panel">
+                        <div class="reference-shell">
+                            <aside class="reference-sidebar">
+                                <div class="reference-sidebar-head">
+                                    <p class="eyebrow">{{ current_section_label }}</p>
+                                    <h2>Mavzular</h2>
+                                    <p>{{ section_entries|length }} ta material</p>
+                                </div>
+
+                                <div class="reference-topic-list">
+                                    {% for entry in reference_entries %}
+                                    <a class="reference-topic-item {% if selected_reference_entry and selected_reference_entry.id == entry.id %}is-active{% endif %}" href="{% url 'subject-workspace-section' subject.id current_section %}?page={{ reference_page_obj.number }}&entry={{ entry.id }}">
+                                        <div class="reference-topic-copy">
+                                            <strong>{{ entry.title }}</strong>
+                                            <span>{% if entry.summary %}{{ entry.summary|truncatechars:92 }}{% else %}Qisqa izoh hali kiritilmagan.{% endif %}</span>
+                                        </div>
+                                        <span class="reference-topic-level">{{ entry.get_access_level_display }}</span>
+                                    </a>
+                                    {% empty %}
+                                    <article class="reference-empty-sidebar">
+                                        <strong>Materiallar yo'q</strong>
+                                        <p>Admin paneldan yangi material qo'shing.</p>
+                                    </article>
+                                    {% endfor %}
+                                </div>
+
+                                {% if reference_page_obj and reference_page_obj.paginator.num_pages > 1 %}
+                                <div class="reference-pagination">
+                                    {% if reference_page_obj.has_previous %}
+                                    <a class="reference-page-link" href="?page={{ reference_page_obj.previous_page_number }}{% if selected_reference_entry %}&entry={{ selected_reference_entry.id }}{% endif %}">Oldingi</a>
+                                    {% else %}
+                                    <span class="reference-page-link is-disabled">Oldingi</span>
+                                    {% endif %}
+                                    <span class="reference-page-meta">{{ reference_page_obj.number }} / {{ reference_page_obj.paginator.num_pages }}</span>
+                                    {% if reference_page_obj.has_next %}
+                                    <a class="reference-page-link" href="?page={{ reference_page_obj.next_page_number }}{% if selected_reference_entry %}&entry={{ selected_reference_entry.id }}{% endif %}">Keyingi</a>
+                                    {% else %}
+                                    <span class="reference-page-link is-disabled">Keyingi</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </aside>
+
+                            <section class="reference-detail-stage">
+                                {% if selected_reference_entry %}
+                                <div class="reference-detail-head">
+                                    <div>
+                                        <p class="eyebrow">{{ current_section_label }}</p>
+                                        <h2>{{ selected_reference_entry.title }}</h2>
+                                        <p class="reference-detail-lead">{{ selected_reference_entry.summary|default:"Bu mavzu uchun qisqa izoh hali kiritilmagan." }}</p>
+                                    </div>
+                                    <div class="reference-level-stack">
+                                        <span class="reference-level-pill">{{ selected_reference_entry.get_access_level_display }}</span>
+                                        {% if selected_reference_entry.is_featured %}
+                                        <span class="reference-level-pill is-soft">Tavsiya</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="reference-info-grid">
+                                    <section class="reference-info-card">
+                                        <span>Qisqa mazmun</span>
+                                        <div class="reference-detail-body">
+                                            {{ selected_reference_entry.summary|default:"Qisqa mazmun hali kiritilmagan."|linebreaksbr }}
+                                        </div>
+                                    </section>
+                                    <section class="reference-info-card">
+                                        <span>Qo'llash</span>
+                                        <div class="reference-detail-body">
+                                            {% if selected_reference_entry.usage_note|leading_text %}
+                                            {{ selected_reference_entry.usage_note|leading_text|linebreaksbr }}
+                                            {% elif selected_reference_entry.usage_note %}
+                                            {{ selected_reference_entry.usage_note|linebreaksbr }}
+                                            {% else %}
+                                            Qo'llash bo'yicha izoh hali kiritilmagan.
+                                            {% endif %}
+                                        </div>
+                                    </section>
+                                </div>
+
+                                {% if selected_reference_entry.body|leading_text %}
+                                <div class="reference-explanation-card">
+                                    <h3>Asosiy tushuntirish</h3>
+                                    <div class="reference-detail-body">
+                                        {{ selected_reference_entry.body|leading_text|linebreaksbr }}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if selected_reference_entry.body|numbered_items %}
+                                <div class="reference-rule-card">
+                                    <div class="reference-rule-head">
+                                        <div>
+                                            <p class="eyebrow">Asosiy qoidalar</p>
+                                            <h3>Tartiblangan bandlar</h3>
+                                        </div>
+                                        <span class="reference-rule-count">{{ selected_reference_entry.body|numbered_items|length }} ta band</span>
+                                    </div>
+                                    <div class="reference-rule-list">
+                                        {% for item in selected_reference_entry.body|numbered_items %}
+                                        <article class="reference-rule-item">
+                                            <strong>{{ item }}</strong>
+                                        </article>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if selected_reference_entry.usage_note %}
+                                <div class="reference-formula-card">
+                                    <div class="reference-rule-head">
+                                        <div>
+                                            <p class="eyebrow">Eslab qolish</p>
+                                            <h3>Qolip va formulalar</h3>
+                                        </div>
+                                    </div>
+                                    {% if selected_reference_entry.usage_note|numbered_items %}
+                                    <div class="reference-formula-list">
+                                        {% for item in selected_reference_entry.usage_note|numbered_items %}
+                                        <span class="reference-formula-pill">{{ item }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="reference-detail-body">
+                                        {{ selected_reference_entry.usage_note|linebreaksbr }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <article class="reference-detail-empty">
+                                    <h3>Material tanlanmagan</h3>
+                                    <p>Chap tomondagi ro'yxatdan mavzuni tanlang yoki admin paneldan yangi material qo'shing.</p>
+                                </article>
+                                {% endif %}
+                            </section>
+                        </div>
                     </div>
                     {% else %}
                     <div class="content-panel">
