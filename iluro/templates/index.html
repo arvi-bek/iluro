@@ -5,193 +5,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iluro | Milliy Sertifikat Tayyorlov</title>
+    <title>Iluro | Startup Pitch</title>
     {% include "partials/favicon.html" %}
-    <meta name="description" content="Milliy sertifikat uchun fanlarni o'zingiz tanlaydigan va testlarni real formatda ishlaydigan platforma.">
+    <meta name="description" content="Iluro milliy sertifikat tayyorlovini test, mashq, esse va AI yordamchi bilan bitta mahsulotga aylantiradi.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/index.css' %}?v=20260404-4">
+    <link rel="stylesheet" href="{% static 'css/index.css' %}?v=20260406-pitch1">
+    <link rel="stylesheet" href="{% static 'css/index_pitch.css' %}?v=20260406-pitch1">
 </head>
 <body>
-    <div class="landing-shell">
+    <div class="pitch-shell">
         <header class="site-header">
-            <div class="header-utility">
-                <span class="utility-pill">Milliy sertifikat</span>
-                <span class="utility-pill">AI yordamchi</span>
-            </div>
             <a class="brand" href="/" aria-label="ILURO bosh sahifa">
                 {% include "partials/brand_logo.html" with logo_width="132" logo_height="30" %}
             </a>
-            <nav class="site-nav">
-                <a href="#overview">Platforma</a>
-                <a href="#subjects">Fanlar</a>
-                <a href="#process">Jarayon</a>
+            <nav class="site-nav" aria-label="Pitch navigatsiyasi">
+                <a href="#overview">Overview</a>
+                <a href="#problem">Muammo</a>
+                <a href="#product">Product</a>
+                <a href="#traction">Bugun</a>
+                <a href="#roadmap">Roadmap</a>
+                <a href="#ask">Invest</a>
             </nav>
             <div class="header-actions">
                 {% if request.user.is_authenticated %}
-                    <a class="header-link" href="{% url 'dashboard' %}">{{ request.user.first_name|default:request.user.username }}</a>
-                    <a class="header-link header-link--filled" href="{% url 'logout' %}">Chiqish</a>
+                <a class="header-link" href="{% url 'dashboard' %}">Dashboard</a>
+                <a class="header-link header-link--filled" href="{% url 'logout' %}">Chiqish</a>
                 {% else %}
-                    <a class="header-link" href="{% url 'login' %}">Kirish</a>
-                    <a class="header-link header-link--filled" href="{% url 'register' %}">Boshlash</a>
+                <a class="header-link" href="{% url 'login' %}">Kirish</a>
+                <a class="header-link header-link--filled" href="{% url 'register' %}">Boshlash</a>
                 {% endif %}
             </div>
         </header>
 
-        <main>
-            <section class="hero" id="overview">
+        <main class="pitch-main">
+            <section class="hero-section" id="overview">
                 <div class="hero-copy">
-                    <p class="eyebrow">Milliy sertifikat va AI yordamchi tayyorlov</p>
-                    <h1>Milliy sertifikat tayyorlovini bitta nazorat qilinadigan oqimga yig'ing.</h1>
+                    <p class="eyebrow">Startup presentation</p>
+                    <h1>Milliy sertifikat tayyorlovini bitta nazorat qilinadigan mahsulotga yig'yapmiz.</h1>
                     <p class="hero-text">
-                        Iluro tarix, matematika va ona tili tayyorlovini alohida sahifalar emas,
-                        yagona boshqariladigan mahsulot sifatida beradi: kunlik dars, resurs, test va tahlil.
+                        Iluro test, mashq, grammatika, esse va resurslarni alohida sahifalar emas,
+                        foydalanuvchi uchun tushunarli bitta product flow sifatida birlashtiradi.
                     </p>
-                    <div class="hero-metrics">
-                        {% for item in resource_metrics %}
-                        <article class="hero-metric">
-                            <strong>{{ item.value }}</strong>
-                            <span>{{ item.label }}</span>
-                        </article>
-                        {% endfor %}
-                    </div>
                     <div class="hero-actions">
                         {% if request.user.is_authenticated %}
                         <a class="primary-link" href="{% url 'dashboard' %}">Dashboardga o'tish</a>
                         {% else %}
-                        <a class="primary-link" href="{% url 'register' %}">Bepul boshlash</a>
+                        <a class="primary-link" href="{% url 'register' %}">Beta guruhga kirish</a>
                         {% endif %}
-                        <a class="secondary-link" href="#process">Jarayonni ko'rish</a>
+                        <a class="secondary-link" href="#ask">18k USD ask</a>
                     </div>
-                    <div class="hero-callout">
-                        <strong>Bugungi tayyorlov oqimi</strong>
-                        <span>3 fan, real test ritmi, AI tahlil va progress nazorati bir joyda.</span>
-                    </div>
-                    <div class="hero-notes">
-                        {% for item in highlights %}
-                        <div class="hero-note">{{ item }}</div>
+                    <div class="hero-strip">
+                        {% for metric in traction_metrics %}
+                        <article class="hero-stat">
+                            <strong>{{ metric.value }}</strong>
+                            <span>{{ metric.label }}</span>
+                        </article>
                         {% endfor %}
                     </div>
                 </div>
 
-                <div class="hero-board" aria-hidden="true">
-                    <div class="hero-board-glow"></div>
-                    <div class="hero-board-grid"></div>
-                    <div class="hero-board-window">
-                        <div class="hero-board-top">
-                            <div class="hero-board-tabs">
-                                <span class="hero-board-tab is-active">Kunlik dars</span>
-                                <span class="hero-board-tab">Mening oqimim</span>
-                                <span class="hero-board-tab">Lug'at</span>
-                            </div>
-                            <div class="hero-board-user">
-                                <span class="hero-board-badge">Pre-A1</span>
-                            </div>
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="hero-window">
+                        <div class="window-top">
+                            <span class="window-pill is-active">Product stack</span>
+                            <span class="window-pill">Milliy sertifikat</span>
+                            <span class="window-pill">AI layer</span>
                         </div>
-
-                        <article class="hero-board-focus">
-                            <div class="hero-board-focus-copy">
-                                <span class="hero-board-label">Bugungi oqim</span>
-                                <strong>3 fanlik tayyorlov rejasi</strong>
-                                <p>Kunlik dars, resurs va mini test bitta learning-board ichida.</p>
-                            </div>
-                            <div class="hero-learning-bar">
-                                <span></span>
-                            </div>
-                        </article>
-
-                        <div class="hero-board-core">
-                            <div class="hero-board-subjects">
-                                {% for subject in subjects %}
-                                <article class="hero-board-subject">
-                                    <span class="hero-board-subject-index">0{{ forloop.counter }}</span>
-                                    <strong>{{ subject.name }}</strong>
-                                    <p>{{ subject.accent }}</p>
+                        <div class="window-grid">
+                            <article class="window-focus">
+                                <span class="window-label">Biz nima quryapmiz</span>
+                                <strong>Assessment + resurs + esse + AI</strong>
+                                <p>Tarix, matematika va ona tili uchun tayyorlov oqimi bir joyda ishlayapti.</p>
+                            </article>
+                            <div class="window-columns">
+                                {% for module in product_modules|slice:":4" %}
+                                <article class="window-card">
+                                    <span>{{ module.label }}</span>
+                                    <strong>{{ module.title }}</strong>
+                                    <p>{{ module.text }}</p>
                                 </article>
                                 {% endfor %}
-                            </div>
-
-                            <div class="hero-board-side">
-                                <article class="hero-board-card hero-board-card--accent">
-                                    <span class="hero-board-label">Resurslar</span>
-                                    <strong>Yig'ilgan tayyorlov bazasi</strong>
-                                    <div class="hero-board-points hero-board-points--tight">
-                                        {% for item in resource_metrics %}
-                                        <span>{{ item.value }} {{ item.label }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </article>
-                                <article class="hero-board-card">
-                                    <span class="hero-board-label">AI yordamchi</span>
-                                <strong>Mavzu tahlili, xato izohi va esse reja generatori</strong>
-                                    <div class="hero-board-points hero-board-points--tight">
-                                        {% for item in curriculum_points %}
-                                        <span>{{ item }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </article>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section class="support-strip">
-                <div class="support-copy">
-                    <p class="eyebrow">Nima uchun Iluro</p>
-                    <h2>Tarqoq tayyorlov emas, boshqariladigan learning product.</h2>
+            <section class="deck-section deck-section--problem" id="problem">
+                <div class="section-intro">
+                    <p class="eyebrow">Muammo</p>
+                    <h2>Tayyorlov hali ham tarqoq: resurs boshqa joyda, nazorat boshqa joyda, feedback esa yo'q.</h2>
+                    <p>
+                        O'quvchi bir vaqtning o'zida test, mavzu, yozma ish va progressni boshqarolmaydi.
+                        Shu bo'shliq Iluro uchun asosiy kirish nuqtasi.
+                    </p>
                 </div>
-                <div class="support-list">
-                    {% for feature in features %}
-                    <article class="support-item">
-                        <strong>{{ feature.title }}</strong>
-                        <p>{{ feature.text }}</p>
+                <div class="problem-list">
+                    {% for item in problem_points %}
+                    <article class="problem-item">
+                        <strong>0{{ forloop.counter }}</strong>
+                        <p>{{ item }}</p>
                     </article>
                     {% endfor %}
                 </div>
             </section>
 
-            <section class="subjects-section" id="subjects">
-                <div class="section-heading">
-                    <p class="eyebrow">Fanlar tizimi</p>
-                    <h2>Har bir fan alohida ritmga ega, lekin bir xil platforma ichida boshqariladi.</h2>
+            <section class="deck-section" id="product">
+                <div class="section-intro">
+                    <p class="eyebrow">Yechim</p>
+                    <h2>Iluro product stack foydalanuvchini fan tanlashdan natijagacha olib boradi.</h2>
+                    <p>Biz marketing sayt emas, strukturalangan o'quv mahsulot qurayapmiz.</p>
                 </div>
-                <div class="subject-lanes">
-                    {% for subject in subjects %}
-                    <article class="subject-lane">
-                        <span>0{{ forloop.counter }}</span>
-                        <strong>{{ subject.name }}</strong>
-                        <p>{{ subject.accent }}</p>
+                <div class="module-stack">
+                    {% for module in product_modules %}
+                    <article class="module-row">
+                        <span class="module-index">0{{ forloop.counter }}</span>
+                        <div class="module-copy">
+                            <strong>{{ module.title }}</strong>
+                            <p>{{ module.text }}</p>
+                        </div>
+                        <span class="module-meta">{{ module.label }}</span>
                     </article>
                     {% endfor %}
                 </div>
             </section>
 
-            <section class="process-section" id="process">
-                <div class="section-heading">
-                    <p class="eyebrow">Ish jarayoni</p>
-                    <h2>Bir qarashda tushuniladigan uch bosqichli tayyorlov oqimi.</h2>
+            <section class="deck-section deck-section--highlight" id="traction">
+                <div class="section-intro">
+                    <p class="eyebrow">Bugun tayyor</p>
+                    <h2>Asosiy product modullari allaqachon real repo va admin workflow bilan ishlayapti.</h2>
+                    <p>Hozirgi holat static promise emas, mavjud modul va kontentga tayangan snapshot sifatida ko'rsatiladi.</p>
                 </div>
-                <div class="process-track">
-                    {% for step in steps %}
-                    <article class="process-step">
-                        <span class="process-number">{{ step.number }}</span>
-                        <strong>{{ step.title }}</strong>
-                        <p>{{ step.description }}</p>
+                <div class="ready-grid">
+                    <article class="ready-card ready-card--accent">
+                        <span>Fanlar</span>
+                        <strong>{{ subjects|length }} ta yo'nalish</strong>
+                        <p>Tarix, matematika va ona tili tayyorlov bloklari mavjud.</p>
+                    </article>
+                    {% for item in resource_metrics %}
+                    <article class="ready-card">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.value }}</strong>
+                        <p>{{ item.note }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+                <div class="truth-strip">
+                    {% for item in highlights %}
+                    <span>{{ item }}</span>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="deck-section" id="market">
+                <div class="section-intro">
+                    <p class="eyebrow">Nega hozir</p>
+                    <h2>Milliy sertifikat bozori strukturalangan product va AI yordamchi bilan qayta yig'ilishi mumkin.</h2>
+                    <p>Demand bor, lekin foydalanuvchi tajribasi hali ham parchalanib qolgan.</p>
+                </div>
+                <div class="market-grid">
+                    {% for item in market_reasons %}
+                    <article class="market-card">
+                        <strong>{{ item.title }}</strong>
+                        <p>{{ item.text }}</p>
                     </article>
                     {% endfor %}
                 </div>
             </section>
 
-            <section class="cta-section" id="cta">
-                <p class="eyebrow">Boshlash</p>
-                <h2>Hisob yarating va tayyorlovni tizimli oqimga o'tkazing.</h2>
-                {% if request.user.is_authenticated %}
-                <a class="primary-link" href="{% url 'dashboard' %}">Dashboardga o'tish</a>
-                {% else %}
-                <a class="primary-link" href="{% url 'register' %}">Ro'yxatdan o'tish</a>
-                {% endif %}
+            <section class="deck-section" id="roadmap">
+                <div class="section-intro">
+                    <p class="eyebrow">Roadmap</p>
+                    <h2>Keyingi build yo'nalishi aniq: fanlar, mock exam va AI qatlamini kengaytiramiz.</h2>
+                    <p>Bugun ishlayotgan product ustiga yangi vertikallarni qo'shamiz, noldan qayta boshlamaymiz.</p>
+                </div>
+                <div class="roadmap-list">
+                    {% for item in roadmap_items %}
+                    <article class="roadmap-row">
+                        <span class="roadmap-stage">{{ item.stage }}</span>
+                        <div class="roadmap-copy">
+                            <strong>{{ item.title }}</strong>
+                            <p>{{ item.text }}</p>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="deck-section" id="model">
+                <div class="section-intro">
+                    <p class="eyebrow">Biznes modeli</p>
+                    <h2>Subscription structure sodda: fan bo'yicha access, keyin esa bundle expansion.</h2>
+                    <p>Pricing va access modeli hozirgi database architecture bilan mos holatda qurilgan.</p>
+                </div>
+                <div class="model-grid">
+                    {% for card in business_model_cards %}
+                    <article class="model-card">
+                        <strong>{{ card.title }}</strong>
+                        <p>{{ card.text }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="deck-section deck-section--ask" id="ask">
+                <div class="ask-hero">
+                    <div class="section-intro section-intro--compact">
+                        <p class="eyebrow">Investitsiya so'rovi</p>
+                        <h2>{{ funding_ask.amount }}</h2>
+                        <p>{{ funding_ask.text }}</p>
+                    </div>
+                    <div class="ask-summary">
+                        <strong>{{ funding_ask.window }}</strong>
+                        <span>{{ funding_ask.use_case }}</span>
+                    </div>
+                </div>
+                <div class="funding-grid">
+                    {% for item in funding_breakdown %}
+                    <article class="funding-card">
+                        <div class="funding-card-top">
+                            <strong>{{ item.percent }}</strong>
+                            <span>{{ item.title }}</span>
+                        </div>
+                        <p>{{ item.text }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="deck-section deck-section--cta" id="cta">
+                <div class="section-intro section-intro--compact">
+                    <p class="eyebrow">Keyingi qadam</p>
+                    <h2>Mahsulotni ko'rish, beta guruhga qo'shilish yoki hamkorlikni boshlash mumkin.</h2>
+                    <p>Pitch public ko'rinadi, mahsulot esa ichkarida ishlayapti. CTA'lar ataylab toza saqlandi.</p>
+                </div>
+                <div class="cta-actions">
+                    {% for link in cta_links %}
+                    <a class="{% if forloop.first %}primary-link{% else %}secondary-link{% endif %}" href="{{ link.href }}">{{ link.label }}</a>
+                    {% endfor %}
+                </div>
             </section>
         </main>
     </div>

@@ -486,8 +486,15 @@ class ProfileAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
         summary, _ = UserStatSummary.objects.get_or_create(user=obj.user)
+        earned_xp = (
+            int(summary.test_xp_total or 0)
+            + int(summary.practice_xp_total or 0)
+            + int(summary.grammar_xp_total or 0)
+            + int(summary.essay_xp_total or 0)
+        )
+        summary.manual_xp_adjustment = obj.xp - earned_xp
         summary.lifetime_xp = obj.xp
-        summary.save(update_fields=["lifetime_xp", "updated_at"])
+        summary.save(update_fields=["manual_xp_adjustment", "lifetime_xp", "updated_at"])
 
         if level_changed and xp_changed and level_override != obj.level:
             self.message_user(
@@ -514,6 +521,13 @@ class BookAdmin(admin.ModelAdmin):
     search_fields = ("title", "author", "subject__name", "grade")
     autocomplete_fields = ("subject",)
     ordering = ("-is_featured", "-created_at")
+    fields = ("subject", "title", "author", "grade", "description", "access_level", "pdf_file", "is_featured")
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if db_field.name == "grade":
+            formfield.help_text = "Matematika/Tarix uchun: 5, 6, 7... Ona tili va adabiyot uchun: roman, qissa, drama, hikoya, sher."
+        return formfield
 
     def has_pdf(self, obj):
         return bool(obj.pdf_file)

@@ -638,6 +638,102 @@ body {
     font-size: 0.86rem;
 }
 
+.pitch-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    gap: 22px;
+    align-items: center;
+    padding: 24px 26px;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top right, rgba(168, 106, 51, 0.1), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 250, 244, 0.82));
+    border: 1px solid rgba(138, 84, 37, 0.14);
+    box-shadow: var(--shadow);
+}
+
+.pitch-strip-copy h3 {
+    margin: 0;
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: -0.03em;
+    font-size: clamp(1.4rem, 2.4vw, 1.95rem);
+    line-height: 1.08;
+    max-width: 20ch;
+}
+
+.pitch-strip-copy p:last-child {
+    margin: 12px 0 0;
+    max-width: 40rem;
+    color: var(--muted);
+    line-height: 1.68;
+}
+
+.pitch-strip-side {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(138, 84, 37, 0.12);
+}
+
+.pitch-strip-headline strong {
+    display: block;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: -0.04em;
+}
+
+.pitch-strip-headline span {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+.pitch-strip-metrics,
+.pitch-strip-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pitch-strip-metrics span,
+.pitch-strip-tags span {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--accent-strong);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.pitch-strip-metrics span strong {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 0.98rem;
+    letter-spacing: -0.03em;
+}
+
+.pitch-strip-link {
+    min-height: 42px;
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-radius: 999px;
+    text-decoration: none;
+    background: rgba(168, 106, 51, 0.1);
+    color: var(--accent-strong);
+    font-weight: 800;
+}
+
 .stats-grid,
 .subject-grid,
 .practice-grid,
@@ -915,6 +1011,7 @@ body {
     }
 
     .hero-panel,
+    .pitch-strip,
     .stats-grid,
     .subject-grid,
     .practice-grid,
@@ -1174,6 +1271,10 @@ body {
         gap: 18px;
     }
 
+    .pitch-strip {
+        padding: 20px 18px;
+    }
+
     .hero-panel h2 {
         max-width: none;
         font-size: 1.75rem;
@@ -1338,6 +1439,39 @@ body {
     .hero-panel {
         padding: 18px 16px;
         gap: 14px;
+    }
+
+    .pitch-strip {
+        padding: 16px;
+        gap: 14px;
+        border-radius: 20px;
+    }
+
+    .pitch-strip-copy h3 {
+        font-size: 1.18rem;
+        max-width: none;
+    }
+
+    .pitch-strip-copy p:last-child,
+    .pitch-strip-headline span {
+        font-size: 0.84rem;
+        line-height: 1.55;
+    }
+
+    .pitch-strip-side {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .pitch-strip-headline strong {
+        font-size: 1.38rem;
+    }
+
+    .pitch-strip-metrics span,
+    .pitch-strip-tags span,
+    .pitch-strip-link {
+        min-height: 34px;
+        font-size: 0.74rem;
     }
 
     .hero-panel h2 {

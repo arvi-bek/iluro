@@ -1399,6 +1399,209 @@ body {
     white-space: normal;
 }
 
+.formula-atlas-panel {
+    background:
+        radial-gradient(circle at top right, rgba(247, 179, 43, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(248, 243, 235, 0.94)),
+        var(--panel);
+}
+
+.formula-atlas-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.formula-atlas-copy {
+    max-width: 42rem;
+}
+
+.formula-atlas-copy h2 {
+    margin-bottom: 10px;
+}
+
+.formula-atlas-copy p:last-child {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.68;
+}
+
+.formula-atlas-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.formula-atlas-toolbar {
+    margin-top: 20px;
+}
+
+.formula-atlas-shell {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 22px;
+    margin-top: 22px;
+}
+
+.formula-atlas-sidebar {
+    padding-right: 22px;
+    border-right: 1px solid rgba(138, 84, 37, 0.08);
+}
+
+.formula-atlas-list {
+    display: grid;
+    gap: 12px;
+}
+
+.formula-atlas-item,
+.formula-atlas-empty {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.formula-atlas-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(138, 84, 37, 0.22);
+    box-shadow: 0 16px 28px rgba(103, 69, 38, 0.08);
+}
+
+.formula-atlas-item.is-active {
+    border-color: rgba(138, 84, 37, 0.32);
+    background: rgba(255, 253, 249, 0.98);
+    box-shadow: 0 18px 30px rgba(103, 69, 38, 0.1);
+}
+
+.formula-atlas-item-copy strong,
+.formula-atlas-empty strong {
+    display: block;
+    font-size: 0.98rem;
+    line-height: 1.18;
+}
+
+.formula-atlas-item-copy span,
+.formula-atlas-empty p {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.54;
+}
+
+.formula-atlas-item-state,
+.formula-stage-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(249, 241, 228, 0.96);
+    color: var(--accent-strong);
+    font-size: 0.76rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.formula-stage-badge.is-soft {
+    background: rgba(168, 106, 51, 0.08);
+}
+
+.formula-atlas-stage {
+    display: grid;
+    gap: 18px;
+}
+
+.formula-stage-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.formula-stage-hero h3 {
+    margin: 0;
+    font-size: 1.65rem;
+    line-height: 1.05;
+    letter-spacing: -0.05em;
+}
+
+.formula-stage-lead {
+    margin: 14px 0 0;
+    max-width: 48rem;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.72;
+}
+
+.formula-stage-badges {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.formula-stage-expression,
+.formula-stage-section,
+.formula-stage-empty {
+    padding: 22px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    box-shadow: 0 16px 30px rgba(103, 69, 38, 0.08);
+}
+
+.formula-stage-expression > span,
+.formula-stage-section > span {
+    display: inline-block;
+    margin-bottom: 12px;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.formula-stage-expression-body {
+    color: var(--text);
+    font-family: "Space Grotesk", sans-serif;
+    font-size: clamp(1.16rem, 1.6vw, 1.48rem);
+    line-height: 1.55;
+    letter-spacing: -0.03em;
+    word-break: break-word;
+}
+
+.formula-stage-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.formula-stage-body {
+    color: var(--text);
+    font-size: 0.98rem;
+    line-height: 1.84;
+}
+
+.formula-stage-empty h3 {
+    margin: 0 0 10px;
+    font-size: 1.08rem;
+}
+
+.formula-stage-empty p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.68;
+}
+
 .grammar-panel {
     background:
         linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(248, 243, 235, 0.94)),
@@ -3367,6 +3570,7 @@ body {
 
     .content-grid,
     .formula-detail-grid,
+    .formula-stage-columns,
     .workspace-home-map {
         grid-template-columns: 1fr;
     }
@@ -3411,8 +3615,22 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .formula-grid {
+    .formula-grid,
+    .formula-atlas-shell {
         grid-template-columns: 1fr;
+    }
+
+    .formula-atlas-head,
+    .formula-stage-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .formula-atlas-sidebar {
+        padding-right: 0;
+        padding-bottom: 18px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(138, 84, 37, 0.08);
     }
 
     .history-panel-head,
@@ -4019,6 +4237,9 @@ body {
     .workspace-hero,
     .content-panel,
     .formula-detail-panel,
+    .formula-stage-expression,
+    .formula-stage-section,
+    .formula-stage-empty,
     .chronology-detail-hero,
     .chronology-detail-list,
     .chronology-detail-bottom {
@@ -4211,6 +4432,7 @@ body {
     .metric-grid,
     .content-grid,
     .formula-grid,
+    .formula-atlas-list,
     .history-card-grid,
     .chronology-grid,
     .workspace-home-map {
@@ -4223,6 +4445,8 @@ body {
     .history-card,
     .chronology-card,
     .formula-detail-card,
+    .formula-atlas-item,
+    .formula-atlas-empty,
     .grammar-example-grid section,
     .history-inline-block {
         padding: 12px;
@@ -4254,6 +4478,7 @@ body {
 
     .mini-card h3,
     .formula-detail-head h3,
+    .formula-stage-hero h3,
     .chronology-card-head h3,
     .history-card h3,
     .workspace-home-button span {
@@ -4267,12 +4492,23 @@ body {
     .formula-detail-summary,
     .formula-detail-body,
     .formula-detail-card,
+    .formula-stage-lead,
+    .formula-stage-body,
+    .formula-atlas-item-copy span,
+    .formula-atlas-empty p,
     .chronology-preview p,
     .chronology-line-card p,
     .workspace-home-button small,
     .workspace-home-note span {
         font-size: 0.76rem;
         line-height: 1.52;
+    }
+
+    .formula-atlas-item-state,
+    .formula-stage-badge {
+        min-height: 28px;
+        padding: 0 10px;
+        font-size: 0.68rem;
     }
 
     .workspace-home-button {

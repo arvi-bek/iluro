@@ -29,9 +29,9 @@
                 </header>
 
                 {% if selected_subject %}
-                <section class="filter-strip" aria-label="Sinf bo'yicha filter">
+                <section class="filter-strip" aria-label="{{ book_filter_title }} filter">
                     <div class="filter-strip-head">
-                        <p class="eyebrow">Sinf bo'yicha</p>
+                        <p class="eyebrow">{{ book_filter_title }}</p>
                         <span>{{ books|length }} ta kitob</span>
                     </div>
                     <div class="filter-pill-row">

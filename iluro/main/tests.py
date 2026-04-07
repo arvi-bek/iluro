@@ -16,8 +16,11 @@ from .models import (
     Subject,
     Subscription,
     Test,
+    UserPracticeAttempt,
+    UserStatSummary,
     UserTest,
 )
+from .services import get_or_sync_profile, record_single_practice_attempt_stats
 from .utils import (
     calculate_essay_topic_xp,
     calculate_grammar_lesson_xp,
@@ -200,3 +203,34 @@ class XPEconomyTests(TestCase):
         normal_xp = calculate_essay_topic_xp("S", is_completed=True, is_featured=False)
         featured_xp = calculate_essay_topic_xp("S", is_completed=True, is_featured=True)
         self.assertGreater(featured_xp, normal_xp)
+
+    def test_manual_admin_xp_is_preserved_when_new_practice_xp_is_added(self):
+        user = User.objects.create_user(username="xpkeeper", password="StrongPass123")
+        Profile.objects.create(user=user, full_name="XP Keeper", xp=1300, level="🔥 Izlanuvchi")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+        practice_set = PracticeSet.objects.create(subject=subject, title="XP set", difficulty="S+")
+        exercise = PracticeExercise.objects.create(
+            subject=subject,
+            practice_set=practice_set,
+            prompt="2 + 2 = ?",
+            answer_mode="choice",
+            difficulty="S+",
+        )
+        choice = PracticeChoice.objects.create(exercise=exercise, text="4", is_correct=True)
+        summary = UserStatSummary.objects.create(user=user, lifetime_xp=1300, manual_xp_adjustment=1300)
+
+        attempt = UserPracticeAttempt.objects.create(
+            user=user,
+            exercise=exercise,
+            selected_choice=choice,
+            is_correct=True,
+        )
+
+        record_single_practice_attempt_stats(attempt)
+        summary.refresh_from_db()
+
+        earned_delta = calculate_single_practice_xp(True, "S+")
+        self.assertEqual(summary.lifetime_xp, 1300 + earned_delta)
+
+        profile = get_or_sync_profile(user)
+        self.assertEqual(profile.xp, 1300 + earned_delta)

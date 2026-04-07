@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .models import (
     Book,
+    GRADE_CHOICES,
     PracticeSet,
     PracticeSetAttempt,
     Question,
@@ -27,6 +28,69 @@ from .services import (
     get_user_subject_access_rows,
 )
 from .utils import normalize_difficulty_label
+
+
+LANGUAGE_BOOK_GENRE_FILTERS = [
+    ("roman", "Romanlar"),
+    ("qissa", "Qissalar"),
+    ("drama", "Dramalar"),
+    ("hikoya", "Hikoyalar"),
+    ("sher", "She'rlar"),
+]
+
+
+def is_language_subject(subject_or_name):
+    subject_name = getattr(subject_or_name, "name", subject_or_name) or ""
+    lowered = subject_name.lower()
+    return "ona tili" in lowered or "adab" in lowered
+
+
+def get_book_filter_config(subject):
+    if is_language_subject(subject):
+        return {
+            "title": "Janr bo'yicha",
+            "choices": LANGUAGE_BOOK_GENRE_FILTERS,
+        }
+    return {
+        "title": "Sinf bo'yicha",
+        "choices": GRADE_CHOICES,
+    }
+
+
+def get_book_bucket_label(book):
+    raw_value = (book.grade or "").strip()
+    if not raw_value:
+        return ""
+
+    if is_language_subject(book.subject):
+        genre_map = dict(LANGUAGE_BOOK_GENRE_FILTERS)
+        return genre_map.get(raw_value, "Boshqalar")
+
+    grade_map = dict(GRADE_CHOICES)
+    return grade_map.get(raw_value, raw_value)
+
+
+def apply_book_filter(queryset, subject, selected_filter):
+    selected_filter = (selected_filter or "").strip()
+    if not selected_filter:
+        return queryset
+
+    if selected_filter == "other":
+        if is_language_subject(subject):
+            allowed_values = [value for value, _ in LANGUAGE_BOOK_GENRE_FILTERS]
+            return queryset.exclude(grade__in=allowed_values)
+        return queryset.filter(grade="")
+
+    if is_language_subject(subject):
+        allowed_values = {value for value, _ in LANGUAGE_BOOK_GENRE_FILTERS}
+        if selected_filter in allowed_values:
+            return queryset.filter(grade=selected_filter)
+        return queryset.none()
+
+    allowed_grades = {value for value, _ in GRADE_CHOICES}
+    if selected_filter in allowed_grades:
+        return queryset.filter(grade=selected_filter)
+    return queryset.none()
 
 
 def get_dashboard_subject_cards(user):
@@ -61,19 +125,19 @@ def get_dashboard_subject_cards(user):
 
 def get_subject_books(subject, grade=None, limit=12):
     base_queryset = Book.objects.filter(subject=subject).order_by("-is_featured", "-created_at")
-    if grade == "other":
-        base_queryset = base_queryset.filter(grade="")
-    elif grade:
-        base_queryset = base_queryset.filter(grade=grade)
+    base_queryset = apply_book_filter(base_queryset, subject, grade)
 
     try:
         books_queryset = base_queryset.annotate(viewer_count=Coalesce(Sum("views__view_count"), Value(0)))
-        return list(books_queryset[:limit])
+        books = list(books_queryset[:limit])
     except (ProgrammingError, OperationalError):
         books = list(base_queryset[:limit])
         for book in books:
             book.viewer_count = 0
-        return books
+
+    for book in books:
+        book.bucket_label = get_book_bucket_label(book)
+    return books
 
 
 def get_subject_tests(user, subject, profile_level, limit=6, category_filter="all"):
@@ -221,7 +285,7 @@ def get_user_subject_best_score(user, subject):
 
 def get_formula_entries(subject, formula_query="", formula_filter="all"):
     formulas_queryset = SubjectSectionEntry.objects.filter(subject=subject, section_key="formulas").order_by(
-        "order", "-is_featured", "-created_at"
+        "created_at", "id"
     )
     if formula_query:
         formulas_queryset = formulas_queryset.filter(

@@ -48,6 +48,9 @@ ASSESSMENT_HISTORY_LIMIT = 5
 
 
 def rebuild_user_statistics(user):
+    summary, _ = UserStatSummary.objects.get_or_create(user=user)
+    manual_xp_adjustment = int(summary.manual_xp_adjustment or 0)
+
     user_tests = list(
         UserTest.objects.filter(user=user)
         .select_related("test")
@@ -80,7 +83,7 @@ def rebuild_user_statistics(user):
     practice_xp = 0
     grammar_xp = 0
     essay_xp = 0
-    lifetime_xp = 0
+    earned_xp = 0
     best_test_score = max((attempt.score or 0 for attempt in user_tests), default=0)
     session_best_practice = max((attempt.score or 0 for attempt in practice_sessions), default=0)
     single_best_practice = 100 if any(attempt.is_correct for attempt in practice_attempts if attempt.practice_session_id is None) else 0
@@ -99,26 +102,21 @@ def rebuild_user_statistics(user):
     last_activity_candidates.extend(progress.updated_at for progress in essay_progress_rows if progress.updated_at)
     last_activity_at = max(last_activity_candidates, default=None)
 
-    summary, _ = UserStatSummary.objects.update_or_create(
-        user=user,
-        defaults={
-            "lifetime_xp": lifetime_xp,
-            "test_xp_total": 0,
-            "practice_xp_total": 0,
-            "grammar_xp_total": 0,
-            "essay_xp_total": 0,
-            "lifetime_test_count": len(user_tests),
-            "lifetime_practice_count": len(practice_attempts),
-            "total_grammar_lessons_completed": grammar_completed_count,
-            "total_essay_topics_completed": essay_completed_count,
-            "total_correct_answers": total_correct_test_answers + total_correct_practice_answers,
-            "total_correct_test_answers": total_correct_test_answers,
-            "total_correct_practice_answers": total_correct_practice_answers,
-            "best_test_score": best_test_score,
-            "best_practice_score": best_practice_score,
-            "last_activity_at": last_activity_at,
-        },
-    )
+    summary.lifetime_xp = 0
+    summary.test_xp_total = 0
+    summary.practice_xp_total = 0
+    summary.grammar_xp_total = 0
+    summary.essay_xp_total = 0
+    summary.lifetime_test_count = len(user_tests)
+    summary.lifetime_practice_count = len(practice_attempts)
+    summary.total_grammar_lessons_completed = grammar_completed_count
+    summary.total_essay_topics_completed = essay_completed_count
+    summary.total_correct_answers = total_correct_test_answers + total_correct_practice_answers
+    summary.total_correct_test_answers = total_correct_test_answers
+    summary.total_correct_practice_answers = total_correct_practice_answers
+    summary.best_test_score = best_test_score
+    summary.best_practice_score = best_practice_score
+    summary.last_activity_at = last_activity_at
 
     subject_stats = {}
     for attempt in user_tests:
@@ -132,7 +130,7 @@ def rebuild_user_statistics(user):
             attempt.snapshot_json = {**attempt.snapshot_json, "xp_awarded": attempt_xp}
             attempt.save(update_fields=["snapshot_json"])
         test_xp += attempt_xp
-        lifetime_xp += attempt_xp
+        earned_xp += attempt_xp
         subject_id = attempt.test.subject_id
         stats = subject_stats.setdefault(
             subject_id,
@@ -177,7 +175,7 @@ def rebuild_user_statistics(user):
                 attempt_xp = calculate_single_practice_xp(attempt.is_correct, attempt.exercise.difficulty)
                 stats["xp"] += attempt_xp
                 practice_xp += attempt_xp
-                lifetime_xp += attempt_xp
+                earned_xp += attempt_xp
                 stats["best_score"] = max(stats["best_score"], 100)
         if attempt.created_at and (stats["last_activity_at"] is None or attempt.created_at > stats["last_activity_at"]):
             stats["last_activity_at"] = attempt.created_at
@@ -189,7 +187,7 @@ def rebuild_user_statistics(user):
             session.practice_set.difficulty,
         )
         practice_xp += session_xp
-        lifetime_xp += session_xp
+        earned_xp += session_xp
         subject_id = session.practice_set.subject_id
         stats = subject_stats.setdefault(
             subject_id,
@@ -220,7 +218,7 @@ def rebuild_user_statistics(user):
             progress.xp_awarded = progress_xp
             progress.save(update_fields=["xp_awarded", "updated_at"])
         grammar_xp += progress_xp
-        lifetime_xp += progress_xp
+        earned_xp += progress_xp
         subject_id = progress.lesson.subject_id
         stats = subject_stats.setdefault(
             subject_id,
@@ -250,7 +248,7 @@ def rebuild_user_statistics(user):
             progress.xp_awarded = progress_xp
             progress.save(update_fields=["xp_awarded", "updated_at"])
         essay_xp += progress_xp
-        lifetime_xp += progress_xp
+        earned_xp += progress_xp
         subject_id = progress.topic.subject_id
         stats = subject_stats.setdefault(
             subject_id,
@@ -269,7 +267,7 @@ def rebuild_user_statistics(user):
         if progress.updated_at and (stats["last_activity_at"] is None or progress.updated_at > stats["last_activity_at"]):
             stats["last_activity_at"] = progress.updated_at
 
-    summary.lifetime_xp = lifetime_xp
+    summary.lifetime_xp = max(0, earned_xp + manual_xp_adjustment)
     summary.test_xp_total = test_xp
     summary.practice_xp_total = practice_xp
     summary.grammar_xp_total = grammar_xp
@@ -279,6 +277,7 @@ def rebuild_user_statistics(user):
     summary.save(
         update_fields=[
             "lifetime_xp",
+            "manual_xp_adjustment",
             "test_xp_total",
             "practice_xp_total",
             "grammar_xp_total",

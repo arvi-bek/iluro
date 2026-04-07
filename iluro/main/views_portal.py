@@ -12,7 +12,6 @@ from .models import (
     Book,
     EssayTopic,
     EssayTopicProgress,
-    GRADE_CHOICES,
     GrammarLessonProgress,
     GrammarLessonQuestion,
     PracticeSet,
@@ -22,6 +21,7 @@ from .models import (
     Test,
 )
 from .selectors import (
+    get_book_filter_config,
     get_dashboard_subject_cards,
     get_formula_entries,
     get_latest_dashboard_resources,
@@ -463,6 +463,26 @@ def dashboard_view(request):
             "hint": "Daraja yig'ilgan XP orqali o'sadi.",
         },
     ]
+    pitch_snapshot = {
+        "eyebrow": "Startup snapshot",
+        "title": "Iluro endi assessment sayt emas, ko'p fanli tayyorlov mahsulotiga aylanyapti.",
+        "text": (
+            "Hozir ishlayotgan modullar ustiga SAT, yangi fanlar, mock exam va AI yordamchi "
+            "qatlami qo'shiladi. Maqsad: productni tezroq kengaytirish uchun 18k USD runway."
+        ),
+        "ask_amount": "18k USD",
+        "ask_note": "AI, reklama, server va kontent kengayishi uchun",
+        "metrics": [
+            {"label": "Fanlar", "value": f"{len(subjects)} ta"},
+            {"label": "XP bazasi", "value": f"{profile.xp} XP"},
+            {"label": "Fokus", "value": "AI + mock"},
+        ],
+        "next_moves": [
+            "SAT va 3 ta yangi fan",
+            "Mock exam flow",
+            "AI helper va esse self-check",
+        ],
+    }
     context = {
         "profile": profile,
         "stats": stats,
@@ -472,6 +492,7 @@ def dashboard_view(request):
         "level_info": level_info,
         "xp_summary": xp_summary,
         "show_beta_trial_notice": bool(request.session.get("beta_trial_notice")),
+        "pitch_snapshot": pitch_snapshot,
     }
     return render(request, "dashboard.html", context)
 
@@ -492,7 +513,6 @@ def subject_workspace_view(request, subject_id, section=None):
     subject = get_object_or_404(Subject.objects.annotate(test_count=Count("test")), id=subject_id)
     subject_level = _get_effective_subject_level(request.user, subject_id=subject.id, profile=profile)
     selected_grade = request.GET.get("grade", "").strip()
-    allowed_grades = {choice[0] for choice in GRADE_CHOICES}
 
     if not _user_can_access_subject(request.user, subject.id):
         messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
@@ -511,7 +531,9 @@ def subject_workspace_view(request, subject_id, section=None):
 
     peer_subjects = get_subject_peer_subjects(request.user, subject.id)
 
-    selected_book_grade = selected_grade if selected_grade in allowed_grades or selected_grade == "other" else None
+    book_filter_config = get_book_filter_config(subject)
+    allowed_book_filters = {choice[0] for choice in book_filter_config["choices"]}
+    selected_book_grade = selected_grade if selected_grade in allowed_book_filters or selected_grade == "other" else None
     books = get_subject_books(subject, grade=selected_book_grade, limit=12)
     grade_filters = [{"value": "", "label": "Barchasi", "is_active": selected_grade == ""}]
     grade_filters.extend(
@@ -520,7 +542,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "label": label,
             "is_active": selected_grade == value,
         }
-        for value, label in GRADE_CHOICES
+        for value, label in book_filter_config["choices"]
     )
     grade_filters.append(
         {
@@ -1021,7 +1043,7 @@ def subject_workspace_view(request, subject_id, section=None):
         "books": books[0].title if books else "",
         "tests": tests[0].title if tests else "",
         "formulas": SubjectSectionEntry.objects.filter(subject=subject, section_key="formulas")
-        .order_by("order", "-is_featured", "-created_at")
+        .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
@@ -1031,7 +1053,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "access_level",
             subject_level,
         )
-        .order_by("order", "-is_featured", "-created_at")
+        .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
@@ -1040,7 +1062,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "access_level",
             subject_level,
         )
-        .order_by("order", "-is_featured", "-created_at")
+        .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
@@ -1049,7 +1071,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "access_level",
             subject_level,
         )
-        .order_by("order", "-is_featured", "-created_at")
+        .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
@@ -1058,7 +1080,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "access_level",
             subject_level,
         )
-        .order_by("order", "-is_featured", "-created_at")
+        .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
@@ -1067,7 +1089,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "access_level",
             subject_level,
         )
-        .order_by("order", "-is_featured", "-created_at")
+        .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
@@ -1077,7 +1099,7 @@ def subject_workspace_view(request, subject_id, section=None):
             "access_level",
             subject_level,
         )
-        .order_by("order", "-is_featured", "-created_at")
+        .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
@@ -1158,6 +1180,7 @@ def subject_workspace_view(request, subject_id, section=None):
         "history_page_obj": history_page_obj,
         "selected_grade": selected_grade,
         "grade_filters": grade_filters,
+        "book_filter_title": book_filter_config["title"],
         "selected_test_filter": selected_test_filter,
         "history_test_filters": history_test_filters,
         "combined_problem_items": combined_problem_items,

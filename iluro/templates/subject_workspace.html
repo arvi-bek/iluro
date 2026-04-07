@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260406-essay2">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260407-formula1">
 </head>
 <body>
     <div class="workspace-shell">
@@ -204,9 +204,9 @@
                     <div class="content-panel">
                         <p class="eyebrow">Kitoblar</p>
                         <h2>{{ subject.name }} resurslari</h2>
-                        <section class="workspace-filter-strip" aria-label="Sinf bo'yicha filter">
+                        <section class="workspace-filter-strip" aria-label="{{ book_filter_title }} filter">
                             <div class="workspace-filter-head">
-                                <p class="eyebrow">Sinf bo'yicha</p>
+                                <p class="eyebrow">{{ book_filter_title }}</p>
                                 <span>{{ books|length }} ta kitob</span>
                             </div>
                             <div class="workspace-filter-row">
@@ -219,11 +219,11 @@
                         </section>
                         <div class="content-grid">
                             {% for book in books %}
-                            <article class="mini-card">
-                                <div class="mini-card-top">
-                                    <span>{{ subject.name }}{% if book.grade %} · {{ book.get_grade_display }}{% endif %}</span>
-                                    <strong class="card-state">Resurs</strong>
-                                </div>
+                                <article class="mini-card">
+                                    <div class="mini-card-top">
+                                        <span>{{ subject.name }}{% if book.bucket_label %} · {{ book.bucket_label }}{% endif %}</span>
+                                        <strong class="card-state">Resurs</strong>
+                                    </div>
                                 <h3>{{ book.title }}</h3>
                                 <p>{% if book.grade %}<strong>{{ book.get_grade_display }}</strong>. {% endif %}{% if book.author %}Muallif: {{ book.author }}.{% endif %} {{ book.description|truncatechars:100 }}</p>
                                 <div class="test-stat-stack">
@@ -290,90 +290,116 @@
                         </div>
                     </div>
                     {% elif current_section == "formulas" %}
-                    <div class="content-panel formulas-panel">
-                        <p class="eyebrow">Formulalar</p>
-                        <h2>{{ subject.name }} uchun formula katalogi</h2>
-                        <p>Bu bo'lim darajaga bog'liq emas. Kartadan formulani tanlang, detail panelda formula yozilishi va undan qayerda foydalanilishini ko'rasiz.</p>
+                    <div class="content-panel formulas-panel formula-atlas-panel">
+                        <div class="formula-atlas-head">
+                            <div class="formula-atlas-copy">
+                                <p class="eyebrow">Formulalar</p>
+                                <h2>{{ subject.name }} formula atlasi</h2>
+                                <p>Kerakli formulani chapdan tanlang. O'ng tomonda yozilishi, qisqa izohi va qayerda ishlatilishi bittada ko'rinadi.</p>
+                            </div>
+                            <div class="formula-atlas-meta">
+                                <span class="workspace-section-pill">{{ formula_entries|length }} ta formula</span>
+                                <span class="workspace-section-pill is-soft">{% if formula_filter == "featured" %}Tavsiya etilgan{% else %}Barcha formula{% endif %}</span>
+                            </div>
+                        </div>
 
-                        <form class="formula-toolbar" method="get">
+                        <form class="formula-toolbar formula-atlas-toolbar" method="get">
                             <label class="formula-search">
                                 <span>Qidiruv</span>
                                 <input type="text" name="q" value="{{ formula_query }}" placeholder="Masalan, kvadrat tenglama, sinus, logarifm">
                             </label>
                             <label class="formula-filter">
-                                <span>Filter</span>
+                                <span>Ko'rinish</span>
                                 <select name="formula_filter">
                                     <option value="all" {% if formula_filter == "all" %}selected{% endif %}>Barchasi</option>
                                     <option value="featured" {% if formula_filter == "featured" %}selected{% endif %}>Tavsiya etilgan</option>
                                 </select>
                             </label>
-                            <button class="mini-link formula-submit" type="submit">Qo'llash</button>
+                            <button class="mini-link formula-submit" type="submit">Yangilash</button>
                         </form>
 
-                        <div class="content-grid formula-grid">
-                            {% for entry in formula_entries %}
-                            <a
-                                class="mini-card formula-tile {% if selected_formula and selected_formula.id == entry.id %}is-active{% endif %}"
-                                href="{% url 'subject-workspace-section' subject.id 'formulas' %}?formula={{ entry.id }}{% if formula_query %}&q={{ formula_query|urlencode }}{% endif %}{% if formula_filter and formula_filter != 'all' %}&formula_filter={{ formula_filter|urlencode }}{% endif %}#formula-detail"
-                            >
-                                <div class="mini-card-top">
-                                    <span>{{ subject.name }}</span>
-                                    <strong class="card-state">{% if entry.is_featured %}Tanlangan{% else %}Formula{% endif %}</strong>
+                        <div class="formula-atlas-shell">
+                            <aside class="formula-atlas-sidebar">
+                                <div class="formula-atlas-list">
+                                    {% for entry in formula_entries %}
+                                    <a
+                                        class="formula-atlas-item {% if selected_formula and selected_formula.id == entry.id %}is-active{% endif %}"
+                                        href="{% url 'subject-workspace-section' subject.id 'formulas' %}?formula={{ entry.id }}{% if formula_query %}&q={{ formula_query|urlencode }}{% endif %}{% if formula_filter and formula_filter != 'all' %}&formula_filter={{ formula_filter|urlencode }}{% endif %}#formula-detail"
+                                    >
+                                        <div class="formula-atlas-item-copy">
+                                            <strong>{{ entry.title }}</strong>
+                                            <span>{% if entry.summary %}{{ entry.summary|truncatechars:86 }}{% elif entry.body %}{{ entry.body|truncatechars:86 }}{% else %}Formula tafsiloti detail panelda ko'rsatiladi.{% endif %}</span>
+                                        </div>
+                                        <span class="formula-atlas-item-state">{% if entry.is_featured %}Tanlangan{% else %}Formula{% endif %}</span>
+                                    </a>
+                                    {% empty %}
+                                    <article class="formula-atlas-empty">
+                                        <strong>Formula topilmadi</strong>
+                                        <p>Qidiruvni o'zgartirib ko'ring yoki admin paneldan yangi formulalar qo'shing.</p>
+                                    </article>
+                                    {% endfor %}
                                 </div>
-                                <h3>{{ entry.title }}</h3>
-                                <p>{% if entry.summary %}{{ entry.summary|truncatechars:100 }}{% elif entry.body %}{{ entry.body|truncatechars:100 }}{% else %}Formula tafsiloti detail panelda ko'rsatiladi.{% endif %}</p>
-                                {% if entry.usage_note %}
-                                <div class="test-stat-stack formula-meta">
-                                    <small>Foydalanish: {{ entry.usage_note|truncatechars:82 }}</small>
+                            </aside>
+
+                            <section class="formula-atlas-stage" id="formula-detail">
+                                {% if selected_formula %}
+                                <div class="formula-stage-hero">
+                                    <div>
+                                        <p class="eyebrow">Tanlangan formula</p>
+                                        <h3>{{ selected_formula.title }}</h3>
+                                        <p class="formula-stage-lead">{{ selected_formula.summary|default:"Qisqa izoh hali kiritilmagan. Formula yozilishi va qo'llanishini pastda ko'rasiz." }}</p>
+                                    </div>
+                                    <div class="formula-stage-badges">
+                                        <span class="formula-stage-badge">{% if selected_formula.is_featured %}Tanlangan{% else %}Asosiy formula{% endif %}</span>
+                                        {% if selected_formula.usage_note %}
+                                        <span class="formula-stage-badge is-soft">Izoh bor</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                {% endif %}
-                            </a>
-                            {% empty %}
-                            <article class="mini-card empty-card">
-                                <h3>Formula topilmadi</h3>
-                                <p>Qidiruvni o'zgartirib ko'ring yoki admin paneldan yangi formulalar qo'shing.</p>
-                            </article>
-                            {% endfor %}
-                        </div>
 
-                        {% if selected_formula %}
-                        <article class="formula-detail-panel" id="formula-detail">
-                            <div class="formula-detail-head">
-                                <div>
-                                    <p class="eyebrow">Tanlangan formula</p>
-                                    <h3>{{ selected_formula.title }}</h3>
-                                </div>
-                                <strong class="card-state detail-state">{% if selected_formula.is_featured %}Tanlangan{% else %}Formula{% endif %}</strong>
-                            </div>
-
-                            {% if selected_formula.summary %}
-                            <p class="formula-detail-summary">{{ selected_formula.summary }}</p>
-                            {% endif %}
-
-                            <div class="formula-detail-grid">
-                                <section class="formula-detail-card">
-                                    <span>Formula</span>
-                                    <div class="formula-detail-body">
+                                <div class="formula-stage-expression">
+                                    <span>Formula yozilishi</span>
+                                    <div class="formula-stage-expression-body">
                                         {% if selected_formula.body %}
                                         {{ selected_formula.body|linebreaksbr }}
                                         {% else %}
                                         Formula yozilishi hali kiritilmagan.
                                         {% endif %}
                                     </div>
-                                </section>
-                                <section class="formula-detail-card">
-                                    <span>Qayerda ishlatiladi</span>
-                                    <div class="formula-detail-body">
-                                        {% if selected_formula.usage_note %}
-                                        {{ selected_formula.usage_note|linebreaksbr }}
-                                        {% else %}
-                                        Bu formula uchun foydalanish izohi hali kiritilmagan.
-                                        {% endif %}
-                                    </div>
-                                </section>
-                            </div>
-                        </article>
-                        {% endif %}
+                                </div>
+
+                                <div class="formula-stage-columns">
+                                    <section class="formula-stage-section">
+                                        <span>Qayerda ishlatiladi</span>
+                                        <div class="formula-stage-body">
+                                            {% if selected_formula.usage_note %}
+                                            {{ selected_formula.usage_note|linebreaksbr }}
+                                            {% else %}
+                                            Bu formula uchun foydalanish izohi hali kiritilmagan.
+                                            {% endif %}
+                                        </div>
+                                    </section>
+                                    <section class="formula-stage-section">
+                                        <span>Qisqa yo'nalish</span>
+                                        <div class="formula-stage-body">
+                                            {% if selected_formula.summary %}
+                                            {{ selected_formula.summary|linebreaksbr }}
+                                            {% elif selected_formula.body %}
+                                            Formula yozilishini o'qib, chapdagi katalog orqali keyingi formulaga o'ting.
+                                            {% else %}
+                                            Bu formula uchun qisqa yo'nalish hali kiritilmagan.
+                                            {% endif %}
+                                        </div>
+                                    </section>
+                                </div>
+                                {% else %}
+                                <article class="formula-stage-empty">
+                                    <h3>Formula tanlanmagan</h3>
+                                    <p>Chap tomondagi katalogdan formulani tanlang. Tanlaganingizdan keyin shu yerda katta ko'rinishda o'qish va eslab qolish qulaylashadi.</p>
+                                </article>
+                                {% endif %}
+                            </section>
+                        </div>
                     </div>
                     {% elif current_section == "problems" %}
                     <div class="content-panel">

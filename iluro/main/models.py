@@ -293,6 +293,7 @@ class Profile(models.Model):
 class UserStatSummary(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="stat_summary")
     lifetime_xp = models.IntegerField(default=0)
+    manual_xp_adjustment = models.IntegerField(default=0)
     test_xp_total = models.PositiveIntegerField(default=0)
     practice_xp_total = models.PositiveIntegerField(default=0)
     grammar_xp_total = models.PositiveIntegerField(default=0)
@@ -370,7 +371,7 @@ class Book(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, db_index=True)
     title = models.CharField(max_length=255)
     author = models.CharField(max_length=150, blank=True)
-    grade = models.CharField(max_length=2, choices=GRADE_CHOICES, blank=True)
+    grade = models.CharField(max_length=20, blank=True, verbose_name="Sinf / janr")
     description = models.TextField(blank=True)
     access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="S", blank=True)
     pdf_file = models.FileField(upload_to='books/', blank=True, null=True)
@@ -428,7 +429,7 @@ class SubjectSectionEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("order", "-is_featured", "-created_at")
+        ordering = ("created_at", "id")
         verbose_name = "Fan bo'limi materiali"
         verbose_name_plural = "Fan bo'limi materiallari"
         indexes = [
@@ -511,7 +512,7 @@ class EssayTopic(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("-is_featured", "-created_at")
+        ordering = ("created_at", "id")
         verbose_name = "Insho mavzusi"
         verbose_name_plural = "Insho mavzulari"
 

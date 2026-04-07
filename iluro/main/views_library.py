@@ -9,8 +9,13 @@ from django.http import FileResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from .models import Book, BookView, GRADE_CHOICES, Subject
-from .selectors import get_tests_listing
+from .models import Book, BookView, Subject
+from .selectors import (
+    apply_book_filter,
+    get_book_bucket_label,
+    get_book_filter_config,
+    get_tests_listing,
+)
 from .services import (
     get_active_subscription_ids as _get_active_subscription_ids,
     get_or_sync_profile as _get_or_sync_profile,
@@ -35,7 +40,7 @@ def books_list_view(request):
     subject_queryset = Subject.objects.filter(id__in=owned_subject_ids).order_by("name")
     selected_subject = None
     book_queryset = Book.objects.select_related("subject").order_by("-is_featured", "-created_at")
-    allowed_grades = {choice[0] for choice in GRADE_CHOICES}
+    book_filter_config = {"title": "Sinf bo'yicha", "choices": []}
 
     if selected_subject_id.isdigit():
         selected_subject = get_object_or_404(Subject, id=selected_subject_id)
@@ -43,13 +48,12 @@ def books_list_view(request):
             messages.error(request, "Bu fan uchun sizda aktiv obuna yo'q.")
             return redirect("subject-selection")
         book_queryset = book_queryset.filter(subject=selected_subject)
+        book_filter_config = get_book_filter_config(selected_subject)
     else:
         book_queryset = book_queryset.none()
 
-    if selected_grade == "other":
-        book_queryset = book_queryset.filter(grade="")
-    elif selected_grade in allowed_grades:
-        book_queryset = book_queryset.filter(grade=selected_grade)
+    if selected_subject:
+        book_queryset = apply_book_filter(book_queryset, selected_subject, selected_grade)
 
     try:
         book_items = list(book_queryset.annotate(viewer_count=Coalesce(Sum("views__view_count"), Value(0))))
@@ -58,7 +62,7 @@ def books_list_view(request):
                 "id": book.id,
                 "title": book.title,
                 "subject": book.subject.name,
-                "grade": book.get_grade_display() if book.grade else "",
+                "grade": get_book_bucket_label(book),
                 "author": book.author,
                 "description": book.description,
                 "pdf_url": book.pdf_file.url if book.pdf_file else "",
@@ -73,7 +77,7 @@ def books_list_view(request):
                 "id": book.id,
                 "title": book.title,
                 "subject": book.subject.name,
-                "grade": book.get_grade_display() if book.grade else "",
+                "grade": get_book_bucket_label(book),
                 "author": book.author,
                 "description": book.description,
                 "pdf_url": book.pdf_file.url if book.pdf_file else "",
@@ -89,7 +93,7 @@ def books_list_view(request):
             "label": label,
             "is_active": selected_grade == value,
         }
-        for value, label in GRADE_CHOICES
+        for value, label in book_filter_config["choices"]
     )
     grade_filters.append(
         {
@@ -113,6 +117,7 @@ def books_list_view(request):
             **sidebar,
             "books": books,
             "grade_filters": grade_filters,
+            "book_filter_title": book_filter_config["title"],
             "selected_grade": selected_grade,
             "selected_subject": selected_subject,
             "subject_cards": subject_cards,
