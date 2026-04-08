@@ -159,6 +159,7 @@ def book_read_view(request, book_id):
     if next_url:
         full_reader_url = f"{full_reader_url}&next={next_url}"
     reader_pdf_url = f"/books/{book.id}/pdf/?token={token}"
+    full_reader_pdf_url = f"/books/{book.id}/pdf/?token={token}&reader=mobile#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
 
     return render(
         request,
@@ -171,6 +172,7 @@ def book_read_view(request, book_id):
             "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile#toolbar=0&navpanes=0",
             "full_reader_url": full_reader_url,
             "reader_pdf_url": reader_pdf_url,
+            "full_reader_pdf_url": full_reader_pdf_url,
         },
     )
 
