@@ -64,28 +64,28 @@ def index(request: HttpRequest):
     ]
     product_modules = [
         {
-            "title": "Assessment stack",
-            "text": "Test, mashq va natija tahlili bir xil user flow bilan ishlaydi.",
+            "title": "Test va mashqlar",
+            "text": "Test topshirish, mashq ishlash va natijani ko'rish bitta oqimda ishlaydi.",
             "label": "Assessment",
-            "meta": f"{tests_count + practice_count} ta assessment blok",
+            "meta": f"{tests_count + practice_count} ta blok",
         },
         {
-            "title": "Reference stack",
-            "text": "Sanalar, atamalar, qoidalar va qo'shimcha materiallar tez import qilinadi.",
+            "title": "Mavzu materiallari",
+            "text": "Sanalar, atamalar, qoidalar va qo'shimcha materiallar bir joyda turadi.",
             "label": "Reference",
-            "meta": f"{reference_count} ta reference material",
+            "meta": f"{reference_count} ta material",
         },
         {
-            "title": "Language stack",
-            "text": "Grammatika darslari, esse mavzulari va self-check ritmi tayyor.",
+            "title": "Grammatika va esse",
+            "text": "Grammatika darslari, esse mavzulari va yozma ish uchun tayanch bloklar bor.",
             "label": "Language",
-            "meta": f"{grammar_count + essay_count} ta grammar/esse blok",
+            "meta": f"{grammar_count + essay_count} ta dars va mavzu",
         },
         {
-            "title": "Ops stack",
-            "text": "Admin import markazi orqali test, mashq va content batch ko'rinishida qo'shiladi.",
+            "title": "Kontent qo'shish oson",
+            "text": "Admin import markazi orqali yangi test, mashq va materiallarni tez kiritish mumkin.",
             "label": "Ops",
-            "meta": "Kontent pipeline tayyor",
+            "meta": "Admin import tayyor",
         },
     ]
     traction_metrics = [
@@ -116,10 +116,10 @@ def index(request: HttpRequest):
         {"phase": "05", "stage": "05", "title": "Mentor layer", "text": "Mentor maslahatlari va yo'naltirilgan support."},
     ]
     business_model_cards = [
-        {"title": "1 fan", "text": "Aniq ehtiyojga mos kirish", "meta": "Entry subscription"},
-        {"title": "2 fan", "text": "Cross-sell va upgrade nuqtasi", "meta": "Bundle step"},
-        {"title": "3 fan", "text": "Milliy sertifikat uchun asosiy paket", "meta": "Core offer"},
-        {"title": "All access", "text": "SAT va yangi fanlar bilan premium qatlam", "meta": "Expansion offer"},
+        {"title": "1 fan", "text": "Bitta kerakli fan bilan boshlash uchun", "meta": "Entry subscription"},
+        {"title": "2 fan", "text": "Ikki fan birga tayyorlanish uchun", "meta": "Bundle step"},
+        {"title": "3 fan", "text": "Asosiy to'liq tayyorlov paketi", "meta": "Core offer"},
+        {"title": "All access", "text": "Barcha fan va keyingi yo'nalishlar uchun", "meta": "Expansion offer"},
     ]
     funding_ask = {
         "amount": "18k USD",
@@ -139,6 +139,60 @@ def index(request: HttpRequest):
         {"label": "Beta guruh", "href": "https://t.me/+c5-ItPYBkKcyNTU6"},
         {"label": "Hamkorlik", "href": "https://t.me/arvibek_O"},
     ]
+    product_flow = [
+        {
+            "step": "01",
+            "title": "Fan tanlang",
+            "text": "Kerakli yo'nalishni tanlab, shu fan uchun ochilgan material va assessment oqimiga kiring.",
+        },
+        {
+            "step": "02",
+            "title": "Mavzuni tushunib oling",
+            "text": "Formula, grammatika, xronologiya yoki qo'shimcha blokdan tayanchni yig'ing.",
+        },
+        {
+            "step": "03",
+            "title": "Mashq ishlang",
+            "text": "Bitta savollik flow bilan xato qilmasdan mashq va misollarni yeching.",
+        },
+        {
+            "step": "04",
+            "title": "Test topshiring",
+            "text": "Fan bo'yicha nazorat bloklari orqali tayyorgarlik darajangizni tekshiring.",
+        },
+        {
+            "step": "05",
+            "title": "Natijani ko'ring",
+            "text": "XP, level va yakuniy natija orqali qaysi joyda kuchli yoki sust ekaningiz ko'rinadi.",
+        },
+        {
+            "step": "06",
+            "title": "Keyingi bosqichga o'ting",
+            "text": "Platforma sizni navbatdagi mavzu, set yoki yo'nalishga tartibli olib boradi.",
+        },
+    ]
+    subject_details = [
+        {
+            "name": "Tarix",
+            "caption": "Xronologiya, atamalar va test bloklari.",
+            "tags": ["Sanalar", "Atamalar", "Testlar"],
+        },
+        {
+            "name": "Matematika",
+            "caption": "Formulalar, misol-masalalar va bosqichli mashqlar.",
+            "tags": ["Formulalar", "Mashqlar", "Nazorat"],
+        },
+        {
+            "name": "Ona tili va adabiyot",
+            "caption": "Grammatika, esse va qo'shimcha materiallar.",
+            "tags": ["Grammatika", "Esse", "Kutubxona"],
+        },
+    ]
+    progress_points = [
+        {"title": "Daraja tizimi", "text": "S dan A+ gacha o'sish foydalanuvchiga aniq ko'rinadi."},
+        {"title": "XP oqimi", "text": "Har bir test, mashq va grammatika bloki umumiy progressga ulanadi."},
+        {"title": "Reyting", "text": "Top foydalanuvchilar va shaxsiy o'sish bir joyda ko'rinadi."},
+    ]
     context = {
         "subjects": subjects,
         "resource_metrics": resource_metrics,
@@ -153,6 +207,9 @@ def index(request: HttpRequest):
         "funding_ask": funding_ask,
         "funding_breakdown": funding_breakdown,
         "cta_links": cta_links,
+        "product_flow": product_flow,
+        "subject_details": subject_details,
+        "progress_points": progress_points,
     }
     return render(request, "index.html", context)
 
