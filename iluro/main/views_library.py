@@ -168,7 +168,7 @@ def book_read_view(request, book_id):
             "reader_token": token,
             "back_url": back_url,
             "viewer_count": viewer_count,
-            "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile",
+            "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile#toolbar=0&navpanes=0",
             "full_reader_url": full_reader_url,
             "reader_pdf_url": reader_pdf_url,
         },
