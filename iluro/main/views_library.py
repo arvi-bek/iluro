@@ -152,27 +152,17 @@ def book_read_view(request, book_id):
     request.session["reader_tokens"] = reader_tokens
     request.session.modified = True
     next_url = request.GET.get("next", "").strip()
-    reader_mode = (request.GET.get("mode") or "").strip().lower()
-    is_full_reader = reader_mode == "full"
     back_url = next_url or f"/subjects/{book.subject_id}/books/"
-    full_reader_url = f"/books/{book.id}/read/?mode=full"
-    if next_url:
-        full_reader_url = f"{full_reader_url}&next={next_url}"
-    reader_pdf_url = f"/books/{book.id}/pdf/?token={token}"
-    full_reader_pdf_url = f"/books/{book.id}/pdf/?token={token}&reader=mobile#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
 
     return render(
         request,
-        "book_read_full.html" if is_full_reader else "book_read.html",
+        "book_read.html",
         {
             "book": book,
             "reader_token": token,
             "back_url": back_url,
             "viewer_count": viewer_count,
-            "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile#toolbar=0&navpanes=0",
-            "full_reader_url": full_reader_url,
-            "reader_pdf_url": reader_pdf_url,
-            "full_reader_pdf_url": full_reader_pdf_url,
+            "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile",
         },
     )
 
