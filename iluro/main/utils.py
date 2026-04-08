@@ -2,19 +2,21 @@ XP_PER_CORRECT_TEST_ANSWER = 6
 XP_PER_CORRECT_PRACTICE_ANSWER = 5
 
 DIFFICULTY_ALIAS_MAP = {
-    "s": "S",
-    "s+": "S+",
+    "s": "C",
+    "s+": "C+",
+    "c": "C",
+    "c+": "C+",
     "b": "B",
     "b+": "B+",
     "a": "A",
     "a+": "A+",
-    "easy": "S",
+    "easy": "C",
     "medium": "B",
     "hard": "A",
     "very hard": "A+",
 }
 
-LEVEL_ORDER = ["S", "S+", "B", "B+", "A", "A+"]
+LEVEL_ORDER = ["C", "C+", "B", "B+", "A", "A+"]
 
 XP_LEVEL_RULES = [
     {"label": "✨ Yangi User", "min_xp": 0, "max_xp": 200},
@@ -26,8 +28,8 @@ XP_LEVEL_RULES = [
 ]
 
 SCORE_LEVEL_RULES = [
-    {"label": "S", "min_score": 0, "max_score": 16},
-    {"label": "S+", "min_score": 17, "max_score": 32},
+    {"label": "C", "min_score": 0, "max_score": 16},
+    {"label": "C+", "min_score": 17, "max_score": 32},
     {"label": "B", "min_score": 33, "max_score": 48},
     {"label": "B+", "min_score": 49, "max_score": 64},
     {"label": "A", "min_score": 65, "max_score": 80},
@@ -40,8 +42,8 @@ TEST_BASE_XP_PER_CORRECT = 2
 PRACTICE_SET_BASE_XP_PER_CORRECT = 1
 
 SINGLE_PRACTICE_XP_BY_DIFFICULTY = {
-    "S": 2,
-    "S+": 2,
+    "C": 2,
+    "C+": 2,
     "B": 3,
     "B+": 3,
     "A": 4,
@@ -49,8 +51,8 @@ SINGLE_PRACTICE_XP_BY_DIFFICULTY = {
 }
 
 TEST_DIFFICULTY_XP_BONUS = {
-    "S": 0,
-    "S+": 2,
+    "C": 0,
+    "C+": 2,
     "B": 4,
     "B+": 6,
     "A": 8,
@@ -58,8 +60,8 @@ TEST_DIFFICULTY_XP_BONUS = {
 }
 
 PRACTICE_SET_DIFFICULTY_XP_BONUS = {
-    "S": 0,
-    "S+": 1,
+    "C": 0,
+    "C+": 1,
     "B": 2,
     "B+": 3,
     "A": 4,
@@ -67,8 +69,8 @@ PRACTICE_SET_DIFFICULTY_XP_BONUS = {
 }
 
 GRAMMAR_COMPLETION_XP_BY_DIFFICULTY = {
-    "S": 6,
-    "S+": 7,
+    "C": 6,
+    "C+": 7,
     "B": 8,
     "B+": 9,
     "A": 10,
@@ -76,8 +78,8 @@ GRAMMAR_COMPLETION_XP_BY_DIFFICULTY = {
 }
 
 ESSAY_TOPIC_XP_BY_DIFFICULTY = {
-    "S": 8,
-    "S+": 10,
+    "C": 8,
+    "C+": 10,
     "B": 12,
     "B+": 14,
     "A": 16,
@@ -229,9 +231,9 @@ def calculate_essay_topic_xp(difficulty: str | None, is_completed: bool, is_feat
 
 
 def get_allowed_level_labels(current_level: str | None) -> list[str]:
-    normalized_level = normalize_difficulty_label(current_level or "S")
+    normalized_level = normalize_difficulty_label(current_level or "C")
     if normalized_level not in LEVEL_ORDER:
-        normalized_level = "S"
+        normalized_level = "C"
     current_index = LEVEL_ORDER.index(normalized_level)
     return LEVEL_ORDER[: current_index + 1]
 

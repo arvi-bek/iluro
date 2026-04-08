@@ -9,8 +9,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260404-6">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260408-books4">
 </head>
+{% if is_full_reader %}
+<body style="margin:0;background:#111;">
+    <iframe
+        src="{{ reader_pdf_url }}"
+        title="{{ book.title }}"
+        style="width:100vw;height:100vh;border:0;display:block;background:#111;"
+    ></iframe>
+</body>
+{% else %}
 <body>
     <div class="content-shell">
         <header class="content-header">
@@ -22,7 +31,7 @@
                 </p>
             </div>
             <div class="reader-actions">
-                <a class="header-link reader-full-link" href="{{ mobile_pdf_url }}" target="_blank" rel="noopener">To'liq reader</a>
+                <a class="header-link reader-full-link" href="{{ full_reader_url }}" target="_blank" rel="noopener">To'liq reader</a>
                 <a class="header-link" href="{{ back_url }}">Kitoblarga qaytish</a>
             </div>
         </header>
@@ -52,10 +61,11 @@
             </div>
             <div class="reader-mobile-fallback">
                 <p>Mobil qurilmada kitobni to'liq varaqlash uchun alohida readerni yangi tabda oching. O'qib bo'lgach tabni yopib sahifaga qaytasiz.</p>
-                <a class="header-link reader-mobile-link" href="{{ mobile_pdf_url }}" target="_blank" rel="noopener">To'liq readerni ochish</a>
+                <a class="header-link reader-mobile-link" href="{{ full_reader_url }}" target="_blank" rel="noopener">To'liq readerni ochish</a>
             </div>
             <iframe src="{% url 'book-pdf' book.id %}?token={{ reader_token }}" title="{{ book.title }}"></iframe>
         </section>
     </div>
 </body>
+{% endif %}
 </html>

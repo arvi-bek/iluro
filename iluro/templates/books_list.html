@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260404-6">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260408-books1">
 </head>
 <body>
     <div class="app-layout">
@@ -34,6 +34,11 @@
                         <p class="eyebrow">{{ book_filter_title }}</p>
                         <span>{{ books|length }} ta kitob</span>
                     </div>
+                    {% if show_language_notice %}
+                    <p class="books-origin-note">
+                        Ushbu kitoblar rasmiy milliy sertifikat tavsiya etilgan adabiyotlar ro'yhatining 1-apreldan keyingi amaldagi qismiga tayangan holda jamlangan.
+                    </p>
+                    {% endif %}
                     <div class="filter-pill-row">
                         {% for item in grade_filters %}
                         <a class="filter-pill {% if item.is_active %}is-active{% endif %}" href="{% url 'books' %}?subject={{ selected_subject.id }}{% if item.value %}&grade={{ item.value }}{% endif %}">

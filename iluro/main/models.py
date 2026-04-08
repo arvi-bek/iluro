@@ -5,8 +5,8 @@ from datetime import timedelta
 
 
 DIFFICULTY_CHOICES = [
-    ("S", "S"),
-    ("S+", "S+"),
+    ("C", "C"),
+    ("C+", "C+"),
     ("B", "B"),
     ("B+", "B+"),
     ("A", "A"),
@@ -272,7 +272,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     full_name = models.CharField(max_length=150)
-    level = models.CharField(max_length=20, default='S')
+    level = models.CharField(max_length=20, default='C')
     xp = models.IntegerField(default=0)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="student")
     theme = models.CharField(max_length=20, choices=THEME_CHOICES, default="warm")
@@ -353,7 +353,7 @@ class UserSubjectStat(models.Model):
 class UserSubjectPreference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, db_index=True)
-    preferred_level = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default="S")
+    preferred_level = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default="C")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -373,7 +373,7 @@ class Book(models.Model):
     author = models.CharField(max_length=150, blank=True)
     grade = models.CharField(max_length=20, blank=True, verbose_name="Sinf / janr")
     description = models.TextField(blank=True)
-    access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="S", blank=True)
+    access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="C", blank=True)
     pdf_file = models.FileField(upload_to='books/', blank=True, null=True)
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -423,7 +423,7 @@ class SubjectSectionEntry(models.Model):
     summary = models.TextField(blank=True)
     body = models.TextField(blank=True)
     usage_note = models.TextField(blank=True)
-    access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="S")
+    access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="C")
     order = models.PositiveIntegerField(default=0)
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -507,7 +507,7 @@ class EssayTopic(models.Model):
     outline = models.TextField(blank=True)
     sample_intro = models.TextField(blank=True)
     sample_conclusion = models.TextField(blank=True)
-    access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="S")
+    access_level = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="C")
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -550,7 +550,7 @@ class PracticeSet(models.Model):
     source_book = models.CharField(max_length=255, blank=True)
     topic = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
-    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="S")
+    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="C")
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -585,7 +585,7 @@ class PracticeExercise(models.Model):
     answer_mode = models.CharField(max_length=20, choices=ANSWER_MODE_CHOICES, default="choice")
     correct_text = models.CharField(max_length=255, blank=True)
     explanation = models.TextField(blank=True)
-    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="S")
+    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="C")
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

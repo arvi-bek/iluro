@@ -4,6 +4,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 from main.models import GrammarLessonQuestion, Subject, SubjectSectionEntry
+from main.utils import normalize_difficulty_label
 
 
 class Command(BaseCommand):
@@ -37,7 +38,7 @@ class Command(BaseCommand):
 
         subject_ref = options.get("subject") or payload.get("subject_name") or payload.get("subject")
         subject = self._resolve_subject(subject_ref)
-        access_level = (payload.get("access_level") or "S").strip() or "S"
+        access_level = normalize_difficulty_label((payload.get("access_level") or "C").strip() or "C")
         valid_levels = {choice[0] for choice in SubjectSectionEntry._meta.get_field("access_level").choices}
         if access_level not in valid_levels:
             raise CommandError(
@@ -78,7 +79,7 @@ class Command(BaseCommand):
                     "summary": summary,
                     "body": body,
                     "usage_note": usage_note,
-                    "access_level": (item.get("access_level") or access_level).strip() or access_level,
+                    "access_level": normalize_difficulty_label((item.get("access_level") or access_level).strip() or access_level),
                     "order": item.get("order", index),
                     "is_featured": bool(item.get("is_featured", False)),
                 },

@@ -465,26 +465,6 @@ def dashboard_view(request):
             "hint": "Daraja yig'ilgan XP orqali o'sadi.",
         },
     ]
-    pitch_snapshot = {
-        "eyebrow": "Startup snapshot",
-        "title": "Iluro endi assessment sayt emas, ko'p fanli tayyorlov mahsulotiga aylanyapti.",
-        "text": (
-            "Hozir ishlayotgan modullar ustiga SAT, yangi fanlar, mock exam va AI yordamchi "
-            "qatlami qo'shiladi. Maqsad: productni tezroq kengaytirish uchun 18k USD runway."
-        ),
-        "ask_amount": "18k USD",
-        "ask_note": "AI, reklama, server va kontent kengayishi uchun",
-        "metrics": [
-            {"label": "Fanlar", "value": f"{len(subjects)} ta"},
-            {"label": "XP bazasi", "value": f"{profile.xp} XP"},
-            {"label": "Fokus", "value": "AI + mock"},
-        ],
-        "next_moves": [
-            "SAT va 3 ta yangi fan",
-            "Mock exam flow",
-            "AI helper va esse self-check",
-        ],
-    }
     context = {
         "profile": profile,
         "stats": stats,
@@ -494,7 +474,6 @@ def dashboard_view(request):
         "level_info": level_info,
         "xp_summary": xp_summary,
         "show_beta_trial_notice": bool(request.session.get("beta_trial_notice")),
-        "pitch_snapshot": pitch_snapshot,
     }
     return render(request, "dashboard.html", context)
 
@@ -1428,7 +1407,7 @@ def ranking_view(request):
                 "username": user.username,
                 "best_score": user.best_score,
                 "tests": user.total_tests,
-                "level": getattr(profile, "level", "S") if profile else "S",
+                "level": getattr(profile, "level", "C") if profile else "C",
                 "xp": user.effective_xp,
                 "role": role_label,
                 "initials": _build_user_initials(display_name, user.username),

@@ -64,28 +64,34 @@ def index(request: HttpRequest):
     ]
     product_modules = [
         {
-            "title": "Test va mashqlar",
-            "text": "Test topshirish, mashq ishlash va natijani ko'rish bitta oqimda ishlaydi.",
-            "label": "Assessment",
-            "meta": f"{tests_count + practice_count} ta blok",
+            "title": "Testlar",
+            "text": "Daraja bo'yicha tizimli test ishlash va real imtihon formatida mashq qilish",
+            "icon": "document-check",
         },
         {
-            "title": "Mavzu materiallari",
-            "text": "Sanalar, atamalar, qoidalar va qo'shimcha materiallar bir joyda turadi.",
-            "label": "Reference",
-            "meta": f"{reference_count} ta material",
+            "title": "Mashqlar",
+            "text": "Bir savoldan ishlanadigan qulay flow va bosqichli murakkablik tizimi",
+            "icon": "cursor",
         },
         {
-            "title": "Grammatika va esse",
-            "text": "Grammatika darslari, esse mavzulari va yozma ish uchun tayanch bloklar bor.",
-            "label": "Language",
-            "meta": f"{grammar_count + essay_count} ta dars va mavzu",
+            "title": "Grammatika",
+            "text": "Daraja bo'yicha dars, mini test va progress orqali o'rganish",
+            "icon": "note",
         },
         {
-            "title": "Kontent qo'shish oson",
-            "text": "Admin import markazi orqali yangi test, mashq va materiallarni tez kiritish mumkin.",
-            "label": "Ops",
-            "meta": "Admin import tayyor",
+            "title": "Esse",
+            "text": "Mavzu, tezis, struktura va self-check orqali yozish malakasini oshirish",
+            "icon": "pen",
+        },
+        {
+            "title": "Kutubxona",
+            "text": "Qo'shimcha manbalar, atamalar lug'ati va tarixiy ma'lumotlar to'plami",
+            "icon": "library",
+        },
+        {
+            "title": "Progress / XP",
+            "text": "Har bir faoliyat uchun XP to'plash, daraja olish va natijani kuzatish",
+            "icon": "trend",
         },
     ]
     traction_metrics = [
@@ -117,7 +123,7 @@ def index(request: HttpRequest):
     ]
     business_model_cards = [
         {"title": "1 fan", "text": "Bitta kerakli fan bilan boshlash uchun", "meta": "Entry subscription"},
-        {"title": "2 fan", "text": "Ikki fan birga tayyorlanish uchun", "meta": "Bundle step"},
+        {"title": "2 fan", "text": "Ikki fan bo'yicha birga tayyorlanish uchun", "meta": "Bundle step"},
         {"title": "3 fan", "text": "Asosiy to'liq tayyorlov paketi", "meta": "Core offer"},
         {"title": "All access", "text": "Barcha fan va keyingi yo'nalishlar uchun", "meta": "Expansion offer"},
     ]
@@ -139,60 +145,99 @@ def index(request: HttpRequest):
         {"label": "Beta guruh", "href": "https://t.me/+c5-ItPYBkKcyNTU6"},
         {"label": "Hamkorlik", "href": "https://t.me/arvibek_O"},
     ]
+    faq_items = [
+        {
+            "question": "Platformada qaysi fanlar bor?",
+            "answer": "Hozir ILURO ichida tarix, matematika va ona tili hamda adabiyot bo'yicha tayyorlov bloklari mavjud.",
+        },
+        {
+            "question": "ILURO faqat test saytimi?",
+            "answer": "Yo'q. Platformada testlar bilan birga mashqlar, grammatika, esse, formulalar va qo'shimcha resurslar ham bor.",
+        },
+        {
+            "question": "Obuna qanday ishlaydi?",
+            "answer": "Foydalanuvchi 1 fan, 2 fan, 3 fan yoki all access formatida o'ziga mos variantni tanlaydi.",
+        },
+        {
+            "question": "Progress qanday ko'rinadi?",
+            "answer": "Har bir faoliyat XP va daraja tizimiga ulanadi. Natija, mashqlar soni va keyingi bosqich foydalanuvchiga aniq ko'rinadi.",
+        },
+        {
+            "question": "Keyinroq yana nimalar qo'shiladi?",
+            "answer": "AI helper, mock exam, esse self-check va yangi fanlar bosqichma-bosqich platformaga qo'shiladi.",
+        },
+    ]
     product_flow = [
         {
             "step": "01",
             "title": "Fan tanlang",
             "text": "Kerakli yo'nalishni tanlab, shu fan uchun ochilgan material va assessment oqimiga kiring.",
+            "icon": "book",
         },
         {
             "step": "02",
             "title": "Mavzuni tushunib oling",
             "text": "Formula, grammatika, xronologiya yoki qo'shimcha blokdan tayanchni yig'ing.",
+            "icon": "target",
         },
         {
             "step": "03",
             "title": "Mashq ishlang",
             "text": "Bitta savollik flow bilan xato qilmasdan mashq va misollarni yeching.",
+            "icon": "cursor",
         },
         {
             "step": "04",
             "title": "Test topshiring",
             "text": "Fan bo'yicha nazorat bloklari orqali tayyorgarlik darajangizni tekshiring.",
+            "icon": "check-circle",
         },
         {
             "step": "05",
             "title": "Natijani ko'ring",
             "text": "XP, level va yakuniy natija orqali qaysi joyda kuchli yoki sust ekaningiz ko'rinadi.",
+            "icon": "chart",
         },
         {
             "step": "06",
             "title": "Keyingi bosqichga o'ting",
             "text": "Platforma sizni navbatdagi mavzu, set yoki yo'nalishga tartibli olib boradi.",
+            "icon": "arrow-right",
         },
     ]
     subject_details = [
         {
             "name": "Tarix",
-            "caption": "Xronologiya, atamalar va test bloklari.",
-            "tags": ["Sanalar", "Atamalar", "Testlar"],
+            "caption": "Xronologiya, atamalar, test va umumiy tayyorlov",
+            "tags": ["Xronologiya", "Tarixiy atamalar", "Davr bo'yicha testlar", "Umumiy tayyorlov"],
+            "icon": "book",
+            "accent": "sand",
         },
         {
             "name": "Matematika",
-            "caption": "Formulalar, misol-masalalar va bosqichli mashqlar.",
-            "tags": ["Formulalar", "Mashqlar", "Nazorat"],
+            "caption": "Formulalar, misol-masalalar va bosqichli mashqlar",
+            "tags": ["Formulalar to'plami", "Misol-masalalar", "Bosqichli mashq", "Test topshirish"],
+            "icon": "calculator",
+            "accent": "mint",
         },
         {
             "name": "Ona tili va adabiyot",
-            "caption": "Grammatika, esse va qo'shimcha materiallar.",
-            "tags": ["Grammatika", "Esse", "Kutubxona"],
+            "caption": "Grammatika, esse, qo'shimcha ma'lumotlar va testlar",
+            "tags": ["Grammatika darslari", "Esse yozish", "Adabiyot resurslari", "Til testlari"],
+            "icon": "document",
+            "accent": "pearl",
         },
     ]
-    progress_points = [
-        {"title": "Daraja tizimi", "text": "S dan A+ gacha o'sish foydalanuvchiga aniq ko'rinadi."},
-        {"title": "XP oqimi", "text": "Har bir test, mashq va grammatika bloki umumiy progressga ulanadi."},
-        {"title": "Reyting", "text": "Top foydalanuvchilar va shaxsiy o'sish bir joyda ko'rinadi."},
-    ]
+    progress_snapshot = {
+        "level": "A",
+        "next_level": "A+",
+        "xp": "2,847",
+        "progress": 73,
+        "rank": "#142",
+        "tests": 47,
+        "practice": 134,
+        "levels": ["C", "C+", "B", "B+", "A", "A+"],
+    }
     context = {
         "subjects": subjects,
         "resource_metrics": resource_metrics,
@@ -207,9 +252,10 @@ def index(request: HttpRequest):
         "funding_ask": funding_ask,
         "funding_breakdown": funding_breakdown,
         "cta_links": cta_links,
+        "faq_items": faq_items,
         "product_flow": product_flow,
         "subject_details": subject_details,
-        "progress_points": progress_points,
+        "progress_snapshot": progress_snapshot,
     }
     return render(request, "index.html", context)
 

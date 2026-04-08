@@ -409,25 +409,55 @@ def create_user_beta_trial_subscription(user, end_at=None):
     )
 
 
+def cleanup_empty_user_subscriptions(subscription_ids=None):
+    queryset = UserSubscription.objects.filter(is_all_access=False)
+    if subscription_ids is not None:
+        queryset = queryset.filter(id__in=list(subscription_ids))
+
+    empty_ids = []
+    for subscription in queryset.prefetch_related("subjects"):
+        if not subscription.subjects.exists():
+            empty_ids.append(subscription.id)
+
+    if empty_ids:
+        UserSubscription.objects.filter(id__in=empty_ids).delete()
+
+    return empty_ids
+
+
+def revoke_subject_access(user, subject, include_legacy=True, include_bundle=True):
+    user_id = user.id if hasattr(user, "id") else int(user)
+    subject_id = subject.id if hasattr(subject, "id") else int(subject)
+
+    if include_legacy:
+        Subscription.objects.filter(user_id=user_id, subject_id=subject_id).delete()
+
+    affected_subscription_ids = []
+    if include_bundle:
+        affected_subscription_ids = list(
+            UserSubscriptionSubject.objects.filter(
+                subscription__user_id=user_id,
+                subject_id=subject_id,
+            )
+            .values_list("subscription_id", flat=True)
+            .distinct()
+        )
+        UserSubscriptionSubject.objects.filter(
+            subscription__user_id=user_id,
+            subject_id=subject_id,
+        ).delete()
+        cleanup_empty_user_subscriptions(affected_subscription_ids)
+
+    return affected_subscription_ids
+
+
 def get_user_subject_access_rows(user, active_only=False):
     now = timezone.now()
     access_map = {}
 
-    legacy_rows = Subscription.objects.filter(user=user).select_related("subject")
-    if active_only:
-        legacy_rows = legacy_rows.filter(end_date__gte=now)
-
-    for row in legacy_rows:
-        existing = access_map.get(row.subject_id)
-        if existing is None or row.end_date > existing["end_at"]:
-            access_map[row.subject_id] = {
-                "subject": row.subject,
-                "subject_id": row.subject_id,
-                "end_at": row.end_date,
-                "source": "legacy",
-            }
-
-    bundle_rows = UserSubscription.objects.filter(user=user).prefetch_related("subjects__subject")
+    bundle_rows = UserSubscription.objects.filter(user=user)
+    has_bundle_rows = bundle_rows.exists()
+    bundle_rows = bundle_rows.prefetch_related("subjects__subject")
     if active_only:
         bundle_rows = bundle_rows.filter(status="active", end_at__gte=now)
 
@@ -456,6 +486,25 @@ def get_user_subject_access_rows(user, active_only=False):
                     "end_at": subscription.end_at,
                     "source": "bundle",
                 }
+
+    if has_bundle_rows:
+        rows = list(access_map.values())
+        rows.sort(key=lambda item: item["subject"].name)
+        return rows
+
+    legacy_rows = Subscription.objects.filter(user=user).select_related("subject")
+    if active_only:
+        legacy_rows = legacy_rows.filter(end_date__gte=now)
+
+    for row in legacy_rows:
+        existing = access_map.get(row.subject_id)
+        if existing is None or row.end_date > existing["end_at"]:
+            access_map[row.subject_id] = {
+                "subject": row.subject,
+                "subject_id": row.subject_id,
+                "end_at": row.end_date,
+                "source": "legacy",
+            }
 
     rows = list(access_map.values())
     rows.sort(key=lambda item: item["subject"].name)
@@ -532,7 +581,7 @@ def import_test_from_json_payload(payload, *, subject_override=None, replace=Fal
         raise ValidationError("JSON top-level dict bo'lishi kerak.")
 
     title = (payload.get("title") or "").strip()
-    difficulty = (payload.get("difficulty") or "").strip()
+    difficulty = normalize_difficulty_label((payload.get("difficulty") or "").strip())
     category = (payload.get("category") or "general").strip() or "general"
     duration = int(payload.get("duration_minutes") or 40)
     questions = payload.get("questions") or []
@@ -637,7 +686,7 @@ def _convert_test_payload_to_practice_payload(payload):
         raise ValidationError("Assessment import uchun JSON dict bo'lishi kerak.")
 
     title = (payload.get("title") or "").strip()
-    difficulty = (payload.get("difficulty") or "S").strip() or "S"
+    difficulty = normalize_difficulty_label((payload.get("difficulty") or "C").strip() or "C")
     questions = payload.get("questions") or []
     derived_answer_key = payload.get("derived_answer_key") or {}
 
@@ -781,7 +830,7 @@ def import_subject_entries_from_payload(payload, *, subject_override=None, secti
             "summary": (entry.get("summary") or "").strip(),
             "body": (entry.get("body") or "").strip(),
             "usage_note": (entry.get("usage_note") or "").strip(),
-            "access_level": (entry.get("access_level") or "S").strip() or "S",
+            "access_level": normalize_difficulty_label((entry.get("access_level") or "C").strip() or "C"),
             "order": entry.get("order", index),
             "is_featured": bool(entry.get("is_featured", False)),
         }
@@ -817,7 +866,7 @@ def import_grammar_topics_from_payload(payload, *, subject_override=None, clear_
 
     subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
     subject = resolve_subject_ref(subject_ref)
-    access_level = (payload.get("access_level") or "S").strip() or "S"
+    access_level = normalize_difficulty_label((payload.get("access_level") or "C").strip() or "C")
     valid_levels = {choice[0] for choice in SubjectSectionEntry._meta.get_field("access_level").choices}
     if access_level not in valid_levels:
         raise ValidationError(
@@ -858,7 +907,7 @@ def import_grammar_topics_from_payload(payload, *, subject_override=None, clear_
                 "summary": summary,
                 "body": body,
                 "usage_note": usage_note,
-                "access_level": (item.get("access_level") or access_level).strip() or access_level,
+                "access_level": normalize_difficulty_label((item.get("access_level") or access_level).strip() or access_level),
                 "order": item.get("order", index),
                 "is_featured": bool(item.get("is_featured", False)),
             },
@@ -914,11 +963,11 @@ def import_essay_topics_from_payload(payload, *, subject_override=None, clear_ex
     if isinstance(payload, dict):
         topics = payload.get("topics") or payload.get("entries") or [payload]
         subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
-        default_access_level = (payload.get("access_level") or "S").strip() or "S"
+        default_access_level = normalize_difficulty_label((payload.get("access_level") or "C").strip() or "C")
     elif isinstance(payload, list):
         topics = payload
         subject_ref = subject_override
-        default_access_level = "S"
+        default_access_level = "C"
     else:
         raise ValidationError("Essay import uchun JSON dict yoki list bo'lishi kerak.")
 
@@ -952,7 +1001,7 @@ def import_essay_topics_from_payload(payload, *, subject_override=None, clear_ex
                 "outline": (item.get("outline") or "").strip(),
                 "sample_intro": (item.get("sample_intro") or "").strip(),
                 "sample_conclusion": (item.get("sample_conclusion") or "").strip(),
-                "access_level": (item.get("access_level") or default_access_level).strip() or default_access_level,
+                "access_level": normalize_difficulty_label((item.get("access_level") or default_access_level).strip() or default_access_level),
                 "is_featured": bool(item.get("is_featured", False)),
             },
         )
@@ -974,15 +1023,15 @@ def import_practice_sets_from_payload(payload, *, subject_override=None, replace
         if "sets" in payload:
             sets = payload.get("sets") or []
             subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
-            default_difficulty = (payload.get("difficulty") or "S").strip() or "S"
+            default_difficulty = normalize_difficulty_label((payload.get("difficulty") or "C").strip() or "C")
         else:
             sets = [payload]
             subject_ref = subject_override or payload.get("subject_name") or payload.get("subject")
-            default_difficulty = (payload.get("difficulty") or "S").strip() or "S"
+            default_difficulty = normalize_difficulty_label((payload.get("difficulty") or "C").strip() or "C")
     elif isinstance(payload, list):
         sets = payload
         subject_ref = subject_override
-        default_difficulty = "S"
+        default_difficulty = "C"
     else:
         raise ValidationError("Mashqlar importi uchun JSON dict yoki list bo'lishi kerak.")
 
@@ -1006,7 +1055,7 @@ def import_practice_sets_from_payload(payload, *, subject_override=None, replace
             if not title:
                 raise ValidationError(f"{index}-set uchun title majburiy.")
 
-            difficulty = (item.get("difficulty") or default_difficulty).strip() or default_difficulty
+            difficulty = normalize_difficulty_label((item.get("difficulty") or default_difficulty).strip() or default_difficulty)
             if difficulty not in valid_difficulties:
                 raise ValidationError(
                     f"Noto'g'ri difficulty: {difficulty}. Mavjudlari: {', '.join(sorted(valid_difficulties))}"
@@ -1067,7 +1116,7 @@ def import_practice_sets_from_payload(payload, *, subject_override=None, replace
                     answer_mode=answer_mode,
                     correct_text=(exercise.get("correct_text") or "").strip(),
                     explanation=(exercise.get("explanation") or "").strip(),
-                    difficulty=(exercise.get("difficulty") or difficulty).strip() or difficulty,
+                    difficulty=normalize_difficulty_label((exercise.get("difficulty") or difficulty).strip() or difficulty),
                     is_featured=bool(exercise.get("is_featured", False)),
                 )
                 created_exercises += 1

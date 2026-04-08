@@ -585,6 +585,14 @@ body.theme-forest {
     display: none;
 }
 
+.books-origin-note {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.55;
+    max-width: 70ch;
+}
+
 .reader-panel iframe {
     width: 100%;
     height: 78vh;
@@ -1788,6 +1796,11 @@ body.theme-forest {
 
     .reader-mobile-fallback p {
         margin: 0 0 8px;
+        font-size: 0.76rem;
+        line-height: 1.45;
+    }
+
+    .books-origin-note {
         font-size: 0.76rem;
         line-height: 1.45;
     }

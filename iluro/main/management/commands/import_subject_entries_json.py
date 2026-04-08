@@ -4,6 +4,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 from main.models import Subject, SubjectSectionEntry
+from main.utils import normalize_difficulty_label
 
 
 class Command(BaseCommand):
@@ -79,7 +80,7 @@ class Command(BaseCommand):
                 "summary": (entry.get("summary") or "").strip(),
                 "body": (entry.get("body") or "").strip(),
                 "usage_note": (entry.get("usage_note") or "").strip(),
-                "access_level": (entry.get("access_level") or "S").strip() or "S",
+                "access_level": normalize_difficulty_label((entry.get("access_level") or "C").strip() or "C"),
                 "order": entry.get("order", index),
                 "is_featured": bool(entry.get("is_featured", False)),
             }

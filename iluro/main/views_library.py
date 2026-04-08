@@ -15,6 +15,7 @@ from .selectors import (
     get_book_bucket_label,
     get_book_filter_config,
     get_tests_listing,
+    is_language_subject,
 )
 from .services import (
     get_active_subscription_ids as _get_active_subscription_ids,
@@ -120,6 +121,7 @@ def books_list_view(request):
             "book_filter_title": book_filter_config["title"],
             "selected_grade": selected_grade,
             "selected_subject": selected_subject,
+            "show_language_notice": bool(selected_subject and is_language_subject(selected_subject)),
             "subject_cards": subject_cards,
             "current_books_path": request.get_full_path(),
         },
@@ -150,7 +152,13 @@ def book_read_view(request, book_id):
     request.session["reader_tokens"] = reader_tokens
     request.session.modified = True
     next_url = request.GET.get("next", "").strip()
+    reader_mode = (request.GET.get("mode") or "").strip().lower()
+    is_full_reader = reader_mode == "full"
     back_url = next_url or f"/subjects/{book.subject_id}/books/"
+    full_reader_url = f"/books/{book.id}/read/?mode=full"
+    if next_url:
+        full_reader_url = f"{full_reader_url}&next={next_url}"
+    reader_pdf_url = f"/books/{book.id}/pdf/?token={token}"
 
     return render(
         request,
@@ -161,6 +169,9 @@ def book_read_view(request, book_id):
             "back_url": back_url,
             "viewer_count": viewer_count,
             "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile",
+            "full_reader_url": full_reader_url,
+            "is_full_reader": is_full_reader,
+            "reader_pdf_url": reader_pdf_url,
         },
     )
 
@@ -178,7 +189,6 @@ def book_pdf_view(request, book_id):
     expected_token = session_tokens.get(str(book.id))
     fetch_dest = request.META.get("HTTP_SEC_FETCH_DEST", "")
     reader_mode = request.GET.get("reader", "")
-
     if not expected_token or provided_token != expected_token:
         return HttpResponseForbidden("Bu PDF faqat sayt ichidagi reader orqali ochiladi.")
 

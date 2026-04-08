@@ -13,6 +13,10 @@
     box-sizing: border-box;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
@@ -556,9 +560,17 @@ body {
 
 @media (max-width: 780px) {
     .flow-shell {
-        width: calc(100% - 20px);
-        padding-top: 14px;
-        padding-bottom: 132px;
+        width: calc(100% - 16px);
+        padding-top: 10px;
+        padding-bottom: 24px;
+    }
+
+    .solve-wizard-shell {
+        padding-bottom: 24px;
+    }
+
+    .progress-wrap {
+        display: none;
     }
 
     .flow-panel,
@@ -572,13 +584,13 @@ body {
     .flow-panel,
     .solve-header,
     .question-card {
-        padding: 20px;
+        padding: 16px;
     }
 
     .flow-panel h1,
     .solve-header h1 {
-        font-size: clamp(2.05rem, 9vw, 2.8rem);
-        line-height: 0.98;
+        font-size: clamp(1.7rem, 8vw, 2.2rem);
+        line-height: 1.02;
     }
 
     .meta-list {
@@ -587,14 +599,45 @@ body {
 
     .meta-list span,
     .question-index {
-        min-height: 34px;
-        padding: 0 12px;
-        font-size: 0.82rem;
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 0.76rem;
     }
 
     .question-prompt {
-        font-size: clamp(1.85rem, 8vw, 2.5rem);
-        line-height: 1.02;
+        margin-top: 12px;
+        font-size: clamp(1.15rem, 5.6vw, 1.45rem);
+        line-height: 1.24;
+        letter-spacing: -0.03em;
+    }
+
+    .question-card h2 {
+        margin-top: 8px;
+        font-size: 1rem;
+        line-height: 1.28;
+    }
+
+    .choices {
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .choice-option {
+        gap: 10px;
+        padding: 12px 13px;
+        border-radius: 16px;
+    }
+
+    .choice-option span {
+        min-width: 0;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+
+    .answer-field {
+        min-height: 52px;
+        padding: 0 14px;
+        font-size: 16px;
     }
 
     .wizard-stage-head {
@@ -602,10 +645,37 @@ body {
         flex-direction: column;
     }
 
+    .wizard-stage-head h2 {
+        font-size: 1.28rem;
+        line-height: 1.14;
+    }
+
+    .wizard-counter {
+        min-height: 34px;
+        padding: 0 12px;
+        font-size: 0.78rem;
+    }
+
+    .question-chip {
+        min-width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        font-size: 0.82rem;
+    }
+
+    .wizard-step {
+        min-height: auto;
+    }
+
     .wizard-actions {
-        left: 10px;
-        right: 10px;
+        position: sticky;
+        left: auto;
+        right: auto;
         bottom: 10px;
+        z-index: 12;
+        margin-top: 16px;
+        padding: 10px;
+        border-radius: 18px;
         flex-direction: column;
         align-items: stretch;
     }
@@ -613,11 +683,11 @@ body {
     .wizard-actions-main {
         width: 100%;
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
+        gap: 10px;
     }
 
     .wizard-actions-main > :only-child {
-        grid-column: 1 / -1;
         width: 100%;
         min-width: 0;
     }
@@ -628,6 +698,14 @@ body {
     .wizard-back-link {
         width: 100%;
         justify-content: center;
+        min-height: 40px;
+        padding: 0 12px;
+        border-radius: 14px;
+        font-size: 0.8rem;
+    }
+
+    .wizard-back-link {
+        margin-top: 0;
     }
 
     .result-actions {
@@ -642,5 +720,168 @@ body {
 
     .result-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    .flow-shell {
+        width: calc(100% - 12px);
+    }
+
+    .eyebrow {
+        margin-bottom: 8px;
+        font-size: 0.68rem;
+        letter-spacing: 0.13em;
+    }
+
+    .flow-panel,
+    .solve-header,
+    .question-card {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .solve-header {
+        gap: 10px;
+    }
+
+    .solve-header h1 {
+        font-size: clamp(1rem, 6.6vw, 1.3rem);
+        line-height: 1.12;
+    }
+
+    .lead {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        line-height: 1.46;
+    }
+
+    .solve-header .meta-list {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        width: 100%;
+    }
+
+    .solve-header .meta-list span {
+        min-height: 26px;
+        padding: 0 8px;
+        font-size: 0.68rem;
+        line-height: 1.2;
+        justify-content: flex-start;
+        border-radius: 999px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .question-prompt {
+        margin-top: 8px;
+        font-size: 0.98rem;
+        line-height: 1.34;
+        letter-spacing: -0.02em;
+    }
+
+    .meta-list {
+        gap: 6px;
+    }
+
+    .meta-list span,
+    .question-index {
+        min-height: 30px;
+        padding: 0 9px;
+        font-size: 0.72rem;
+    }
+
+    .wizard-stage-head {
+        display: none;
+    }
+
+    .question-card .eyebrow {
+        margin-bottom: 6px;
+    }
+
+    .question-nav {
+        gap: 6px;
+        padding: 0 0 2px;
+        margin-top: -2px;
+    }
+
+    .choice-option {
+        gap: 8px;
+        padding: 10px 11px;
+    }
+
+    .choice-option span {
+        font-size: 0.82rem;
+        line-height: 1.42;
+    }
+
+    .answer-field {
+        min-height: 46px;
+        padding: 0 12px;
+    }
+
+    .question-chip {
+        min-width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        font-size: 0.72rem;
+    }
+
+    .wizard-actions {
+        position: static;
+        bottom: auto;
+        margin-top: 8px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .wizard-back-link {
+        width: fit-content;
+        min-height: 28px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        justify-content: flex-start;
+    }
+
+    .wizard-actions-main {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-left: 0;
+    }
+
+    .wizard-actions-main > * {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .wizard-actions-main > :only-child {
+        flex: 0 0 auto;
+        min-width: 112px;
+    }
+
+    .wizard-actions-main .primary-btn,
+    .wizard-actions-main .secondary-btn,
+    .wizard-actions-main .ghost-btn {
+        width: 100%;
+        min-height: 30px;
+        padding: 0 8px;
+        border-radius: 10px;
+        font-size: 0.68rem;
+        font-weight: 700;
     }
 }

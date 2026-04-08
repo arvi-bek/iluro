@@ -6,6 +6,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
@@ -19,6 +20,8 @@ from .models import (
     GrammarLessonQuestion, GrammarLessonProgress, UserStatSummary,
 )
 from .services import (
+    cleanup_empty_user_subscriptions,
+    revoke_subject_access,
     import_assessment_from_payload,
     import_essay_topics_from_payload,
     import_grammar_topics_from_payload,
@@ -222,7 +225,7 @@ class SubjectAdmin(admin.ModelAdmin):
 
 # ---------------- SUBSCRIPTION ----------------
 @admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
+class SubscriptionAdmin(HiddenLegacyAdminMixin, admin.ModelAdmin):
     list_display = ("id", "user", "subject", "status_badge", "purchased_at", "end_date")
     list_filter = ("subject", "purchased_at", "end_date")
     search_fields = ("user__username", "subject__name")
@@ -268,11 +271,25 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
         super().save_model(request, obj, form, change)
 
+    def delete_model(self, request, obj):
+        user_id = obj.user_id
+        subject_id = obj.subject_id
+        super().delete_model(request, obj)
+        revoke_subject_access(user_id, subject_id, include_legacy=False, include_bundle=True)
+
+    def delete_queryset(self, request, queryset):
+        pairs = list(queryset.values_list("user_id", "subject_id"))
+        super().delete_queryset(request, queryset)
+        for user_id, subject_id in pairs:
+            revoke_subject_access(user_id, subject_id, include_legacy=False, include_bundle=True)
+
 
 class UserSubscriptionSubjectInline(admin.TabularInline):
     model = UserSubscriptionSubject
-    extra = 1
+    extra = 0
     autocomplete_fields = ("subject",)
+    verbose_name = "Fan"
+    verbose_name_plural = "Ochiq fanlar"
 
 
 @admin.register(SubscriptionPlan)
@@ -285,21 +302,180 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 
 @admin.register(UserSubscription)
 class UserSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "plan", "title", "status", "is_all_access", "started_at", "end_at")
-    list_filter = ("status", "is_all_access", "plan", "source", "end_at")
-    search_fields = ("user__username", "title", "plan__name")
+    list_display = ("id", "user_identity", "title", "coverage_preview", "source_badge", "status_badge", "started_at", "end_at")
+    list_filter = ("status", "is_all_access", "plan", "source", "end_at", "started_at")
+    search_fields = (
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "user__profile__full_name",
+        "title",
+        "plan__name",
+    )
     autocomplete_fields = ("user", "plan")
     inlines = [UserSubscriptionSubjectInline]
     ordering = ("-end_at", "-created_at")
+    fields = ("user", "plan", "title", "source", "status", "is_all_access", "started_at", "end_at")
+    list_per_page = 25
+    search_help_text = "Username, to'liq ism, email yoki obuna nomi bo'yicha qidiring"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("plan", "user").prefetch_related("subjects__subject")
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        initial.setdefault("source", "manual")
+        initial.setdefault("status", "active")
+        initial.setdefault("started_at", timezone.localtime(timezone.now()))
+        initial.setdefault("end_at", timezone.localtime(timezone.now() + timedelta(days=30)))
+        return initial
+
+    def coverage_preview(self, obj):
+        if obj.is_all_access:
+            return mark_safe(
+                '<span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;'
+                'background:rgba(168,106,51,0.12);color:#8a5425;font-weight:700;">All access</span>'
+            )
+        subjects = [item.subject.name for item in obj.subjects.all()]
+        if not subjects:
+            return mark_safe(
+                '<span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;'
+                'background:rgba(176,87,67,0.10);color:#b05743;font-weight:700;">Fan biriktirilmagan</span>'
+            )
+        preview = ", ".join(subjects[:3])
+        if len(subjects) > 3:
+            preview = f"{preview} +{len(subjects) - 3}"
+        return preview
+    coverage_preview.short_description = "Qamrov"
+
+    def user_identity(self, obj):
+        profile_name = getattr(getattr(obj.user, "profile", None), "full_name", "") or ""
+        display_name = profile_name.strip() or obj.user.get_full_name().strip() or obj.user.username
+        secondary = f"@{obj.user.username}"
+        if obj.user.email:
+            secondary = f"{secondary} · {obj.user.email}"
+        return format_html(
+            '<div style="display:grid;gap:2px;">'
+            '<strong style="color:#24160d;">{}</strong>'
+            '<span style="color:#8f735c;font-size:12px;">{}</span>'
+            "</div>",
+            display_name,
+            secondary,
+        )
+    user_identity.short_description = "Foydalanuvchi"
+    user_identity.admin_order_field = "user__username"
+
+    def status_badge(self, obj):
+        palette = {
+            "active": ("rgba(73,123,86,0.12)", "#497b56", "Faol"),
+            "expired": ("rgba(176,87,67,0.10)", "#b05743", "Tugagan"),
+            "cancelled": ("rgba(112,112,112,0.10)", "#6d6d6d", "Bekor"),
+        }
+        bg, color, label = palette.get(obj.status, ("rgba(112,112,112,0.10)", "#6d6d6d", obj.get_status_display()))
+        return format_html(
+            '<span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;'
+            'background:{};color:{};font-weight:700;">{}</span>',
+            bg,
+            color,
+            label,
+        )
+    status_badge.short_description = "Holat"
+    status_badge.admin_order_field = "status"
+
+    def source_badge(self, obj):
+        palette = {
+            "purchase": ("rgba(73,123,86,0.10)", "#497b56", "Purchase"),
+            "beta_trial": ("rgba(168,106,51,0.12)", "#8a5425", "Beta trial"),
+            "manual": ("rgba(54,103,171,0.10)", "#3667ab", "Manual"),
+            "legacy_import": ("rgba(112,112,112,0.10)", "#6d6d6d", "Legacy"),
+        }
+        bg, color, label = palette.get(obj.source, ("rgba(112,112,112,0.10)", "#6d6d6d", obj.get_source_display()))
+        return format_html(
+            '<span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;'
+            'background:{};color:{};font-weight:700;">{}</span>',
+            bg,
+            color,
+            label,
+        )
+    source_badge.short_description = "Manba"
+    source_badge.admin_order_field = "source"
+
+    def save_model(self, request, obj, form, change):
+        if obj.plan and not obj.title:
+            obj.title = obj.plan.name
+        super().save_model(request, obj, form, change)
+
+    def save_related(self, request, form, formsets, change):
+        subscription = form.instance
+        previous_subject_ids = set()
+        if subscription.pk:
+            previous_subject_ids = set(subscription.subjects.values_list("subject_id", flat=True))
+
+        super().save_related(request, form, formsets, change)
+
+        current_subject_ids = set(subscription.subjects.values_list("subject_id", flat=True))
+        removed_subject_ids = previous_subject_ids - current_subject_ids
+        for subject_id in removed_subject_ids:
+            revoke_subject_access(subscription.user_id, subject_id, include_legacy=True, include_bundle=False)
+
+        removed_ids = cleanup_empty_user_subscriptions([subscription.id])
+        if subscription.id in removed_ids:
+            self.message_user(
+                request,
+                "Fan biriktirilmagan obuna avtomatik olib tashlandi. Access ochilishi uchun kamida bitta fan qo'shing.",
+                level=messages.WARNING,
+            )
+            return
+
+        subscription.refresh_from_db()
+        if not subscription.is_all_access and not subscription.subjects.exists():
+            self.message_user(
+                request,
+                "Bu obunaga hali fan biriktirilmagan. Access ochilishi uchun kamida bitta fan qo'shing.",
+                level=messages.WARNING,
+            )
+
+    def delete_model(self, request, obj):
+        subject_ids = list(obj.subjects.values_list("subject_id", flat=True))
+        user_id = obj.user_id
+        super().delete_model(request, obj)
+        for subject_id in subject_ids:
+            revoke_subject_access(user_id, subject_id, include_legacy=True, include_bundle=False)
+
+    def delete_queryset(self, request, queryset):
+        payload = [
+            (subscription.user_id, list(subscription.subjects.values_list("subject_id", flat=True)))
+            for subscription in queryset
+        ]
+        super().delete_queryset(request, queryset)
+        for user_id, subject_ids in payload:
+            for subject_id in subject_ids:
+                revoke_subject_access(user_id, subject_id, include_legacy=True, include_bundle=False)
 
 
 @admin.register(UserSubscriptionSubject)
-class UserSubscriptionSubjectAdmin(admin.ModelAdmin):
+class UserSubscriptionSubjectAdmin(HiddenLegacyAdminMixin, admin.ModelAdmin):
     list_display = ("id", "subscription", "subject", "created_at")
     list_filter = ("subject", "created_at")
     search_fields = ("subscription__user__username", "subject__name", "subscription__title")
     autocomplete_fields = ("subscription", "subject")
     ordering = ("-created_at",)
+
+    def delete_model(self, request, obj):
+        user_id = obj.subscription.user_id
+        subject_id = obj.subject_id
+        subscription_id = obj.subscription_id
+        super().delete_model(request, obj)
+        revoke_subject_access(user_id, subject_id, include_legacy=True, include_bundle=False)
+        cleanup_empty_user_subscriptions([subscription_id])
+
+    def delete_queryset(self, request, queryset):
+        payload = list(queryset.values_list("subscription__user_id", "subject_id", "subscription_id"))
+        super().delete_queryset(request, queryset)
+        for user_id, subject_id, subscription_id in payload:
+            revoke_subject_access(user_id, subject_id, include_legacy=True, include_bundle=False)
+            cleanup_empty_user_subscriptions([subscription_id])
 
 
 # ---------------- TEST ----------------

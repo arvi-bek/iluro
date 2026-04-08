@@ -134,7 +134,7 @@ def settings_view(request):
 
         allowed_roles = {choice[0] for choice in Profile.ROLE_CHOICES if choice[0] != "admin"}
         allowed_themes = {choice[0] for choice in Profile.THEME_CHOICES}
-        allowed_levels = {"S", "S+", "B", "B+", "A", "A+"}
+        allowed_levels = {"C", "C+", "B", "B+", "A", "A+"}
 
         if role not in allowed_roles:
             messages.error(request, "Status noto'g'ri tanlandi.")
@@ -151,7 +151,7 @@ def settings_view(request):
         request.user.save(update_fields=["first_name"])
 
         for subscription in active_subscriptions:
-            preferred_level = request.POST.get(f"subject_level_{subscription['subject_id']}", "S")
+            preferred_level = request.POST.get(f"subject_level_{subscription['subject_id']}", "C")
             if preferred_level not in allowed_levels:
                 continue
             UserSubjectPreference.objects.update_or_create(
@@ -179,7 +179,7 @@ def settings_view(request):
         **_sidebar_context(request.user),
         "role_choices": [choice for choice in Profile.ROLE_CHOICES if choice[0] != "admin"],
         "theme_choices": Profile.THEME_CHOICES,
-        "level_choices": ["S", "S+", "B", "B+", "A", "A+"],
+        "level_choices": ["C", "C+", "B", "B+", "A", "A+"],
         "preferred_subject_levels": preferred_subject_levels,
     }
     return render(request, "settings.html", context)

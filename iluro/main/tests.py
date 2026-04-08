@@ -15,12 +15,20 @@ from .models import (
     Question,
     Subject,
     Subscription,
+    SubscriptionPlan,
     Test,
     UserPracticeAttempt,
+    UserSubscription,
+    UserSubscriptionSubject,
     UserStatSummary,
     UserTest,
 )
-from .services import get_or_sync_profile, record_single_practice_attempt_stats
+from .services import (
+    get_active_subscription_ids,
+    get_or_sync_profile,
+    record_single_practice_attempt_stats,
+    revoke_subject_access,
+)
 from .utils import (
     calculate_essay_topic_xp,
     calculate_grammar_lesson_xp,
@@ -42,7 +50,7 @@ class MainSmokeTests(TestCase):
             user=self.user,
             full_name="Flow User",
             role="student",
-            level="S",
+            level="C",
             xp=0,
         )
 
@@ -66,12 +74,12 @@ class MainSmokeTests(TestCase):
             subject=self.math,
             title="Math Flow Test",
             duration=10,
-            difficulty="S",
+            difficulty="C",
         )
         self.question = Question.objects.create(
             test=self.test,
             text="2 + 2 = ?",
-            difficulty="S",
+            difficulty="C",
         )
         self.correct_choice = Choice.objects.create(
             question=self.question,
@@ -85,14 +93,14 @@ class MainSmokeTests(TestCase):
             title="Natural sonlar mashqi",
             source_book="IDC 1",
             topic="Natural sonlar",
-            difficulty="S",
+            difficulty="C",
         )
         self.practice_exercise = PracticeExercise.objects.create(
             subject=self.math,
             practice_set=self.practice_set,
             prompt="3 + 3 = ?",
             answer_mode="choice",
-            difficulty="S",
+            difficulty="C",
         )
         self.practice_choice = PracticeChoice.objects.create(
             exercise=self.practice_exercise,
@@ -181,7 +189,7 @@ class MainSmokeTests(TestCase):
 
 class XPEconomyTests(TestCase):
     def test_harder_test_awards_more_xp_for_same_result(self):
-        medium_xp = calculate_test_xp(correct_count=14, total_count=20, difficulty="S")
+        medium_xp = calculate_test_xp(correct_count=14, total_count=20, difficulty="C")
         hard_xp = calculate_test_xp(correct_count=14, total_count=20, difficulty="A")
         self.assertGreater(hard_xp, medium_xp)
 
@@ -192,29 +200,29 @@ class XPEconomyTests(TestCase):
 
     def test_single_practice_requires_correct_answer(self):
         self.assertEqual(calculate_single_practice_xp(False, "A+"), 0)
-        self.assertGreater(calculate_single_practice_xp(True, "A+"), calculate_single_practice_xp(True, "S"))
+        self.assertGreater(calculate_single_practice_xp(True, "A+"), calculate_single_practice_xp(True, "C"))
 
     def test_grammar_completion_rewards_more_than_simple_attempt(self):
-        attempted_xp = calculate_grammar_lesson_xp(best_score=55, difficulty="S", is_completed=False, has_attempt=True)
-        completed_xp = calculate_grammar_lesson_xp(best_score=85, difficulty="S", is_completed=True, has_attempt=True)
+        attempted_xp = calculate_grammar_lesson_xp(best_score=55, difficulty="C", is_completed=False, has_attempt=True)
+        completed_xp = calculate_grammar_lesson_xp(best_score=85, difficulty="C", is_completed=True, has_attempt=True)
         self.assertGreater(completed_xp, attempted_xp)
 
     def test_featured_essay_rewards_more_xp(self):
-        normal_xp = calculate_essay_topic_xp("S", is_completed=True, is_featured=False)
-        featured_xp = calculate_essay_topic_xp("S", is_completed=True, is_featured=True)
+        normal_xp = calculate_essay_topic_xp("C", is_completed=True, is_featured=False)
+        featured_xp = calculate_essay_topic_xp("C", is_completed=True, is_featured=True)
         self.assertGreater(featured_xp, normal_xp)
 
     def test_manual_admin_xp_is_preserved_when_new_practice_xp_is_added(self):
         user = User.objects.create_user(username="xpkeeper", password="StrongPass123")
         Profile.objects.create(user=user, full_name="XP Keeper", xp=1300, level="🔥 Izlanuvchi")
         subject = Subject.objects.create(name="Matematika", price=30000)
-        practice_set = PracticeSet.objects.create(subject=subject, title="XP set", difficulty="S+")
+        practice_set = PracticeSet.objects.create(subject=subject, title="XP set", difficulty="C+")
         exercise = PracticeExercise.objects.create(
             subject=subject,
             practice_set=practice_set,
             prompt="2 + 2 = ?",
             answer_mode="choice",
-            difficulty="S+",
+            difficulty="C+",
         )
         choice = PracticeChoice.objects.create(exercise=exercise, text="4", is_correct=True)
         summary = UserStatSummary.objects.create(user=user, lifetime_xp=1300, manual_xp_adjustment=1300)
@@ -229,8 +237,61 @@ class XPEconomyTests(TestCase):
         record_single_practice_attempt_stats(attempt)
         summary.refresh_from_db()
 
-        earned_delta = calculate_single_practice_xp(True, "S+")
+        earned_delta = calculate_single_practice_xp(True, "C+")
         self.assertEqual(summary.lifetime_xp, 1300 + earned_delta)
 
         profile = get_or_sync_profile(user)
         self.assertEqual(profile.xp, 1300 + earned_delta)
+
+
+class SubscriptionAccessTests(TestCase):
+    def test_bundle_rows_take_priority_over_legacy_rows(self):
+        user = User.objects.create_user(username="subpriority", password="StrongPass123")
+        subject = Subject.objects.create(name="Tarix", price=30000)
+
+        Subscription.objects.create(
+            user=user,
+            subject=subject,
+            end_date=timezone.now() + timezone.timedelta(days=30),
+        )
+        plan = SubscriptionPlan.objects.create(code="sub-priority-plan", name="1 fan", subject_limit=1, price=30000)
+        UserSubscription.objects.create(
+            user=user,
+            plan=plan,
+            title="1 fan",
+            source="manual",
+            status="active",
+            is_all_access=False,
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=30),
+        )
+
+        self.assertEqual(get_active_subscription_ids(user), [])
+
+    def test_revoke_subject_access_cleans_legacy_and_bundle_rows(self):
+        user = User.objects.create_user(username="subrevoke", password="StrongPass123")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+
+        Subscription.objects.create(
+            user=user,
+            subject=subject,
+            end_date=timezone.now() + timezone.timedelta(days=30),
+        )
+        plan = SubscriptionPlan.objects.create(code="sub-revoke-plan", name="1 fan", subject_limit=1, price=30000)
+        bundle = UserSubscription.objects.create(
+            user=user,
+            plan=plan,
+            title="1 fan",
+            source="manual",
+            status="active",
+            is_all_access=False,
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=30),
+        )
+        UserSubscriptionSubject.objects.create(subscription=bundle, subject=subject)
+
+        revoke_subject_access(user, subject)
+
+        self.assertFalse(Subscription.objects.filter(user=user, subject=subject).exists())
+        self.assertFalse(UserSubscriptionSubject.objects.filter(subscription=bundle, subject=subject).exists())
+        self.assertEqual(get_active_subscription_ids(user), [])

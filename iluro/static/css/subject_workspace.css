@@ -3790,6 +3790,67 @@ body {
 }
 
 @media (max-width: 760px) {
+    .workspace-route-panel {
+        display: none;
+    }
+
+    .workspace-module-panel .workspace-route-head p:last-child {
+        display: none;
+    }
+
+    .workspace-home-note {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 16px;
+    }
+
+    .problems-panel .workspace-section-copy {
+        max-width: none;
+    }
+
+    .problems-filter-strip {
+        margin-top: 14px;
+        margin-bottom: 18px;
+        padding: 12px 14px;
+    }
+
+    .problems-panel .workspace-filter-row {
+        gap: 8px;
+    }
+
+    .problems-panel .workspace-filter-pill {
+        padding: 9px 14px;
+        font-size: 0.82rem;
+    }
+
+    .problems-panel .mini-card {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .problems-panel .mini-card h3 {
+        margin: 8px 0 6px;
+        font-size: 0.98rem;
+        line-height: 1.2;
+    }
+
+    .problems-panel .mini-card p {
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+
+    .problems-panel .test-stat-stack {
+        gap: 6px;
+        margin-top: 12px;
+    }
+
+    .problems-panel .test-stat-stack small {
+        min-height: 0;
+        padding: 8px 10px;
+        border-radius: 12px;
+        font-size: 0.72rem;
+    }
+
     .subject-sidebar-toggle-input {
         position: absolute;
         opacity: 0;
@@ -4363,6 +4424,75 @@ body {
     .workspace-module-panel {
         padding: 12px;
         border-radius: 16px;
+    }
+
+    .workspace-home-panel .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .workspace-home-panel .workspace-section-text,
+    .problems-panel .workspace-section-text {
+        font-size: 0.74rem;
+        line-height: 1.46;
+    }
+
+    .workspace-home-panel .workspace-section-intro,
+    .problems-panel .workspace-section-intro {
+        gap: 10px;
+    }
+
+    .problems-panel .workspace-section-pill {
+        min-height: 28px;
+        padding: 0 10px;
+        font-size: 0.66rem;
+    }
+
+    .problems-filter-strip {
+        padding: 10px;
+        border-radius: 16px;
+    }
+
+    .problems-panel .workspace-filter-row {
+        gap: 6px;
+        padding-bottom: 2px;
+    }
+
+    .problems-panel .workspace-filter-pill {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 0.76rem;
+        white-space: nowrap;
+    }
+
+    .problems-panel .mini-card {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .problems-panel .mini-card-top {
+        gap: 8px;
+    }
+
+    .problems-panel .mini-card span,
+    .problems-panel .card-state {
+        font-size: 0.64rem;
+    }
+
+    .problems-panel .mini-card h3 {
+        font-size: 0.9rem;
+        line-height: 1.14;
+        margin: 6px 0 4px;
+    }
+
+    .problems-panel .mini-card p {
+        font-size: 0.74rem;
+        line-height: 1.42;
+    }
+
+    .problems-panel .mini-link {
+        width: 100%;
+        margin-top: 12px;
     }
 
     .workspace-route-head h3,

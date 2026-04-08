@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260405b">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260408-mobile3">
 </head>
 <body>
     <div class="flow-shell solve-wizard-shell{% if exercises|length == 1 %} is-single-step{% endif %}">
@@ -27,18 +27,6 @@
             <p class="lead">{{ practice_set.description }}</p>
             {% endif %}
         </section>
-
-        {% if exercises|length > 1 %}
-        <div class="progress-wrap">
-            <div class="progress-head">
-                <span>Bajarilgan topshiriqlar</span>
-                <strong id="progressText">0 / {{ exercises|length }}</strong>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-        </div>
-        {% endif %}
 
         <form class="solve-form wizard-form" method="post" data-wizard-form>
             {% csrf_token %}
@@ -94,14 +82,14 @@
             {% endfor %}
 
             <div class="wizard-actions">
-                <a class="ghost-btn wizard-back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' practice_set.subject.id 'problems' %}{% endif %}">Misol / Masalalarga qaytish</a>
+                <a class="ghost-btn wizard-back-link" href="{% if next_url %}{{ next_url }}{% else %}{% url 'subject-workspace-section' practice_set.subject.id 'problems' %}{% endif %}">Bo'limga qaytish</a>
                 <div class="wizard-actions-main">
                     {% if exercises|length > 1 %}
                     <button class="secondary-btn" type="button" id="prevStepBtn">Oldingi</button>
-                    <button class="primary-btn" type="button" id="nextStepBtn">Keyingi savol</button>
-                    <button class="primary-btn" type="submit" id="submitWizardBtn" hidden>Bo'limni yakunlash</button>
+                    <button class="primary-btn" type="button" id="nextStepBtn">Keyingi</button>
+                    <button class="primary-btn" type="submit" id="submitWizardBtn" hidden>Yakunlash</button>
                     {% else %}
-                    <button class="primary-btn" type="submit" id="submitWizardBtn">Bo'limni yakunlash</button>
+                    <button class="primary-btn" type="submit" id="submitWizardBtn">Yakunlash</button>
                     {% endif %}
                 </div>
             </div>
@@ -113,8 +101,6 @@
             const chips = Array.from(document.querySelectorAll("[data-step-target]"));
             const radioInputs = Array.from(document.querySelectorAll('input[type="radio"]'));
             const textInputs = Array.from(document.querySelectorAll(".answer-field"));
-            const progressText = document.getElementById("progressText");
-            const progressFill = document.getElementById("progressFill");
             const prevBtn = document.getElementById("prevStepBtn");
             const nextBtn = document.getElementById("nextStepBtn");
             const submitBtn = document.getElementById("submitWizardBtn");
@@ -148,12 +134,6 @@
                     if (completed) answered += 1;
                     chip.classList.toggle("is-complete", completed);
                 });
-                if (progressText) {
-                    progressText.textContent = `${answered} / ${totalSteps}`;
-                }
-                if (progressFill) {
-                    progressFill.style.width = `${totalSteps ? (answered / totalSteps) * 100 : 0}%`;
-                }
             }
 
             function showStep(index, shouldScroll) {

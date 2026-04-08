@@ -105,31 +105,6 @@
                 </div>
             </section>
 
-            <section class="pitch-strip" aria-label="Startup snapshot">
-                <div class="pitch-strip-copy">
-                    <p class="tiny-label">{{ pitch_snapshot.eyebrow }}</p>
-                    <h3>{{ pitch_snapshot.title }}</h3>
-                    <p>{{ pitch_snapshot.text }}</p>
-                </div>
-                <div class="pitch-strip-side">
-                    <div class="pitch-strip-headline">
-                        <strong>{{ pitch_snapshot.ask_amount }}</strong>
-                        <span>{{ pitch_snapshot.ask_note }}</span>
-                    </div>
-                    <div class="pitch-strip-metrics">
-                        {% for item in pitch_snapshot.metrics %}
-                        <span><strong>{{ item.value }}</strong>{{ item.label }}</span>
-                        {% endfor %}
-                    </div>
-                    <div class="pitch-strip-tags">
-                        {% for item in pitch_snapshot.next_moves %}
-                        <span>{{ item }}</span>
-                        {% endfor %}
-                    </div>
-                    <a class="pitch-strip-link" href="{% url 'index' %}#ask">Batafsil ko'rish</a>
-                </div>
-            </section>
-
             <section class="stats-grid" id="progress">
                 {% for stat in stats %}
                 <article class="stat-card">

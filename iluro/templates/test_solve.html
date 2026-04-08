@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260405b">
+    <link rel="stylesheet" href="{% static 'css/test_flow.css' %}?v=20260408-mobile3">
 </head>
 <body>
     <div class="flow-shell solve-wizard-shell{% if questions|length == 1 %} is-single-step{% endif %}">
@@ -24,18 +24,6 @@
                 <span>{{ questions|length }} ta savol</span>
             </div>
         </header>
-
-        {% if questions|length > 1 %}
-        <div class="progress-wrap">
-            <div class="progress-head">
-                <span>Javob berilgan savollar</span>
-                <strong id="progressText">0 / {{ questions|length }}</strong>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-        </div>
-        {% endif %}
 
         <form method="post" class="solve-form wizard-form" data-wizard-form>
             {% csrf_token %}
@@ -73,14 +61,14 @@
             {% endfor %}
 
             <div class="wizard-actions">
-                <a class="ghost-btn wizard-back-link" href="{{ next_url }}">Orqaga</a>
+                <a class="ghost-btn wizard-back-link" href="{{ next_url }}">Bo'limga qaytish</a>
                 <div class="wizard-actions-main">
                     {% if questions|length > 1 %}
                     <button class="secondary-btn" type="button" id="prevStepBtn">Oldingi</button>
-                    <button class="primary-btn" type="button" id="nextStepBtn">Keyingi savol</button>
-                    <button class="primary-btn" type="submit" id="submitWizardBtn" hidden>Natijani ko'rish</button>
+                    <button class="primary-btn" type="button" id="nextStepBtn">Keyingi</button>
+                    <button class="primary-btn" type="submit" id="submitWizardBtn" hidden>Natija</button>
                     {% else %}
-                    <button class="primary-btn" type="submit" id="submitWizardBtn">Natijani ko'rish</button>
+                    <button class="primary-btn" type="submit" id="submitWizardBtn">Natija</button>
                     {% endif %}
                 </div>
             </div>
@@ -88,8 +76,6 @@
     </div>
     <script>
         (function () {
-            const progressText = document.getElementById("progressText");
-            const progressFill = document.getElementById("progressFill");
             const radioInputs = Array.from(document.querySelectorAll('input[type="radio"]'));
             const steps = Array.from(document.querySelectorAll("[data-step]"));
             const chips = Array.from(document.querySelectorAll("[data-step-target]"));
@@ -106,12 +92,6 @@
                 const answered = new Set(
                     radioInputs.filter((input) => input.checked).map((input) => input.name)
                 ).size;
-                if (progressText) {
-                    progressText.textContent = `${answered} / ${totalQuestions}`;
-                }
-                if (progressFill) {
-                    progressFill.style.width = `${totalQuestions ? (answered / totalQuestions) * 100 : 0}%`;
-                }
                 chips.forEach((chip, index) => {
                     const stepAnswered = radioInputs.some((input) => input.checked && Number(input.closest("[data-step]").dataset.step) === index);
                     chip.classList.toggle("is-complete", stepAnswered);
