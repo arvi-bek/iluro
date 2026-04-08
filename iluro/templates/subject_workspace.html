@@ -406,6 +406,21 @@
                         <p class="eyebrow">Mashqlar</p>
                         <h2>{{ subject.name }} uchun yagona assessment bo'limi</h2>
                         <p>Test va mashq bloklari shu yerga birlashtirildi. Timer olib tashlandi, savollarni bemalol ishlab keyin natijani ko'rasiz.</p>
+                        {% if show_language_problem_filters %}
+                        <section class="workspace-filter-strip test-filter-strip" aria-label="Ona tili mashq filteri">
+                            <div class="workspace-filter-head">
+                                <p class="eyebrow">Yo'nalish bo'yicha</p>
+                                <span>{{ combined_problem_items|length }} ta blok</span>
+                            </div>
+                            <div class="workspace-filter-row">
+                                {% for item in language_problem_filters %}
+                                <a class="workspace-filter-pill {% if item.is_active %}is-active{% endif %}" href="{% url 'subject-workspace-section' subject.id 'problems' %}{% if item.value != 'all' %}?problem_filter={{ item.value }}{% endif %}">
+                                    {{ item.label }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </section>
+                        {% endif %}
                         <div class="content-grid">
                             {% for item in combined_problem_items %}
                             <article class="mini-card">

@@ -38,6 +38,31 @@ LANGUAGE_BOOK_GENRE_FILTERS = [
     ("sher", "She'rlar"),
 ]
 
+LANGUAGE_PROBLEM_FILTERS = [
+    ("all", "Barchasi"),
+    ("grammar", "Grammatika"),
+    ("literature", "Adabiyot"),
+]
+
+LITERATURE_KEYWORDS = (
+    "adabiyot",
+    "roman",
+    "qissa",
+    "hikoya",
+    "she'r",
+    "sher",
+    "drama",
+    "doston",
+    "g'azal",
+    "gazal",
+    "ruboiy",
+    "masal",
+    "asar",
+    "muallif",
+    "obraz",
+    "qahramon",
+)
+
 
 def is_language_subject(subject_or_name):
     subject_name = getattr(subject_or_name, "name", subject_or_name) or ""
@@ -55,6 +80,37 @@ def get_book_filter_config(subject):
         "title": "Sinf bo'yicha",
         "choices": GRADE_CHOICES,
     }
+
+
+def get_language_problem_filter_config():
+    return {
+        "title": "Yo'nalish bo'yicha",
+        "choices": LANGUAGE_PROBLEM_FILTERS,
+    }
+
+
+def _build_literature_q(fields):
+    query = Q()
+    for field in fields:
+        for keyword in LITERATURE_KEYWORDS:
+            query |= Q(**{f"{field}__icontains": keyword})
+    return query
+
+
+def apply_language_problem_filter(queryset, subject, selected_filter, fields):
+    if not is_language_subject(subject):
+        return queryset
+
+    selected_filter = (selected_filter or "all").strip()
+    if selected_filter == "all":
+        return queryset
+
+    literature_q = _build_literature_q(fields)
+    if selected_filter == "literature":
+        return queryset.filter(literature_q)
+    if selected_filter == "grammar":
+        return queryset.exclude(literature_q)
+    return queryset
 
 
 def get_book_bucket_label(book):
@@ -140,10 +196,11 @@ def get_subject_books(subject, grade=None, limit=12):
     return books
 
 
-def get_subject_tests(user, subject, profile_level, limit=6, category_filter="all"):
+def get_subject_tests(user, subject, profile_level, limit=6, category_filter="all", content_filter="all"):
     tests_queryset = Test.objects.filter(subject=subject)
     if category_filter in {"general", "terms", "years"}:
         tests_queryset = tests_queryset.filter(category=category_filter)
+    tests_queryset = apply_language_problem_filter(tests_queryset, subject, content_filter, ["title"])
     tests = list(
         filter_by_allowed_level(tests_queryset, "difficulty", profile_level)
         .annotate(question_count=Count("question"))
@@ -171,10 +228,17 @@ def get_subject_tests(user, subject, profile_level, limit=6, category_filter="al
     return tests
 
 
-def get_subject_practice_sets(user, subject, profile_level, limit=12):
+def get_subject_practice_sets(user, subject, profile_level, limit=12, content_filter="all"):
+    practice_queryset = PracticeSet.objects.filter(subject=subject).annotate(exercise_count=Count("exercises"))
+    practice_queryset = apply_language_problem_filter(
+        practice_queryset,
+        subject,
+        content_filter,
+        ["title", "topic", "description", "source_book"],
+    )
     practice_sets = list(
         filter_by_allowed_level(
-            PracticeSet.objects.filter(subject=subject).annotate(exercise_count=Count("exercises")),
+            practice_queryset,
             "difficulty",
             profile_level,
         )

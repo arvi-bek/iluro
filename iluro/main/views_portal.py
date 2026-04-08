@@ -24,9 +24,11 @@ from .selectors import (
     get_book_filter_config,
     get_dashboard_subject_cards,
     get_formula_entries,
+    get_language_problem_filter_config,
     get_latest_dashboard_resources,
     get_ranking_queryset,
     get_statistics_payload,
+    is_language_subject,
     get_subject_books,
     get_subject_peer_subjects,
     get_subject_practice_sets,
@@ -554,19 +556,38 @@ def subject_workspace_view(request, subject_id, section=None):
     selected_test_filter = (request.GET.get("test_filter") or "all").strip()
     if selected_test_filter not in {"all", "general", "terms", "years"}:
         selected_test_filter = "all"
+    selected_problem_filter = (request.GET.get("problem_filter") or "all").strip()
+    if selected_problem_filter not in {"all", "grammar", "literature"}:
+        selected_problem_filter = "all"
+    language_problem_filter_config = get_language_problem_filter_config()
     tests = get_subject_tests(
         request.user,
         subject,
         subject_level,
         limit=6,
         category_filter=selected_test_filter,
+        content_filter=selected_problem_filter,
     )
     history_test_filters = [
         {"value": "all", "label": "Umumiy", "is_active": selected_test_filter == "all"},
         {"value": "terms", "label": "Atamalar bo'yicha", "is_active": selected_test_filter == "terms"},
         {"value": "years", "label": "Yillar bo'yicha", "is_active": selected_test_filter == "years"},
     ]
-    practice_sets = get_subject_practice_sets(request.user, subject, subject_level, limit=12)
+    practice_sets = get_subject_practice_sets(
+        request.user,
+        subject,
+        subject_level,
+        limit=12,
+        content_filter=selected_problem_filter,
+    )
+    language_problem_filters = [
+        {
+            "value": value,
+            "label": label,
+            "is_active": selected_problem_filter == value,
+        }
+        for value, label in language_problem_filter_config["choices"]
+    ]
 
     section_items = [
         {"key": "home", "label": "Asosiy menyu"},
@@ -1183,6 +1204,9 @@ def subject_workspace_view(request, subject_id, section=None):
         "book_filter_title": book_filter_config["title"],
         "selected_test_filter": selected_test_filter,
         "history_test_filters": history_test_filters,
+        "selected_problem_filter": selected_problem_filter,
+        "language_problem_filters": language_problem_filters,
+        "show_language_problem_filters": is_language_subject(subject),
         "combined_problem_items": combined_problem_items,
         "workspace_focus": workspace_focus,
         "workspace_flow_steps": workspace_flow_steps,
