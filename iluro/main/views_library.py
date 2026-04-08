@@ -162,7 +162,7 @@ def book_read_view(request, book_id):
 
     return render(
         request,
-        "book_read.html",
+        "book_read_full.html" if is_full_reader else "book_read.html",
         {
             "book": book,
             "reader_token": token,
@@ -170,7 +170,6 @@ def book_read_view(request, book_id):
             "viewer_count": viewer_count,
             "mobile_pdf_url": f"/books/{book.id}/pdf/?token={token}&reader=mobile",
             "full_reader_url": full_reader_url,
-            "is_full_reader": is_full_reader,
             "reader_pdf_url": reader_pdf_url,
         },
     )
