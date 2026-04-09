@@ -689,12 +689,214 @@ a,
     font-size: 0.82rem;
 }
 
+.iluro-analytics-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+}
+
+.iluro-analytics-card,
+.iluro-analytics-panel {
+    border: 1px solid var(--iluro-border);
+    border-radius: 24px;
+    background: rgba(255, 249, 242, 0.98);
+    box-shadow: var(--iluro-shadow);
+}
+
+.iluro-analytics-card {
+    padding: 1.1rem 1.2rem;
+}
+
+.iluro-analytics-card span {
+    display: block;
+    color: var(--iluro-muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.iluro-analytics-card strong {
+    display: block;
+    margin-top: 0.45rem;
+    color: var(--iluro-text);
+    font-family: "Space Grotesk", "Manrope", sans-serif;
+    font-size: 2rem;
+    letter-spacing: -0.04em;
+}
+
+.iluro-analytics-card p {
+    margin: 0.55rem 0 0;
+    color: var(--iluro-muted);
+}
+
+.iluro-analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.iluro-analytics-panel {
+    overflow: hidden;
+}
+
+.iluro-analytics-panel--wide {
+    grid-column: 1 / -1;
+}
+
+.iluro-analytics-head {
+    padding: 1.15rem 1.2rem 0.9rem;
+    border-bottom: 1px solid var(--iluro-border);
+}
+
+.iluro-analytics-head h2 {
+    margin: 0;
+    color: var(--iluro-text);
+    font-family: "Space Grotesk", "Manrope", sans-serif;
+    font-size: 1.45rem;
+    letter-spacing: -0.03em;
+}
+
+.iluro-analytics-bars,
+.iluro-analytics-table {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1.1rem 1.2rem 1.2rem;
+}
+
+.iluro-analytics-bar-row {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.iluro-analytics-bar-copy {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+}
+
+.iluro-analytics-bar-copy strong {
+    color: var(--iluro-text);
+}
+
+.iluro-analytics-bar-copy span {
+    color: var(--iluro-muted);
+    font-size: 0.92rem;
+}
+
+.iluro-analytics-bar-track {
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(33, 20, 13, 0.08);
+    overflow: hidden;
+}
+
+.iluro-analytics-bar-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #a86a33 0%, #d5b38b 100%);
+}
+
+.iluro-activity-chart {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.9rem;
+    align-items: end;
+    min-height: 260px;
+    padding: 1.2rem;
+}
+
+.iluro-activity-chart__item {
+    display: grid;
+    gap: 0.55rem;
+    text-align: center;
+}
+
+.iluro-activity-chart__bar-wrap {
+    height: 180px;
+    display: flex;
+    align-items: end;
+    justify-content: center;
+}
+
+.iluro-activity-chart__bar {
+    width: 100%;
+    max-width: 72px;
+    min-height: 16px;
+    border-radius: 18px 18px 10px 10px;
+    background: linear-gradient(180deg, #d8b286 0%, #a86a33 100%);
+    box-shadow: 0 16px 35px rgba(168, 106, 51, 0.14);
+    position: relative;
+}
+
+.iluro-activity-chart__bar span {
+    position: absolute;
+    top: -1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--iluro-accent-deep);
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
+.iluro-activity-chart__item strong {
+    color: var(--iluro-text);
+    font-size: 0.92rem;
+}
+
+.iluro-activity-chart__item small {
+    color: var(--iluro-muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.iluro-analytics-table__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid var(--iluro-line);
+    border-radius: 18px;
+    background: #fffdf9;
+    align-items: center;
+}
+
+.iluro-analytics-table__row strong {
+    display: block;
+    color: var(--iluro-text);
+    font-size: 1rem;
+}
+
+.iluro-analytics-table__row span {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--iluro-muted);
+    font-size: 0.84rem;
+}
+
+.iluro-analytics-table__row .is-right {
+    text-align: right;
+}
+
+.iluro-analytics-empty {
+    margin: 0;
+    color: var(--iluro-muted);
+}
+
 @media (max-width: 1200px) {
     .iluro-admin-grid {
         grid-template-columns: 1fr;
     }
 
     .iluro-admin-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .iluro-analytics-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -1009,5 +1211,23 @@ input[type="checkbox"] {
     #searchbar,
     #changelist-search input[type="text"] {
         min-width: 100%;
+    }
+
+    .iluro-activity-chart {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .iluro-analytics-table__row {
+        grid-template-columns: 1fr;
+    }
+
+    .iluro-analytics-table__row .is-right {
+        text-align: left;
+    }
+}
+
+@media (max-width: 640px) {
+    .iluro-activity-chart {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

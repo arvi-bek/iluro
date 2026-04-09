@@ -186,6 +186,44 @@ class MainSmokeTests(TestCase):
         self.assertEqual(result_response.status_code, 200)
         self.assertContains(result_response, subject_problems_url)
 
+    def test_register_rejects_non_latin_username_characters(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "full_name": "Test User",
+                "username": "test!user",
+                "email": "newuser@example.com",
+                "password": "StrongPass123",
+                "password2": "StrongPass123",
+                "role": "student",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Username faqat lotin harflari, raqamlar va pastki chiziq (_) dan iborat bo'lishi kerak.",
+        )
+        self.assertFalse(User.objects.filter(email="newuser@example.com").exists())
+
+    def test_register_accepts_latin_username_with_digits_and_underscore(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "full_name": "Latin User",
+                "username": "latin_user01",
+                "email": "latinuser@example.com",
+                "password": "StrongPass123",
+                "password2": "StrongPass123",
+                "role": "student",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username="latin_user01").exists())
+
 
 class XPEconomyTests(TestCase):
     def test_harder_test_awards_more_xp_for_same_result(self):

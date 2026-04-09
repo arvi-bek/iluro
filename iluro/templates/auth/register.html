@@ -23,7 +23,18 @@
         </label>
         <label>
             <span>Username</span>
-            <input type="text" name="username" placeholder="Kamida 4 ta belgi" minlength="4" required>
+            <input
+                type="text"
+                name="username"
+                placeholder="Masalan: ilm_user01"
+                minlength="4"
+                maxlength="30"
+                pattern="[A-Za-z0-9_]+"
+                title="Faqat lotin harflari, raqamlar va pastki chiziq (_) ishlating"
+                autocomplete="username"
+                required
+            >
+            <small>Faqat lotin harflari, raqamlar va <code>_</code> ishlating.</small>
         </label>
         <label>
             <span>Email</span>

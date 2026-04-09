@@ -34,7 +34,7 @@
                     {% if request.user.is_authenticated %}
                     <a class="header-link header-link--filled" href="{% url 'dashboard' %}">Boshlash</a>
                     {% else %}
-                    <a class="header-link header-link--filled" href="{% url 'register' %}">Boshlash</a>
+                    <a class="header-link header-link--filled" href="{% url 'login' %}">Boshlash</a>
                     {% endif %}
                     <a class="header-link header-link--ghost" href="{{ cta_links.0.href }}">Beta guruh</a>
                 </div>
@@ -54,7 +54,7 @@
                             {% if request.user.is_authenticated %}
                             <a class="primary-link" href="{% url 'dashboard' %}">Boshlash</a>
                             {% else %}
-                            <a class="primary-link" href="{% url 'register' %}">Boshlash</a>
+                            <a class="primary-link" href="{% url 'login' %}">Boshlash</a>
                             {% endif %}
                             <a class="hero-inline-link" href="#subjects">Fanlarni ko'rish</a>
                         </div>
@@ -304,7 +304,7 @@
                         {% if request.user.is_authenticated %}
                         <a class="primary-link" href="{% url 'dashboard' %}">Boshlash</a>
                         {% else %}
-                        <a class="primary-link" href="{% url 'register' %}">Boshlash</a>
+                        <a class="primary-link" href="{% url 'login' %}">Boshlash</a>
                         {% endif %}
                         <a class="secondary-link" href="{{ cta_links.0.href }}">Beta guruh</a>
                     </div>

@@ -1,3 +1,5 @@
+import re
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -13,6 +15,8 @@ from .services import create_user_beta_trial_subscription as _create_user_beta_t
 from .services import get_user_subject_access_rows as _get_user_subject_access_rows
 from .services import get_or_sync_profile as _get_or_sync_profile
 from .services import sidebar_context as _sidebar_context
+
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 
 
 def register_view(request):
@@ -30,6 +34,13 @@ def register_view(request):
 
         if len(username) < 4:
             messages.error(request, "Username kamida 4 ta belgidan iborat bo'lishi kerak.")
+            return redirect("register")
+
+        if not USERNAME_PATTERN.fullmatch(username):
+            messages.error(
+                request,
+                "Username faqat lotin harflari, raqamlar va pastki chiziq (_) dan iborat bo'lishi kerak.",
+            )
             return redirect("register")
 
         if not email:

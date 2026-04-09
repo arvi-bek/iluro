@@ -1,16 +1,20 @@
 
+from collections import defaultdict
+from datetime import timedelta
 
 from django.contrib import admin
+from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.conf import settings
 from django import forms
+from django.db.models import Count, Sum, Value
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
-from django.urls import reverse
-from datetime import timedelta
+from django.urls import path, reverse
 from django.contrib import messages
 from .models import (
     Subject, Subscription, SubscriptionPlan, UserSubscription, UserSubscriptionSubject, Test,
@@ -185,6 +189,246 @@ def import_center_view(request):
         },
     }
     return TemplateResponse(request, "admin/import_center.html", context)
+
+
+def _build_daily_activity_chart(now):
+    tests_by_day = defaultdict(int)
+    practice_by_day = defaultdict(int)
+
+    window_start = (now - timedelta(days=6)).date()
+    for item in (
+        UserTest.objects.filter(started_at__date__gte=window_start)
+        .values("started_at__date")
+        .annotate(total=Count("id"))
+    ):
+        tests_by_day[item["started_at__date"]] = item["total"]
+
+    for item in (
+        PracticeSetAttempt.objects.filter(created_at__date__gte=window_start)
+        .values("created_at__date")
+        .annotate(total=Count("id"))
+    ):
+        practice_by_day[item["created_at__date"]] = item["total"]
+
+    bars = []
+    peak = 0
+    for offset in range(7):
+        day = window_start + timedelta(days=offset)
+        label = day.strftime("%d.%m")
+        test_total = tests_by_day.get(day, 0)
+        practice_total = practice_by_day.get(day, 0)
+        total = test_total + practice_total
+        peak = max(peak, total)
+        bars.append(
+            {
+                "label": label,
+                "tests": test_total,
+                "practice": practice_total,
+                "total": total,
+            }
+        )
+
+    peak = peak or 1
+    for item in bars:
+        item["height_pct"] = max(10, round((item["total"] / peak) * 100)) if item["total"] else 8
+
+    return bars
+
+
+def _build_subject_distribution(now):
+    subjects = list(Subject.objects.order_by("name"))
+    all_access_user_ids = set(
+        UserSubscription.objects.filter(status="active", end_at__gte=now, is_all_access=True).values_list("user_id", flat=True)
+    )
+    by_subject = {subject.id: set(all_access_user_ids) for subject in subjects}
+
+    for user_id, subject_id in Subscription.objects.filter(end_date__gte=now).values_list("user_id", "subject_id"):
+        by_subject.setdefault(subject_id, set()).add(user_id)
+
+    for user_id, subject_id in UserSubscriptionSubject.objects.filter(
+        subscription__status="active",
+        subscription__end_at__gte=now,
+    ).values_list("subscription__user_id", "subject_id"):
+        by_subject.setdefault(subject_id, set()).add(user_id)
+
+    peak = 0
+    items = []
+    for subject in subjects:
+        total = len(by_subject.get(subject.id, set()))
+        peak = max(peak, total)
+        items.append({"name": subject.name, "total": total})
+
+    peak = peak or 1
+    for item in items:
+        item["width_pct"] = round((item["total"] / peak) * 100) if item["total"] else 0
+    return items
+
+
+def _build_subscription_sources(now):
+    palette = {
+        "purchase": "#497b56",
+        "beta_trial": "#8a5425",
+        "manual": "#3667ab",
+        "legacy_import": "#6d6d6d",
+    }
+    label_map = dict(UserSubscription.SOURCE_CHOICES)
+    items = []
+    peak = 0
+    queryset = (
+        UserSubscription.objects.filter(status="active", end_at__gte=now)
+        .values("source")
+        .annotate(total=Count("id"))
+        .order_by("-total", "source")
+    )
+    for item in queryset:
+        peak = max(peak, item["total"])
+        items.append(
+            {
+                "name": label_map.get(item["source"], item["source"]),
+                "total": item["total"],
+                "color": palette.get(item["source"], "#8f735c"),
+            }
+        )
+
+    peak = peak or 1
+    for item in items:
+        item["width_pct"] = round((item["total"] / peak) * 100) if item["total"] else 0
+    return items
+
+
+def analytics_dashboard_view(request):
+    cache_key = "admin_analytics_snapshot_v1"
+    cached_payload = cache.get(cache_key)
+    if cached_payload is None:
+        cached_payload = _build_admin_analytics_payload()
+        cache.set(cache_key, cached_payload, getattr(settings, "ADMIN_ANALYTICS_CACHE_SECONDS", 3600))
+
+    context = {
+        **admin.site.each_context(request),
+        "title": "Admin statistika",
+        "subtitle": "Platformadagi umumiy faollik va foydalanuvchi holati",
+        **cached_payload,
+    }
+    return TemplateResponse(request, "admin/analytics_dashboard.html", context)
+
+
+def _build_admin_analytics_payload():
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+    week_ago = now - timedelta(days=7)
+
+    total_users = User.objects.count()
+    summary_active = set(
+        UserStatSummary.objects.filter(last_activity_at__gte=week_ago).values_list("user_id", flat=True)
+    )
+    login_active = set(User.objects.filter(last_login__gte=week_ago).values_list("id", flat=True))
+    active_users_7d = len(summary_active | login_active)
+
+    active_subscription_count = UserSubscription.objects.filter(status="active", end_at__gte=now).count()
+    total_subscription_count = UserSubscription.objects.count()
+
+    new_users_today = User.objects.filter(date_joined__date=today).count()
+    tests_today = UserTest.objects.filter(started_at__date=today).count()
+    practice_today = PracticeSetAttempt.objects.filter(created_at__date=today).count()
+
+    total_xp = UserStatSummary.objects.aggregate(total=Coalesce(Sum("lifetime_xp"), Value(0))).get("total", 0)
+    average_xp = round(total_xp / total_users) if total_users else 0
+
+    top_user_rows = []
+    for item in (
+        UserStatSummary.objects.select_related("user", "user__profile")
+        .order_by("-lifetime_xp", "-lifetime_test_count", "-lifetime_practice_count")[:8]
+    ):
+        profile = getattr(item.user, "profile", None)
+        display_name = getattr(profile, "full_name", "") or item.user.get_full_name().strip() or item.user.username
+        top_user_rows.append(
+            {
+                "display_name": display_name,
+                "username": item.user.username,
+                "xp": item.lifetime_xp,
+                "tests": item.lifetime_test_count,
+                "practice": item.lifetime_practice_count,
+            }
+        )
+
+    recent_user_rows = []
+    for item in User.objects.select_related("profile").order_by("-date_joined")[:8]:
+        profile = getattr(item, "profile", None)
+        display_name = getattr(profile, "full_name", "") or item.get_full_name().strip() or item.username
+        recent_user_rows.append(
+            {
+                "display_name": display_name,
+                "username": item.username,
+                "date_joined": item.date_joined,
+                "last_login": item.last_login,
+            }
+        )
+
+    card_stats = [
+        {
+            "label": "Jami userlar",
+            "value": total_users,
+            "note": "Platformadagi umumiy foydalanuvchilar",
+        },
+        {
+            "label": "Aktiv userlar (7 kun)",
+            "value": active_users_7d,
+            "note": "So'nggi 7 kunda faol bo'lganlar",
+        },
+        {
+            "label": "Hozir faol obunalar",
+            "value": active_subscription_count,
+            "note": "Ayni paytda faol turgan obunalar",
+        },
+        {
+            "label": "Umumiy olingan obunalar",
+            "value": total_subscription_count,
+            "note": "Jami yaratilgan obuna yozuvlari",
+        },
+        {
+            "label": "Bugungi yangi userlar",
+            "value": new_users_today,
+            "note": "Bugun ro'yxatdan o'tganlar",
+        },
+        {
+            "label": "Bugungi testlar",
+            "value": tests_today,
+            "note": "Bugun boshlangan test sessionlar",
+        },
+        {
+            "label": "Bugungi mashqlar",
+            "value": practice_today,
+            "note": "Bugungi mashq bo'limi urinishlari",
+        },
+        {
+            "label": "O'rtacha XP",
+            "value": average_xp,
+            "note": "Barcha userlar bo'yicha o'rtacha XP",
+        },
+    ]
+
+    return {
+        "analytics_cards": card_stats,
+        "subject_distribution": _build_subject_distribution(now),
+        "subscription_sources": _build_subscription_sources(now),
+        "daily_activity": _build_daily_activity_chart(now),
+        "top_users": top_user_rows,
+        "recent_users": recent_user_rows,
+        "generated_at": now,
+    }
+
+
+_default_admin_get_urls = admin.site.get_urls
+
+
+def _iluro_admin_get_urls():
+    custom_urls = [
+        path("analytics/", admin.site.admin_view(analytics_dashboard_view), name="analytics_dashboard"),
+    ]
+    return custom_urls + _default_admin_get_urls()
+
+
+admin.site.get_urls = _iluro_admin_get_urls
 
 
 class HiddenLegacyAdminMixin:

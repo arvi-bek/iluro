@@ -1,0 +1,159 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/admin_custom.css' %}?v=20260409-analytics1">
+{% endblock %}
+
+{% block content %}
+<section class="iluro-admin-hero">
+    <div>
+        <p class="iluro-admin-kicker">ILURO Analytics</p>
+        <h1>Umumiy statistika</h1>
+        <p class="iluro-admin-lead">
+            Platformadagi umumiy faollik, foydalanuvchi oqimi va fanlar kesimidagi taqsimotni bitta joydan ko'ring.
+        </p>
+        <p style="margin-top:18px; display:flex; gap:12px; flex-wrap:wrap;">
+            <a href="{% url 'admin:index' %}" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:999px;background:#a86a33;color:#fff6ed;text-decoration:none;font-weight:700;">Admin bosh sahifa</a>
+            <a href="{% url 'content_import_center' %}" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:999px;background:#fff8f1;color:#8a5425;border:1px solid rgba(138,84,37,0.18);text-decoration:none;font-weight:700;">Import markazi</a>
+        </p>
+    </div>
+    <div class="iluro-admin-hero-badge">
+        <span>Yangilangan vaqt</span>
+        <strong>{{ generated_at|date:"d.m.Y H:i" }}</strong>
+    </div>
+</section>
+
+<section class="iluro-analytics-cards">
+    {% for card in analytics_cards %}
+    <article class="iluro-analytics-card">
+        <span>{{ card.label }}</span>
+        <strong>{{ card.value }}</strong>
+        <p>{{ card.note }}</p>
+    </article>
+    {% endfor %}
+</section>
+
+<section class="iluro-analytics-grid">
+    <article class="iluro-analytics-panel">
+        <div class="iluro-analytics-head">
+            <div>
+                <p class="iluro-admin-app-eyebrow">Diagramma</p>
+                <h2>Fanlar bo'yicha aktiv userlar</h2>
+            </div>
+        </div>
+        <div class="iluro-analytics-bars">
+            {% for item in subject_distribution %}
+            <div class="iluro-analytics-bar-row">
+                <div class="iluro-analytics-bar-copy">
+                    <strong>{{ item.name }}</strong>
+                    <span>{{ item.total }} ta user</span>
+                </div>
+                <div class="iluro-analytics-bar-track">
+                    <span style="width: {{ item.width_pct }}%;"></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="iluro-analytics-panel">
+        <div class="iluro-analytics-head">
+            <div>
+                <p class="iluro-admin-app-eyebrow">Diagramma</p>
+                <h2>Obuna manbalari</h2>
+            </div>
+        </div>
+        <div class="iluro-analytics-bars">
+            {% for item in subscription_sources %}
+            <div class="iluro-analytics-bar-row">
+                <div class="iluro-analytics-bar-copy">
+                    <strong>{{ item.name }}</strong>
+                    <span>{{ item.total }} ta obuna</span>
+                </div>
+                <div class="iluro-analytics-bar-track">
+                    <span style="width: {{ item.width_pct }}%; background: {{ item.color }};"></span>
+                </div>
+            </div>
+            {% empty %}
+            <p class="iluro-analytics-empty">Aktiv obunalar hali yo'q.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="iluro-analytics-panel iluro-analytics-panel--wide">
+        <div class="iluro-analytics-head">
+            <div>
+                <p class="iluro-admin-app-eyebrow">Diagramma</p>
+                <h2>So'nggi 7 kun faolligi</h2>
+            </div>
+        </div>
+        <div class="iluro-activity-chart">
+            {% for item in daily_activity %}
+            <div class="iluro-activity-chart__item">
+                <div class="iluro-activity-chart__bar-wrap">
+                    <div class="iluro-activity-chart__bar" style="height: {{ item.height_pct }}%;">
+                        <span>{{ item.total }}</span>
+                    </div>
+                </div>
+                <strong>{{ item.label }}</strong>
+                <small>{{ item.tests }} test • {{ item.practice }} mashq</small>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="iluro-analytics-grid">
+    <article class="iluro-analytics-panel">
+        <div class="iluro-analytics-head">
+            <div>
+                <p class="iluro-admin-app-eyebrow">Top foydalanuvchilar</p>
+                <h2>Eng ko'p XP</h2>
+            </div>
+        </div>
+        <div class="iluro-analytics-table">
+            {% for item in top_users %}
+            <div class="iluro-analytics-table__row">
+                <div>
+                    <strong>{{ item.display_name }}</strong>
+                    <span>@{{ item.username }}</span>
+                </div>
+                <div class="is-right">
+                    <strong>{{ item.xp }} XP</strong>
+                    <span>{{ item.tests }} test • {{ item.practice }} mashq</span>
+                </div>
+            </div>
+            {% empty %}
+            <p class="iluro-analytics-empty">Statistika hali to'planmagan.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="iluro-analytics-panel">
+        <div class="iluro-analytics-head">
+            <div>
+                <p class="iluro-admin-app-eyebrow">Yangi foydalanuvchilar</p>
+                <h2>Oxirgi registratsiyalar</h2>
+            </div>
+        </div>
+        <div class="iluro-analytics-table">
+            {% for item in recent_users %}
+            <div class="iluro-analytics-table__row">
+                <div>
+                    <strong>{{ item.display_name }}</strong>
+                    <span>@{{ item.username }}</span>
+                </div>
+                <div class="is-right">
+                    <strong>{{ item.date_joined|date:"d.m.Y" }}</strong>
+                    <span>{% if item.last_login %}Oxirgi login: {{ item.last_login|date:"d.m H:i" }}{% else %}Login hali yo'q{% endif %}</span>
+                </div>
+            </div>
+            {% empty %}
+            <p class="iluro-analytics-empty">Yangi userlar hali yo'q.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

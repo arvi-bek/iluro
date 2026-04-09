@@ -186,6 +186,7 @@ if env_bool("DJANGO_ENABLE_HSTS", not DEBUG):
     SECURE_HSTS_PRELOAD = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+ADMIN_ANALYTICS_CACHE_SECONDS = int(os.getenv("DJANGO_ADMIN_ANALYTICS_CACHE_SECONDS", "3600"))
 
 JAZZMIN_SETTINGS = {
     "site_title": "ILURO Admin",
@@ -197,11 +198,18 @@ JAZZMIN_SETTINGS = {
     "search_model": ["auth.User"],
     "topmenu_links": [
         {"name": "Sayt", "url": "index", "permissions": ["auth.view_user"]},
+        {"name": "Statistika", "url": "/admin/analytics/", "permissions": ["auth.view_user"]},
         {"name": "Asosiy bo'limlar", "app": "main"},
         {"name": "Foydalanuvchilar", "model": "auth.User"},
     ],
     "custom_links": {
         "main": [
+            {
+                "name": "Admin statistika",
+                "url": "/admin/analytics/",
+                "icon": "fas fa-chart-pie",
+                "permissions": ["auth.view_user"],
+            },
             {
                 "name": "Import markazi",
                 "url": "/admin/import-center/",
