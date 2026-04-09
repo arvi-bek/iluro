@@ -1440,28 +1440,32 @@ body {
 
 .formula-atlas-shell {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
-    gap: 22px;
+    grid-template-columns: minmax(260px, 292px) minmax(0, 1fr);
+    gap: 18px;
     margin-top: 22px;
+    align-items: start;
 }
 
 .formula-atlas-sidebar {
-    padding-right: 22px;
+    position: sticky;
+    top: 18px;
+    align-self: start;
+    padding-right: 18px;
     border-right: 1px solid rgba(138, 84, 37, 0.08);
 }
 
 .formula-atlas-list {
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .formula-atlas-item,
 .formula-atlas-empty {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
-    padding: 16px;
-    border-radius: 20px;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 18px;
     text-decoration: none;
     color: inherit;
     background: rgba(255, 255, 255, 0.86);
@@ -1484,8 +1488,8 @@ body {
 .formula-atlas-item-copy strong,
 .formula-atlas-empty strong {
     display: block;
-    font-size: 0.98rem;
-    line-height: 1.18;
+    font-size: 0.94rem;
+    line-height: 1.28;
 }
 
 .formula-atlas-item-copy span,
@@ -1493,8 +1497,12 @@ body {
     display: block;
     margin-top: 6px;
     color: var(--muted);
-    font-size: 0.84rem;
-    line-height: 1.54;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
 }
 
 .formula-atlas-item-state,
@@ -1502,12 +1510,12 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 32px;
-    padding: 0 12px;
+    min-height: 28px;
+    padding: 0 10px;
     border-radius: 999px;
     background: rgba(249, 241, 228, 0.96);
     color: var(--accent-strong);
-    font-size: 0.76rem;
+    font-size: 0.7rem;
     font-weight: 800;
     white-space: nowrap;
 }
@@ -1518,7 +1526,11 @@ body {
 
 .formula-atlas-stage {
     display: grid;
-    gap: 18px;
+    gap: 14px;
+    width: 100%;
+    max-width: 900px;
+    align-self: start;
+    align-content: start;
 }
 
 .formula-stage-hero {
@@ -1530,17 +1542,17 @@ body {
 
 .formula-stage-hero h3 {
     margin: 0;
-    font-size: 1.65rem;
-    line-height: 1.05;
+    font-size: 1.48rem;
+    line-height: 1.08;
     letter-spacing: -0.05em;
 }
 
 .formula-stage-lead {
-    margin: 14px 0 0;
-    max-width: 48rem;
+    margin: 10px 0 0;
+    max-width: 42rem;
     color: var(--muted);
-    font-size: 1rem;
-    line-height: 1.72;
+    font-size: 0.95rem;
+    line-height: 1.64;
 }
 
 .formula-stage-badges {
@@ -1552,8 +1564,8 @@ body {
 .formula-stage-expression,
 .formula-stage-section,
 .formula-stage-empty {
-    padding: 22px;
-    border-radius: 24px;
+    padding: 18px 20px;
+    border-radius: 22px;
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(138, 84, 37, 0.1);
     box-shadow: 0 16px 30px rgba(103, 69, 38, 0.08);
@@ -1573,22 +1585,23 @@ body {
 .formula-stage-expression-body {
     color: var(--text);
     font-family: "Space Grotesk", sans-serif;
-    font-size: clamp(1.16rem, 1.6vw, 1.48rem);
-    line-height: 1.55;
+    font-size: clamp(1.02rem, 1.3vw, 1.28rem);
+    line-height: 1.46;
     letter-spacing: -0.03em;
     word-break: break-word;
 }
 
 .formula-stage-columns {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    align-items: start;
 }
 
 .formula-stage-body {
     color: var(--text);
-    font-size: 0.98rem;
-    line-height: 1.84;
+    font-size: 0.94rem;
+    line-height: 1.72;
 }
 
 .formula-stage-empty h3 {
@@ -2302,12 +2315,16 @@ body {
 
 .reference-shell {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
-    gap: 22px;
+    grid-template-columns: minmax(260px, 292px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
 }
 
 .reference-sidebar {
-    padding-right: 22px;
+    position: sticky;
+    top: 18px;
+    align-self: start;
+    padding-right: 18px;
     border-right: 1px solid rgba(138, 84, 37, 0.08);
 }
 
@@ -2350,9 +2367,9 @@ body {
 .reference-empty-sidebar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
-    padding: 16px;
-    border-radius: 20px;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 18px;
     text-decoration: none;
     color: inherit;
     background: rgba(255, 255, 255, 0.86);
@@ -2374,15 +2391,20 @@ body {
 
 .reference-topic-copy strong {
     display: block;
-    font-size: 0.96rem;
+    font-size: 0.94rem;
+    line-height: 1.28;
 }
 
 .reference-topic-copy span {
     display: block;
     margin-top: 6px;
     color: var(--muted);
-    font-size: 0.84rem;
+    font-size: 0.8rem;
     line-height: 1.5;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
 }
 
 .reference-topic-level,
@@ -2392,12 +2414,12 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 32px;
-    padding: 0 12px;
+    min-height: 28px;
+    padding: 0 10px;
     border-radius: 999px;
     background: rgba(249, 241, 228, 0.96);
     color: var(--accent-strong);
-    font-size: 0.76rem;
+    font-size: 0.7rem;
     font-weight: 800;
 }
 
@@ -2407,7 +2429,11 @@ body {
 
 .reference-detail-stage {
     display: grid;
-    gap: 18px;
+    gap: 14px;
+    width: 100%;
+    max-width: 920px;
+    align-self: start;
+    align-content: start;
 }
 
 .reference-pagination {
@@ -2455,11 +2481,11 @@ body {
 }
 
 .reference-detail-lead {
-    margin: 14px 0 0;
-    max-width: 48rem;
+    margin: 10px 0 0;
+    max-width: 42rem;
     color: var(--muted);
-    font-size: 1rem;
-    line-height: 1.72;
+    font-size: 0.95rem;
+    line-height: 1.64;
 }
 
 .reference-level-stack {
@@ -2470,8 +2496,9 @@ body {
 
 .reference-info-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    align-items: start;
 }
 
 .reference-info-card,
@@ -2479,11 +2506,12 @@ body {
 .reference-rule-card,
 .reference-formula-card,
 .reference-detail-empty {
-    padding: 22px;
-    border-radius: 24px;
+    padding: 18px 20px;
+    border-radius: 22px;
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(138, 84, 37, 0.1);
     box-shadow: 0 16px 30px rgba(103, 69, 38, 0.08);
+    align-self: start;
 }
 
 .reference-info-card span {
@@ -2498,8 +2526,8 @@ body {
 
 .reference-detail-body {
     color: var(--text);
-    font-size: 0.98rem;
-    line-height: 1.86;
+    font-size: 0.94rem;
+    line-height: 1.74;
 }
 
 .reference-explanation-card h3,
@@ -2510,29 +2538,29 @@ body {
 
 .reference-rule-list {
     display: grid;
-    gap: 12px;
-    margin-top: 16px;
+    gap: 10px;
+    margin-top: 14px;
 }
 
 .reference-rule-item {
-    padding: 16px 18px;
-    border-radius: 18px;
+    padding: 14px 16px;
+    border-radius: 16px;
     background: rgba(249, 244, 236, 0.94);
     border: 1px solid rgba(138, 84, 37, 0.08);
 }
 
 .reference-rule-item strong {
     display: block;
-    font-size: 0.96rem;
-    line-height: 1.68;
+    font-size: 0.92rem;
+    line-height: 1.6;
     color: var(--text);
 }
 
 .reference-formula-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .grammar-quiz-launcher {
@@ -3627,10 +3655,16 @@ body {
     }
 
     .formula-atlas-sidebar {
+        position: static;
+        top: auto;
         padding-right: 0;
         padding-bottom: 18px;
         border-right: 0;
         border-bottom: 1px solid rgba(138, 84, 37, 0.08);
+    }
+
+    .formula-atlas-stage {
+        max-width: none;
     }
 
     .history-panel-head,
@@ -3644,10 +3678,16 @@ body {
     }
 
     .reference-sidebar {
+        position: static;
+        top: auto;
         padding-right: 0;
         padding-bottom: 18px;
         border-right: 0;
         border-bottom: 1px solid rgba(138, 84, 37, 0.08);
+    }
+
+    .reference-detail-stage {
+        max-width: none;
     }
 
     .reference-info-grid {
@@ -4657,6 +4697,16 @@ body {
     .reference-rule-item {
         padding: 12px;
         border-radius: 16px;
+    }
+
+    .formula-atlas-item,
+    .reference-topic-item {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .formula-atlas-item-state,
+    .reference-topic-level {
+        justify-self: start;
     }
 
     .reference-sidebar-head h2,

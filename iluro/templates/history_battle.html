@@ -1,0 +1,150 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Tarix jangi</title>
+    {% include "partials/favicon.html" %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260406-pitch2">
+    <link rel="stylesheet" href="{% static 'css/games.css' %}?v=20260409-games1">
+</head>
+<body>
+    <div class="dashboard-shell">
+        {% include "partials/app_sidebar_v2.html" %}
+
+        <main class="dashboard-main games-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="tiny-label">Tarix jangi</p>
+                    <h1>Tarix savollarini jang maydonida takrorlaymiz.</h1>
+                </div>
+                <a class="topbar-link" href="{% url 'games-hub' %}">O'yinlar bo'limi</a>
+            </header>
+
+            <section class="battle-intro">
+                <div class="battle-intro-copy">
+                    <p class="tiny-label">Format</p>
+                    <h2>Bir o'yinda 8 ta savol. Sizga qarshi bot ham shu savol deck bilan javob beradi.</h2>
+                    <p>To'g'ri javob frontni siz tomonga suradi. O'yin mavjud tarix testlaridan tanlangan savollar bilan real vaqtda deck yasaydi.</p>
+                    {% if preview_question %}
+                    <div class="battle-preview">
+                        <span>Namuna savol</span>
+                        <strong>{{ preview_question.text }}</strong>
+                        <small>{{ preview_question.source_title }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="battle-intro-side">
+                    <div class="battle-mini-stat">
+                        <span>Sinf</span>
+                        <strong>{% if selected_option %}{{ selected_option.label }}{% else %}Tanlanmagan{% endif %}</strong>
+                    </div>
+                    <div class="battle-mini-stat">
+                        <span>Savol havzasi</span>
+                        <strong>{% if selected_option %}{{ selected_option.question_count }} ta{% else %}0 ta{% endif %}</strong>
+                    </div>
+                    <div class="battle-mini-stat">
+                        <span>O'yin decki</span>
+                        <strong>8 ta savol</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="battle-board"
+                     data-question-url="{% url 'history-battle-questions' %}"
+                     data-selected-grade="{{ selected_grade }}">
+                <div class="battle-toolbar">
+                    <div class="battle-grade-selector" role="tablist" aria-label="Sinf tanlash">
+                        {% for option in grade_options %}
+                        <button class="battle-grade-pill {% if option.value == selected_grade %}is-active{% endif %}"
+                                type="button"
+                                data-grade="{{ option.value }}">
+                            <span>{{ option.label }}</span>
+                            <small>{{ option.question_count }} ta savol</small>
+                        </button>
+                        {% empty %}
+                        <span class="battle-empty">Tarix savollari topilmadi.</span>
+                        {% endfor %}
+                    </div>
+                    <button class="hero-action-primary battle-start-button" type="button" {% if not grade_options %}disabled{% endif %}>
+                        Jangni boshlash
+                    </button>
+                </div>
+
+                <div class="battle-stage">
+                    <section class="battlefield-panel">
+                        <div class="battlefield-head">
+                            <div class="fighter-card is-player">
+                                <span class="fighter-role">Siz</span>
+                                <strong>Iluro jangchisi</strong>
+                                <small id="battle-player-score">0 ochko</small>
+                            </div>
+                            <div class="battle-round-box">
+                                <span id="battle-round-label">Boshlanish arafasi</span>
+                                <strong id="battle-timer">18</strong>
+                                <small>soniya</small>
+                            </div>
+                            <div class="fighter-card is-bot">
+                                <span class="fighter-role">Bot</span>
+                                <strong>Saroy qo'riqchisi</strong>
+                                <small id="battle-bot-score">0 ochko</small>
+                            </div>
+                        </div>
+
+                        <div class="battlefield-track">
+                            <div class="battlefield-line"></div>
+                            <div class="battlefield-banner" id="battle-banner"></div>
+                            <div class="battlefield-side is-player">
+                                <div class="battle-piece">⚔</div>
+                                <span>Iluro</span>
+                            </div>
+                            <div class="battlefield-side is-bot">
+                                <div class="battle-piece">♜</div>
+                                <span>Qo'riqchi</span>
+                            </div>
+                        </div>
+
+                        <div class="battlefield-foot">
+                            <span id="battle-status">Sinfni tanlang va jangni boshlang.</span>
+                            <span id="battle-progress">0 / 8</span>
+                        </div>
+                    </section>
+
+                    <section class="question-panel">
+                        <div class="question-panel-head">
+                            <p class="tiny-label">Savol</p>
+                            <div class="question-meta">
+                                <span id="battle-grade-badge">{% if selected_option %}{{ selected_option.label }}{% endif %}</span>
+                                <span id="battle-source-badge">Tarix</span>
+                            </div>
+                        </div>
+                        <h3 id="battle-question-text">Jang boshlangach savol shu yerda chiqadi.</h3>
+                        <div class="battle-options" id="battle-options"></div>
+                        <div class="battle-helper">
+                            <span>Deck mavjud tarix testlaridan yig'iladi.</span>
+                            <span>Botning aniqligi sinfga qarab biroz o'zgaradi.</span>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="battle-log-panel">
+                    <div class="battle-log-head">
+                        <p class="tiny-label">Jang jurnali</p>
+                        <strong>Har round natijasi shu yerda ko'rinadi.</strong>
+                    </div>
+                    <div class="battle-log" id="battle-log">
+                        <div class="battle-log-empty">O'yin boshlangach so'nggi natijalar shu yerga tushadi.</div>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    {{ grade_options|json_script:"history-battle-grade-options" }}
+    <script src="{% static 'js/history_battle.js' %}?v=20260409-games1"></script>
+</body>
+</html>

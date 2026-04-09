@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260406-ranking3">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260410-ranking4">
 </head>
 <body>
     <div class="app-layout">
@@ -81,11 +81,11 @@
                                 {% endif %}
                             </div>
                             <strong>{{ row.name }}</strong>
+                            <span class="ranking-podium-username">@{{ row.username }}</span>
                             <span>{{ row.role }}</span>
                             <span class="level-badge level-badge--podium">{{ row.level }}</span>
                             <div class="ranking-podium-stats">
                                 <span>{{ row.xp }} XP</span>
-                                <span>{{ row.best_score }}%</span>
                             </div>
                         </article>
                         {% endfor %}

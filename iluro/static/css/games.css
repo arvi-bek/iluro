@@ -1,0 +1,1457 @@
+:root {
+    --games-deep: #2f1d11;
+    --games-bronze: #a86a33;
+    --games-bronze-strong: #875122;
+    --games-sand: #f7eee1;
+    --games-paper: rgba(255, 251, 245, 0.94);
+    --games-line: rgba(138, 84, 37, 0.14);
+    --games-muted: #8b7058;
+    --games-shadow: 0 22px 48px rgba(103, 69, 38, 0.12);
+    --games-blue: #1d86d5;
+    --games-red: #d64343;
+}
+
+body.game-page {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Manrope", sans-serif;
+    color: var(--games-deep);
+    background:
+        radial-gradient(circle at top center, rgba(255, 255, 255, 0.24), transparent 30%),
+        linear-gradient(180deg, #4f5055 0%, #434549 100%);
+}
+
+body.game-page--board {
+    height: 100vh;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top center, rgba(255, 255, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, #45484d 0%, #3d4045 100%);
+}
+
+.game-page .battle-board {
+    width: min(1320px, calc(100vw - 40px));
+    margin: 18px auto;
+    padding: 18px;
+    border-radius: 34px;
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(245, 235, 219, 0.92)),
+        var(--games-paper);
+}
+
+.game-page--board .battle-board {
+    width: calc(100vw - 24px);
+    max-width: none;
+    height: calc(100vh - 24px);
+    margin: 12px auto;
+    padding: 16px;
+    border-radius: 28px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 12px;
+}
+
+.game-page .battle-board::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(29, 134, 213, 0.08), transparent 24%);
+    pointer-events: none;
+}
+
+.game-page .game-topbar,
+.game-page .game-arena,
+.game-page .game-question-panel,
+.game-page .battle-log-panel {
+    position: relative;
+    z-index: 1;
+}
+
+.game-topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.game-page--board .game-topbar {
+    margin-bottom: 0;
+    gap: 16px;
+    align-items: center;
+}
+
+.game-home-link,
+.game-config-link {
+    min-height: 42px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 18px;
+    text-decoration: none;
+    border: 1px solid rgba(47, 29, 17, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    color: #145f98;
+    font-weight: 800;
+    box-shadow: 0 12px 26px rgba(31, 30, 28, 0.08);
+}
+
+.game-config-link {
+    cursor: pointer;
+    color: var(--games-deep);
+}
+
+.game-home-icon {
+    font-size: 1.05rem;
+}
+
+.game-branding {
+    flex: 1;
+    text-align: center;
+}
+
+.game-brand-kicker {
+    margin: 6px 0 8px;
+    color: #1480cb;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.game-branding h1 {
+    margin: 0;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: clamp(2.2rem, 4vw, 3.5rem);
+    line-height: 1;
+    color: #1379bf;
+    letter-spacing: -0.05em;
+}
+
+.game-branding p {
+    margin: 10px auto 0;
+    max-width: 44rem;
+    color: rgba(47, 29, 17, 0.6);
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+.game-page--board .game-branding h1 {
+    font-size: clamp(2.7rem, 3.5vw, 4rem);
+}
+
+.game-page--board .game-branding p {
+    margin-top: 6px;
+    max-width: 56rem;
+    font-size: 1.06rem;
+}
+
+.game-topbar-actions {
+    display: grid;
+    justify-items: end;
+    gap: 12px;
+}
+
+.game-topbar-badge {
+    min-width: 136px;
+    padding: 12px 16px;
+    border-radius: 20px;
+    text-align: right;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(47, 29, 17, 0.08);
+    box-shadow: 0 12px 26px rgba(31, 30, 28, 0.08);
+}
+
+.game-topbar-badge span {
+    display: block;
+    color: #4d6577;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.game-topbar-badge strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 1.1rem;
+}
+
+.game-arena {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr) 300px;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.team-panel {
+    padding: 18px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 2px solid rgba(47, 29, 17, 0.08);
+    box-shadow: 0 22px 44px rgba(31, 30, 28, 0.1);
+}
+
+.team-panel.is-blue {
+    border-color: rgba(29, 134, 213, 0.78);
+}
+
+.team-panel.is-red {
+    border-color: rgba(214, 67, 67, 0.74);
+}
+
+.team-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.team-panel-head span {
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--games-muted);
+}
+
+.team-panel-head strong {
+    font-size: 1rem;
+}
+
+.team-panel-body {
+    padding-top: 18px;
+    display: grid;
+    justify-items: center;
+    text-align: center;
+    gap: 10px;
+}
+
+.team-avatar {
+    width: 88px;
+    height: 88px;
+    display: grid;
+    place-items: center;
+    border-radius: 26px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 238, 228, 0.94));
+    box-shadow: inset 0 0 0 1px rgba(47, 29, 17, 0.08), 0 14px 30px rgba(31, 30, 28, 0.08);
+    font-size: 2rem;
+}
+
+.team-panel.is-blue .team-avatar {
+    color: var(--games-blue);
+}
+
+.team-panel.is-red .team-avatar {
+    color: var(--games-red);
+}
+
+.team-panel-body h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    line-height: 1.05;
+}
+
+.team-panel-body p {
+    margin: 0;
+    color: var(--games-muted);
+    line-height: 1.55;
+}
+
+.center-arena-panel {
+    min-width: 0;
+    padding: 22px;
+    border-radius: 32px;
+    background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.5), transparent 44%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 232, 214, 0.94));
+    border: 1px solid rgba(47, 29, 17, 0.08);
+    box-shadow: 0 22px 44px rgba(31, 30, 28, 0.1);
+}
+
+.battle-round-box small {
+    color: var(--games-muted);
+    font-size: 0.82rem;
+}
+
+.battlefield-banner.is-player-pulse {
+    box-shadow: 0 16px 34px rgba(29, 134, 213, 0.35);
+}
+
+.battlefield-banner.is-bot-pulse {
+    box-shadow: 0 16px 34px rgba(214, 67, 67, 0.3);
+}
+
+.game-question-panel {
+    margin-top: 18px;
+}
+
+.battle-playfield {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr) minmax(280px, 1fr);
+    gap: 18px;
+    margin-top: 18px;
+    align-items: stretch;
+}
+
+.game-page--board .battle-playfield {
+    grid-template-columns: 390px minmax(0, 1fr) 390px;
+    gap: 14px;
+    margin-top: 0;
+    min-height: 0;
+    height: 100%;
+}
+
+.battle-question-card {
+    padding: 14px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(47, 29, 17, 0.08);
+    box-shadow: 0 22px 44px rgba(31, 30, 28, 0.1);
+    display: grid;
+    gap: 12px;
+}
+
+.game-page--board .battle-question-card {
+    min-height: 0;
+    height: 100%;
+    padding: 12px;
+    gap: 10px;
+}
+
+.battle-question-card.is-blue {
+    border-color: rgba(29, 134, 213, 0.72);
+}
+
+.battle-question-card.is-red {
+    border-color: rgba(214, 67, 67, 0.72);
+}
+
+.battle-question-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.battle-question-card__top h2 {
+    margin: 6px 0 0;
+    font-size: clamp(1.2rem, 1.6vw, 1.7rem);
+    line-height: 1.05;
+}
+
+.battle-score-pill {
+    min-width: 48px;
+    height: 48px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(29, 134, 213, 0.12), rgba(29, 134, 213, 0.04));
+    color: var(--games-blue);
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.battle-score-pill.is-red {
+    background: linear-gradient(180deg, rgba(214, 67, 67, 0.14), rgba(214, 67, 67, 0.04));
+    color: var(--games-red);
+}
+
+.battle-question-card__body {
+    padding: 18px;
+    border-radius: 24px;
+    display: grid;
+    gap: 14px;
+    min-height: 520px;
+}
+
+.game-page--board .battle-question-card__body {
+    min-height: 0;
+    height: 100%;
+    align-content: start;
+    padding: 16px;
+    gap: 12px;
+}
+
+.battle-question-card__body.is-blue-soft {
+    background: linear-gradient(180deg, rgba(225, 240, 252, 0.82), rgba(255, 255, 255, 0.88));
+}
+
+.battle-question-card__body.is-red-soft {
+    background: linear-gradient(180deg, rgba(252, 231, 231, 0.8), rgba(255, 255, 255, 0.9));
+}
+
+.battle-question-card__body h3 {
+    margin: 0;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: clamp(1.28rem, 1.5vw, 1.7rem);
+    line-height: 1.16;
+}
+
+.game-page--board .battle-question-card__body h3 {
+    font-size: clamp(1.45rem, 1.8vw, 2rem);
+    line-height: 1.14;
+}
+
+.battle-options--stack {
+    margin-top: 0;
+    align-content: start;
+}
+
+.battle-option {
+    min-height: 72px;
+    gap: 8px;
+}
+
+.game-page--board .battle-option {
+    min-height: 84px;
+    padding: 18px 18px;
+}
+
+.game-page--board .battle-option strong {
+    font-size: 1.22rem;
+    line-height: 1.16;
+}
+
+.game-page--board .battle-option small {
+    font-size: 0.9rem;
+}
+
+.battle-option strong {
+    display: block;
+}
+
+.battle-card-note {
+    margin: 0;
+    color: var(--games-muted);
+    font-size: 0.96rem;
+    line-height: 1.5;
+}
+
+.battle-center-stage {
+    min-width: 0;
+    padding: 16px;
+    border-radius: 30px;
+    background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.52), transparent 44%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(244, 232, 214, 0.95));
+    border: 1px solid rgba(47, 29, 17, 0.08);
+    box-shadow: 0 22px 44px rgba(31, 30, 28, 0.1);
+    display: grid;
+    gap: 16px;
+    align-content: start;
+}
+
+.game-page--board .battle-center-stage {
+    min-height: 0;
+    height: 100%;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+}
+
+.battle-duel-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+
+.battle-mini-score {
+    padding: 12px 14px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(47, 29, 17, 0.08);
+    display: grid;
+    gap: 6px;
+}
+
+.battle-mini-score span {
+    color: var(--games-muted);
+    font-weight: 700;
+}
+
+.battle-mini-score strong {
+    color: #1480cb;
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.game-page--board .battle-mini-score strong {
+    font-size: 2.5rem;
+}
+
+.battle-mini-score.is-right {
+    text-align: right;
+}
+
+.battlefield-track.is-compact {
+    min-height: 300px;
+    margin-top: 0;
+}
+
+.game-page--board .battlefield-track.is-compact {
+    min-height: 0;
+    height: 100%;
+}
+
+.battlefield-track.is-compact .battlefield-side {
+    top: 62%;
+}
+
+.battlefield-track.is-compact .battle-piece {
+    width: 84px;
+    height: 84px;
+}
+
+.game-page--board .battlefield-track.is-compact .battle-piece {
+    width: 104px;
+    height: 104px;
+}
+
+.tiny-label {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    color: var(--games-bronze);
+    text-transform: uppercase;
+}
+
+.game-overlay {
+    position: fixed;
+    inset: 0;
+    padding: 24px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(29, 31, 34, 0.68);
+    backdrop-filter: blur(8px);
+    z-index: 40;
+}
+
+.game-overlay.is-visible {
+    display: flex;
+}
+
+.game-setup-modal {
+    width: min(880px, calc(100vw - 36px));
+    padding: 28px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(47, 29, 17, 0.08);
+    box-shadow: 0 28px 80px rgba(13, 14, 17, 0.34);
+}
+
+.game-page--board .game-setup-modal {
+    width: min(1100px, calc(100vw - 64px));
+    padding: 32px;
+}
+
+.game-page--board .game-grade-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.game-page--board .team-setup-card {
+    min-height: 180px;
+    padding: 22px 18px;
+}
+
+.game-page--board .team-setup-card strong {
+    font-size: 1.18rem;
+}
+
+.game-page--board .team-setup-card input {
+    min-height: 60px;
+    font-size: 1.25rem;
+}
+
+.game-page--board .game-start-btn {
+    min-height: 62px;
+    padding: 0 34px;
+    font-size: 1.12rem;
+}
+
+.game-setup-modal h2 {
+    margin: 0;
+    text-align: center;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: #1480cb;
+    letter-spacing: -0.05em;
+}
+
+.game-setup-note {
+    margin: 12px auto 0;
+    max-width: 44rem;
+    text-align: center;
+    color: var(--games-muted);
+    line-height: 1.65;
+}
+
+.game-grade-grid {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+    gap: 12px;
+}
+
+.game-grade-card {
+    min-height: 82px;
+    padding: 16px;
+    border: 1px solid rgba(47, 29, 17, 0.1);
+    border-radius: 20px;
+    background: #fbfaf8;
+    display: grid;
+    gap: 4px;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.game-grade-card strong {
+    font-size: 1.1rem;
+}
+
+.game-grade-card small {
+    color: var(--games-muted);
+}
+
+.game-grade-card:hover,
+.game-grade-card.is-active {
+    transform: translateY(-1px);
+    border-color: rgba(20, 128, 203, 0.34);
+    box-shadow: 0 16px 34px rgba(29, 134, 213, 0.12);
+}
+
+.teams-setup-grid {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+}
+
+.team-setup-card {
+    padding: 18px 16px;
+    border-radius: 22px;
+    border: 2px solid rgba(47, 29, 17, 0.12);
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.team-setup-card.is-blue {
+    border-color: rgba(29, 134, 213, 0.88);
+}
+
+.team-setup-card.is-red {
+    border-color: rgba(214, 67, 67, 0.84);
+}
+
+.team-setup-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.team-setup-card.is-blue .team-setup-icon {
+    color: var(--games-blue);
+}
+
+.team-setup-card.is-red .team-setup-icon {
+    color: var(--games-red);
+}
+
+.team-setup-card strong {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+}
+
+.team-setup-card input {
+    width: 100%;
+    min-height: 54px;
+    padding: 0 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(47, 29, 17, 0.12);
+    background: #fff;
+    font: inherit;
+    text-align: center;
+}
+
+.team-setup-card input:focus {
+    outline: 2px solid rgba(20, 128, 203, 0.2);
+    border-color: rgba(20, 128, 203, 0.36);
+}
+
+.team-setup-vs {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: clamp(1.8rem, 3vw, 3rem);
+    font-weight: 700;
+    color: #1480cb;
+}
+
+.game-setup-actions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: center;
+}
+
+.game-start-btn {
+    min-height: 54px;
+    padding: 0 28px;
+    border: 0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #1480cb, #1271b4);
+    color: #fff;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 18px 34px rgba(20, 128, 203, 0.24);
+}
+
+.game-start-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.games-main {
+    gap: 20px;
+}
+
+.games-hero,
+.games-section,
+.battle-intro,
+.battle-board,
+.battle-log-panel,
+.battlefield-panel,
+.question-panel {
+    border: 1px solid var(--games-line);
+    background: var(--games-paper);
+    box-shadow: var(--games-shadow);
+}
+
+.games-hero,
+.battle-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
+    gap: 22px;
+    padding: 28px;
+    border-radius: 30px;
+    background:
+        radial-gradient(circle at top right, rgba(168, 106, 51, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(255, 251, 245, 0.98), rgba(246, 236, 221, 0.92));
+}
+
+.games-hero-copy h2,
+.battle-intro-copy h2 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: -0.04em;
+    font-size: clamp(1.9rem, 3vw, 2.8rem);
+    line-height: 1.04;
+}
+
+.games-hero-copy p:last-child,
+.battle-intro-copy p:last-child {
+    margin: 14px 0 0;
+    max-width: 42rem;
+    color: var(--games-muted);
+    line-height: 1.7;
+}
+
+.games-hero-actions {
+    margin-top: 20px;
+}
+
+.games-hero-aside,
+.battle-intro-side {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    padding: 20px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(138, 84, 37, 0.12);
+}
+
+.games-hero-badge,
+.battle-mini-stat span,
+.battle-preview span {
+    color: var(--games-muted);
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.games-hero-aside strong {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 2.1rem;
+    letter-spacing: -0.04em;
+}
+
+.games-hero-aside small,
+.battle-mini-stat small,
+.battle-preview small {
+    color: var(--games-muted);
+    line-height: 1.55;
+}
+
+.games-section,
+.battle-board {
+    border-radius: 28px;
+    padding: 24px;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.game-card {
+    padding: 20px;
+    border-radius: 24px;
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(252, 246, 238, 0.74));
+}
+
+.game-card.is-muted {
+    opacity: 0.76;
+}
+
+.game-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.game-card-top span,
+.game-card-top strong {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--games-bronze-strong);
+}
+
+.game-card h4 {
+    margin: 12px 0 8px;
+    font-size: 1.2rem;
+}
+
+.game-card p {
+    margin: 0;
+    color: var(--games-muted);
+    line-height: 1.65;
+}
+
+.battle-preview {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    display: grid;
+    gap: 6px;
+}
+
+.battle-preview strong {
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.battle-mini-stat {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    display: grid;
+    gap: 6px;
+}
+
+.battle-mini-stat strong {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.18rem;
+}
+
+.battle-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.battle-grade-selector {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.battle-grade-pill {
+    min-height: 54px;
+    padding: 10px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--games-deep);
+    display: grid;
+    gap: 3px;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.battle-grade-pill span {
+    font-weight: 800;
+}
+
+.battle-grade-pill small {
+    color: var(--games-muted);
+    font-size: 0.76rem;
+}
+
+.battle-grade-pill:hover,
+.battle-grade-pill.is-active {
+    transform: translateY(-1px);
+    border-color: rgba(138, 84, 37, 0.28);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 238, 225, 0.94));
+}
+
+.battle-start-button[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.battle-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr);
+    gap: 18px;
+}
+
+.battlefield-panel,
+.question-panel,
+.battle-log-panel {
+    border-radius: 24px;
+    padding: 22px;
+}
+
+.game-page--board .battle-log-panel {
+    display: none;
+}
+
+.battlefield-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.fighter-card,
+.battle-round-box {
+    padding: 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    display: grid;
+    gap: 6px;
+}
+
+.fighter-card.is-player {
+    background: linear-gradient(180deg, rgba(255, 250, 244, 0.92), rgba(246, 236, 221, 0.94));
+}
+
+.fighter-card.is-bot {
+    background: linear-gradient(180deg, rgba(244, 238, 230, 0.92), rgba(237, 227, 211, 0.92));
+}
+
+.fighter-role,
+.battle-round-box span {
+    color: var(--games-muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.fighter-card strong,
+.battle-round-box strong {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.1rem;
+}
+
+.battle-round-box {
+    justify-items: center;
+    align-self: center;
+    min-width: 126px;
+}
+
+.battle-round-box strong {
+    font-size: 2.4rem;
+    line-height: 1;
+}
+
+.battlefield-track {
+    position: relative;
+    min-height: 270px;
+    margin-top: 18px;
+    padding: 20px 24px;
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at center, rgba(168, 106, 51, 0.1), transparent 58%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(249, 242, 233, 0.88));
+    overflow: hidden;
+}
+
+.battlefield-line {
+    position: absolute;
+    top: 50%;
+    left: 48px;
+    right: 48px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(138, 84, 37, 0.12);
+    transform: translateY(-50%);
+}
+
+.battlefield-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 74px;
+    height: 74px;
+    border-radius: 24px;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, var(--games-bronze), var(--games-bronze-strong));
+    box-shadow: 0 16px 30px rgba(138, 84, 37, 0.22);
+    transition: left 260ms ease;
+}
+
+.battlefield-banner::before {
+    content: "⚑";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #fff9f2;
+    font-size: 1.7rem;
+}
+
+.battlefield-side {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+}
+
+.battlefield-side.is-player {
+    left: 28px;
+}
+
+.battlefield-side.is-bot {
+    right: 28px;
+}
+
+.battle-piece {
+    width: 88px;
+    height: 88px;
+    border-radius: 28px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    box-shadow: 0 14px 28px rgba(103, 69, 38, 0.08);
+    font-size: 2.2rem;
+}
+
+.battlefield-side.is-player .battle-piece,
+.battlefield-side.is-bot .battle-piece {
+    font-size: 0;
+}
+
+.battlefield-side.is-player .battle-piece::before,
+.battlefield-side.is-bot .battle-piece::before {
+    font-size: 2.2rem;
+}
+
+.battlefield-side.is-player .battle-piece::before {
+    content: "\2694";
+}
+
+.battlefield-side.is-bot .battle-piece::before {
+    content: "\265C";
+}
+
+.battlefield-side span {
+    font-weight: 800;
+    color: var(--games-muted);
+}
+
+.battlefield-foot,
+.question-panel-head,
+.battle-helper,
+.battle-log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.battlefield-foot {
+    margin-top: 16px;
+    color: var(--games-muted);
+    font-size: 0.92rem;
+}
+
+.question-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.question-meta span,
+.battle-helper span {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(168, 106, 51, 0.08);
+    color: var(--games-bronze-strong);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.question-panel h3 {
+    margin: 16px 0 0;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: clamp(1.3rem, 2vw, 1.8rem);
+    line-height: 1.18;
+}
+
+.battle-options {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.battle-option {
+    width: 100%;
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--games-deep);
+    text-align: left;
+    display: grid;
+    gap: 6px;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.battle-option:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(138, 84, 37, 0.24);
+}
+
+.battle-option strong {
+    font-size: 1rem;
+}
+
+.battle-option small {
+    color: var(--games-muted);
+    font-size: 0.82rem;
+}
+
+.battle-option.is-selected {
+    background: linear-gradient(180deg, rgba(255, 250, 244, 0.96), rgba(246, 236, 221, 0.94));
+    border-color: rgba(138, 84, 37, 0.28);
+}
+
+.battle-option.is-correct {
+    background: linear-gradient(180deg, rgba(236, 247, 236, 0.96), rgba(222, 243, 223, 0.94));
+    border-color: rgba(66, 136, 82, 0.34);
+}
+
+.battle-option.is-wrong {
+    background: linear-gradient(180deg, rgba(252, 239, 236, 0.96), rgba(248, 226, 218, 0.94));
+    border-color: rgba(170, 84, 54, 0.3);
+}
+
+.battle-option:disabled {
+    cursor: default;
+}
+
+.battle-helper {
+    margin-top: 18px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.battle-log-head strong {
+    font-size: 0.98rem;
+}
+
+.battle-log {
+    margin-top: 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.battle-log-item,
+.battle-log-empty {
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(138, 84, 37, 0.1);
+    background: rgba(255, 255, 255, 0.68);
+}
+
+.battle-log-item {
+    display: grid;
+    gap: 4px;
+}
+
+.battle-log-item strong {
+    font-size: 0.98rem;
+}
+
+.battle-log-item small,
+.battle-log-empty {
+    color: var(--games-muted);
+    line-height: 1.5;
+}
+
+.battle-log-item.is-player strong {
+    color: #356237;
+}
+
+.battle-log-item.is-bot strong {
+    color: #8f4f31;
+}
+
+.battle-log-item.is-draw strong {
+    color: var(--games-bronze-strong);
+}
+
+.battle-empty {
+    color: var(--games-muted);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 1180px) {
+    .battle-stage,
+    .games-hero,
+    .battle-intro {
+        grid-template-columns: 1fr;
+    }
+
+    .game-arena {
+        grid-template-columns: 1fr;
+    }
+
+    .battle-playfield {
+        grid-template-columns: 1fr;
+    }
+
+    .game-topbar {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .game-branding,
+    .game-topbar-actions {
+        justify-items: start;
+        text-align: left;
+    }
+
+    .game-branding p {
+        margin-left: 0;
+    }
+
+    .game-page--board .battle-board {
+        height: auto;
+        overflow: visible;
+    }
+
+    .game-page--board .battle-log-panel {
+        display: block;
+    }
+
+    .game-page--board .battle-playfield {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+}
+
+@media (max-width: 760px) {
+    .battle-toolbar,
+    .battlefield-head,
+    .question-panel-head,
+    .battlefield-foot {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .battlefield-head {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .battle-round-box {
+        justify-items: start;
+        width: 100%;
+    }
+
+    .battle-toolbar {
+        align-items: stretch;
+    }
+
+    .battle-start-button {
+        width: 100%;
+    }
+
+    .battle-grade-selector {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .teams-setup-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .team-setup-vs {
+        order: 2;
+        text-align: center;
+    }
+
+    .battle-duel-head {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    .games-hero,
+    .battle-intro,
+    .games-section,
+    .battle-board,
+    .battlefield-panel,
+    .question-panel,
+    .battle-log-panel {
+        padding: 18px 16px;
+        border-radius: 22px;
+    }
+
+    .games-hero-copy h2,
+    .battle-intro-copy h2 {
+        font-size: 1.52rem;
+        max-width: none;
+    }
+
+    .battle-grade-selector {
+        grid-template-columns: 1fr;
+    }
+
+    .battlefield-track {
+        min-height: 220px;
+        padding: 16px;
+    }
+
+    .battle-piece {
+        width: 68px;
+        height: 68px;
+        border-radius: 22px;
+        font-size: 1.8rem;
+    }
+
+    .battlefield-line {
+        left: 30px;
+        right: 30px;
+    }
+
+    .battlefield-side.is-player {
+        left: 12px;
+    }
+
+    .battlefield-side.is-bot {
+        right: 12px;
+    }
+
+    .battlefield-side span {
+        font-size: 0.76rem;
+    }
+
+    .battle-option {
+        padding: 14px 14px;
+    }
+
+    .battle-helper span,
+    .question-meta span {
+        min-height: 30px;
+        font-size: 0.72rem;
+    }
+
+    .game-page .battle-board {
+        width: calc(100vw - 18px);
+        margin: 9px auto;
+        padding: 12px;
+        border-radius: 24px;
+    }
+
+    .game-topbar {
+        gap: 12px;
+    }
+
+    .game-home-link,
+    .game-config-link {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .game-topbar-actions {
+        justify-items: stretch;
+    }
+
+    .game-topbar-badge {
+        width: 100%;
+        text-align: center;
+    }
+
+    .team-panel,
+    .center-arena-panel {
+        padding: 16px;
+        border-radius: 22px;
+    }
+
+    .game-setup-modal {
+        padding: 22px 18px;
+        border-radius: 24px;
+    }
+
+    .game-setup-modal h2 {
+        font-size: 1.9rem;
+    }
+
+    .game-grade-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .team-setup-card input {
+        min-height: 48px;
+    }
+
+    .battle-question-card__body {
+        min-height: auto;
+        padding: 16px;
+    }
+
+    .battlefield-track.is-compact {
+        min-height: 240px;
+    }
+}

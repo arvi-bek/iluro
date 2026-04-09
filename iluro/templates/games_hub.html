@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | O'yinlar</title>
+    {% include "partials/favicon.html" %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260406-pitch2">
+    <link rel="stylesheet" href="{% static 'css/games.css' %}?v=20260409-games1">
+</head>
+<body>
+    <div class="dashboard-shell">
+        {% include "partials/app_sidebar_v2.html" %}
+
+        <main class="dashboard-main games-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="tiny-label">O'yinlar</p>
+                    <h1>Tarixni tezkor battle formatida takrorlash uchun alohida maydon.</h1>
+                </div>
+                <a class="topbar-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
+            </header>
+
+            <section class="games-hero">
+                <div class="games-hero-copy">
+                    <p class="tiny-label">Tarix jangi</p>
+                    <h2>Mavjud tarix testlaridan yangi duel deck tuziladi va har safar boshqa savollar bilan o'ynaysiz.</h2>
+                    <p>Avval sinfni tanlaysiz, keyin o'yin o'sha sinf bo'yicha saytdagi savollardan battle turini yig'ib beradi.</p>
+                    <div class="games-hero-actions">
+                        <a class="hero-action-primary" href="{% url 'history-battle' %}" target="_blank" rel="noopener noreferrer">Tarix jangini ochish</a>
+                    </div>
+                </div>
+                <div class="games-hero-aside">
+                    <span class="games-hero-badge">Mavjud sinflar</span>
+                    <strong>{% if grade_options %}{{ grade_options|length }} ta{% else %}0 ta{% endif %}</strong>
+                    <small>Hozircha tarix savollaridan avtomatik yig'iladigan battle tayyor.</small>
+                </div>
+            </section>
+
+            <section class="games-section">
+                <div class="section-head">
+                    <div>
+                        <p class="tiny-label">Aktiv o'yinlar</p>
+                        <h3>Hozircha bitta o'yin bor, keyin boshqa fanlar ham ulanadi.</h3>
+                    </div>
+                </div>
+
+                <div class="games-grid">
+                    {% for game in games %}
+                    <article class="game-card {% if game.href %}is-active{% else %}is-muted{% endif %}">
+                        <div class="game-card-top">
+                            <span>{{ game.status }}</span>
+                            <strong>{{ game.meta }}</strong>
+                        </div>
+                        <h4>{{ game.title }}</h4>
+                        <p>{{ game.description }}</p>
+                        {% if game.href %}
+                        <a class="card-link" href="{% url game.href %}" {% if game.href == 'history-battle' %}target="_blank" rel="noopener noreferrer"{% endif %}>Ochish</a>
+                        {% else %}
+                        <span class="card-link disabled">Tez orada</span>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

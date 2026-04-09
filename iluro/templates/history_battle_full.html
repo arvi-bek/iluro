@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Tarix jangi</title>
+    {% include "partials/favicon.html" %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/games.css' %}?v=20260409-games6">
+</head>
+<body class="game-page {% if screen_mode == 'board' %}game-page--board{% endif %}">
+    <main class="game-shell battle-board"
+          data-question-url="{% url 'history-battle-questions' %}"
+          data-selected-grade="{{ selected_grade }}"
+          data-screen-mode="{{ screen_mode }}">
+        <header class="game-topbar">
+            <a class="game-home-link" href="{% url 'games-hub' %}">
+                <span class="game-home-icon">&#8962;</span>
+                <span>Home</span>
+            </a>
+            <div class="game-branding">
+                <p class="game-brand-kicker">Iluro tarix battle</p>
+                <h1>Tarix Test Jangi</h1>
+                <p>Mavjud tarix savollaridan sinf bo'yicha jang deck tuziladi.</p>
+            </div>
+            <div class="game-topbar-actions">
+                <button class="game-config-link" type="button" id="battle-configure-btn">
+                    Jamoalarni sozlash
+                </button>
+                <div class="game-topbar-badge">
+                    <span id="battle-topbar-grade">Tarix</span>
+                    <strong id="battle-topbar-count">3 daqiqa</strong>
+                </div>
+            </div>
+        </header>
+
+        <section class="battle-playfield">
+            <article class="battle-question-card is-blue">
+                <div class="battle-question-card__top">
+                    <div>
+                        <p class="tiny-label">Ko'k jamoa</p>
+                        <h2 id="battle-team-one-name">1-jamoa</h2>
+                    </div>
+                    <strong class="battle-score-pill" id="battle-player-score">0</strong>
+                </div>
+                <div class="battle-question-card__body is-blue-soft">
+                    <div class="question-meta">
+                        <span id="battle-grade-badge">{% if selected_option %}{{ selected_option.label }}{% endif %}</span>
+                        <span id="battle-left-source-badge">Tarix</span>
+                    </div>
+                    <h3 id="battle-left-question-text">O'yin boshlangach ko'k jamoaga savol shu yerda chiqadi.</h3>
+                    <div class="battle-options battle-options--stack" id="battle-left-options"></div>
+                </div>
+                <p class="battle-card-note" id="battle-team-one-meta">Start oynasida nom kiriting.</p>
+            </article>
+
+            <article class="battle-center-stage">
+                <div class="battle-duel-head">
+                    <div class="battle-mini-score">
+                        <span id="battle-left-label">1-jamoa</span>
+                        <strong id="battle-left-mini-score">0</strong>
+                    </div>
+                    <div class="battle-round-box">
+                        <span id="battle-round-label">Start kutilyapti</span>
+                        <strong id="battle-timer">03:00</strong>
+                        <small>umumiy vaqt</small>
+                    </div>
+                    <div class="battle-mini-score is-right">
+                        <span id="battle-right-label">2-jamoa</span>
+                        <strong id="battle-right-mini-score">0</strong>
+                    </div>
+                </div>
+
+                <div class="battlefield-track is-compact">
+                    <div class="battlefield-line"></div>
+                    <div class="battlefield-banner" id="battle-banner"></div>
+                    <div class="battlefield-side is-player">
+                        <div class="battle-piece">&#9876;</div>
+                        <span id="battle-left-icon-label">Ko'k</span>
+                    </div>
+                    <div class="battlefield-side is-bot">
+                        <div class="battle-piece">&#9820;</div>
+                        <span id="battle-right-icon-label">Qizil</span>
+                    </div>
+                </div>
+
+                <div class="battlefield-foot">
+                    <span id="battle-status">Sinfni tanlang va o'yinni boshlang.</span>
+                    <span id="battle-progress">0 round | finish 5</span>
+                </div>
+            </article>
+
+            <article class="battle-question-card is-red">
+                <div class="battle-question-card__top">
+                    <div>
+                        <p class="tiny-label">Qizil jamoa</p>
+                        <h2 id="battle-team-two-name">2-jamoa</h2>
+                    </div>
+                    <strong class="battle-score-pill is-red" id="battle-bot-score">0</strong>
+                </div>
+                <div class="battle-question-card__body is-red-soft">
+                    <div class="question-meta">
+                        <span id="battle-right-grade-badge">{% if selected_option %}{{ selected_option.label }}{% endif %}</span>
+                        <span id="battle-right-source-badge">Tarix</span>
+                    </div>
+                    <h3 id="battle-right-question-text">O'yin boshlangach qizil jamoaga savol shu yerda chiqadi.</h3>
+                    <div class="battle-options battle-options--stack" id="battle-right-options"></div>
+                </div>
+                <p class="battle-card-note" id="battle-team-two-meta">Ikkinchi jamoa shu yerda o'ynaydi.</p>
+            </article>
+        </section>
+
+        <section class="battle-log-panel">
+            <div class="battle-log-head">
+                <p class="tiny-label">Jang jurnali</p>
+                <strong>Har round natijasi shu yerda ko'rinadi.</strong>
+            </div>
+            <div class="battle-log" id="battle-log">
+                <div class="battle-log-empty">O'yin boshlangach so'nggi natijalar shu yerga tushadi.</div>
+            </div>
+        </section>
+    </main>
+
+    <section class="game-overlay is-visible" id="battle-setup-overlay" aria-label="Jamoalarni tayyorlash">
+        <div class="game-setup-modal">
+            <p class="game-brand-kicker">Tarix jangi</p>
+            <h2>Jamoalarni tayyorlang</h2>
+            <p class="game-setup-note">Sinfni tanlang, keyin ikki jamoa nomini kiriting. Nomlar brauzerning o'zida vaqtincha saqlanadi, bazaga yozilmaydi.</p>
+
+            <div class="game-grade-grid" role="tablist" aria-label="Sinf tanlash">
+                {% for option in grade_options %}
+                <button class="game-grade-card {% if option.value == selected_grade %}is-active{% endif %}"
+                        type="button"
+                        data-grade="{{ option.value }}">
+                    <strong>{{ option.label }}</strong>
+                    <small>{{ option.question_count }} ta savol</small>
+                </button>
+                {% empty %}
+                <div class="battle-empty">Tarix savollari topilmadi.</div>
+                {% endfor %}
+            </div>
+
+            <div class="teams-setup-grid">
+                <article class="team-setup-card is-blue">
+                    <div class="team-setup-icon">&#128101;</div>
+                    <strong>1-jamoa (ko'k)</strong>
+                    <input type="text" id="battle-team-one-input" maxlength="24" placeholder="Jamoa nomi">
+                </article>
+
+                <div class="team-setup-vs">VS</div>
+
+                <article class="team-setup-card is-red">
+                    <div class="team-setup-icon">&#128101;</div>
+                    <strong>2-jamoa (qizil)</strong>
+                    <input type="text" id="battle-team-two-input" maxlength="24" placeholder="Jamoa nomi">
+                </article>
+            </div>
+
+            <div class="game-setup-actions">
+                <button class="game-start-btn" type="button" id="battle-start-btn" {% if not grade_options %}disabled{% endif %}>
+                    O'yinni boshlash
+                </button>
+            </div>
+        </div>
+    </section>
+
+    {{ grade_options|json_script:"history-battle-grade-options" }}
+    <script src="{% static 'js/history_battle_duel.js' %}?v=20260409-games5"></script>
+</body>
+</html>

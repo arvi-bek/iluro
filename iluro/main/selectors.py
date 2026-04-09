@@ -1,4 +1,8 @@
+import random
+import re
+
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Count, Max, Q, Sum, Value
 from django.db.models.functions import Coalesce
@@ -7,6 +11,7 @@ from django.utils import timezone
 from .models import (
     Book,
     GRADE_CHOICES,
+    PracticeExercise,
     PracticeSet,
     PracticeSetAttempt,
     Question,
@@ -63,11 +68,187 @@ LITERATURE_KEYWORDS = (
     "qahramon",
 )
 
+HISTORY_GRADE_PATTERN = re.compile(r"(?<!\d)(5|6|7|8|9|10|11)\s*[- ]?\s*sinf", re.IGNORECASE)
+HISTORY_GAME_CACHE_SECONDS = 900
+HISTORY_BATTLE_QUESTION_TARGET = 30
+
 
 def is_language_subject(subject_or_name):
     subject_name = getattr(subject_or_name, "name", subject_or_name) or ""
     lowered = subject_name.lower()
     return "ona tili" in lowered or "adab" in lowered
+
+
+def extract_history_grade_label(title):
+    match = HISTORY_GRADE_PATTERN.search(title or "")
+    return match.group(1) if match else ""
+
+
+def extract_history_grade_from_parts(*parts):
+    for part in parts:
+        grade = extract_history_grade_label(part)
+        if grade:
+            return grade
+    return ""
+
+
+def _top_up_history_question_pool(question_pool, limit):
+    if not question_pool or len(question_pool) >= limit:
+        return question_pool[:limit]
+
+    expanded = list(question_pool)
+    while len(expanded) < limit:
+        candidates = [
+            item
+            for item in question_pool
+            if not expanded or item["text"] != expanded[-1]["text"]
+        ] or question_pool
+        expanded.append(random.choice(candidates).copy())
+    return expanded[:limit]
+
+
+def _get_history_subject():
+    return Subject.objects.filter(name__icontains="tarix").order_by("name").first()
+
+
+def get_history_game_grade_options():
+    cache_key = "history-game-grade-options"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    history_subject = _get_history_subject()
+    if not history_subject:
+        cache.set(cache_key, [], HISTORY_GAME_CACHE_SECONDS)
+        return []
+
+    tests = list(
+        Test.objects.filter(subject=history_subject)
+        .annotate(question_count=Count("question"))
+        .values("title", "question_count")
+    )
+    exercises = list(
+        PracticeExercise.objects.filter(subject=history_subject, answer_mode="choice")
+        .annotate(choice_count=Count("choices"))
+        .values("title", "topic", "source_book", "choice_count")
+    )
+    buckets = {}
+    for test in tests:
+        grade = extract_history_grade_label(test["title"])
+        if not grade:
+            continue
+        bucket = buckets.setdefault(
+            grade,
+            {
+                "value": grade,
+                "label": f"{grade}-sinf",
+                "question_count": 0,
+                "test_count": 0,
+            },
+        )
+        bucket["question_count"] += test["question_count"]
+        bucket["test_count"] += 1
+
+    for exercise in exercises:
+        grade = extract_history_grade_from_parts(
+            exercise["topic"],
+            exercise["title"],
+            exercise["source_book"],
+        )
+        if not grade or exercise["choice_count"] < 4:
+            continue
+        bucket = buckets.setdefault(
+            grade,
+            {
+                "value": grade,
+                "label": f"{grade}-sinf",
+                "question_count": 0,
+                "test_count": 0,
+            },
+        )
+        bucket["question_count"] += 1
+
+    options = [
+        buckets[key]
+        for key in sorted(buckets.keys(), key=lambda item: int(item))
+        if buckets[key]["question_count"] > 0
+    ]
+    cache.set(cache_key, options, HISTORY_GAME_CACHE_SECONDS)
+    return options
+
+
+def get_history_battle_questions(grade="", limit=8):
+    history_subject = _get_history_subject()
+    if not history_subject:
+        return []
+
+    selected_grade = str(grade or "").strip()
+    tests = list(Test.objects.filter(subject=history_subject).prefetch_related("question_set__choice_set"))
+    exercises = list(
+        PracticeExercise.objects.filter(subject=history_subject, answer_mode="choice").prefetch_related("choices")
+    )
+    if selected_grade:
+        tests = [test for test in tests if extract_history_grade_label(test.title) == selected_grade]
+        exercises = [
+            exercise
+            for exercise in exercises
+            if extract_history_grade_from_parts(exercise.topic, exercise.title, exercise.source_book) == selected_grade
+        ]
+
+    question_pool = []
+    for test in tests:
+        for question in test.question_set.all():
+            choices = list(question.choice_set.all())
+            correct_choices = [choice for choice in choices if choice.is_correct]
+            wrong_choices = [choice for choice in choices if not choice.is_correct]
+            if len(correct_choices) != 1 or len(wrong_choices) < 3:
+                continue
+
+            selected_choices = [correct_choices[0], *random.sample(wrong_choices, 3)]
+            random.shuffle(selected_choices)
+            correct_index = next(
+                (index for index, choice in enumerate(selected_choices) if choice.is_correct),
+                0,
+            )
+            question_pool.append(
+                {
+                    "text": question.text.strip(),
+                    "options": [choice.text.strip() for choice in selected_choices],
+                    "correct_index": correct_index,
+                    "difficulty": normalize_difficulty_label(question.difficulty),
+                    "source_title": test.title,
+                    "grade": extract_history_grade_label(test.title),
+                }
+            )
+
+    for exercise in exercises:
+        choices = list(exercise.choices.all())
+        correct_choices = [choice for choice in choices if choice.is_correct]
+        wrong_choices = [choice for choice in choices if not choice.is_correct]
+        if len(correct_choices) != 1 or len(wrong_choices) < 3:
+            continue
+
+        selected_choices = [correct_choices[0], *random.sample(wrong_choices, 3)]
+        random.shuffle(selected_choices)
+        correct_index = next(
+            (index for index, choice in enumerate(selected_choices) if choice.is_correct),
+            0,
+        )
+        source_title = exercise.topic or exercise.title or "Tarix mashqi"
+        grade = extract_history_grade_from_parts(exercise.topic, exercise.title, exercise.source_book)
+        question_pool.append(
+            {
+                "text": exercise.prompt.strip(),
+                "options": [choice.text.strip() for choice in selected_choices],
+                "correct_index": correct_index,
+                "difficulty": normalize_difficulty_label(exercise.difficulty),
+                "source_title": source_title,
+                "grade": grade,
+            }
+        )
+
+    random.shuffle(question_pool)
+    return _top_up_history_question_pool(question_pool, limit)
 
 
 def get_book_filter_config(subject):

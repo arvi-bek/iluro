@@ -31,6 +31,13 @@
                 <path d="M19 19v-7" />
                 <path d="M4 19.5h16" />
             </symbol>
+            <symbol id="icon-games" viewBox="0 0 24 24">
+                <path d="M6.5 8.5h11a3 3 0 0 1 2.9 3.8l-1.1 4A3 3 0 0 1 16.4 18H7.6a3 3 0 0 1-2.9-1.7l-1.1-4A3 3 0 0 1 6.5 8.5Z" />
+                <path d="M8.5 12h3" />
+                <path d="M10 10.5v3" />
+                <circle cx="15.7" cy="11.4" r=".9" fill="currentColor" stroke="none" />
+                <circle cx="17.4" cy="13.1" r=".9" fill="currentColor" stroke="none" />
+            </symbol>
         </defs>
     </svg>
     <a class="app-sidebar-brand app-sidebar-brand-desktop" href="{% url 'index' %}" aria-label="ILURO bosh sahifa">
@@ -88,6 +95,12 @@
                 <svg viewBox="0 0 24 24" fill="none"><use href="#icon-ranking"></use></svg>
             </span>
             <span class="nav-link-label">Reyting</span>
+        </a>
+        <a class="{% if request.resolver_match.url_name == 'games-hub' or request.resolver_match.url_name == 'history-battle' %}is-active{% endif %}" href="{% url 'games-hub' %}">
+            <span class="nav-link-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><use href="#icon-games"></use></svg>
+            </span>
+            <span class="nav-link-label">O'yinlar</span>
         </a>
         <a href="{% url 'dashboard' %}#ai-lab">
             <span class="nav-link-icon" aria-hidden="true">

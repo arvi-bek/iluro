@@ -427,6 +427,7 @@ def dashboard_view(request):
         "Fanlarni tekshirish va obunalarni ko'rish",
         "Testlar sahifasidan mashqni boshlash",
         "Kitoblar sahifasidan resurslarni ochish",
+        "Tarix bo'yicha o'yinlarda tezkor takrorlash",
     ]
     hub_cards = [
         {
@@ -446,6 +447,12 @@ def dashboard_view(request):
             "description": "XP, ishlangan testlar va eng yaxshi foiz asosida umumiy foydalanuvchilar reytingi.",
             "href": "ranking",
             "meta": "Hamma uchun ochiq",
+        },
+        {
+            "title": "O'yinlar",
+            "description": "Tarix savollaridan yig'iladigan battle formatidagi mini o'yinlar bilan tezkor takrorlash.",
+            "href": "games-hub",
+            "meta": "Tarix jangi",
         },
     ]
     stats = [
