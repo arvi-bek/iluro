@@ -4,7 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from .models import Choice, PracticeChoice, PracticeExercise, PracticeSet, Question, Subject, Test
-from .selectors import extract_history_grade_label, get_history_game_grade_options
+from .selectors import extract_history_grade_label, get_history_game_grade_options, get_imlo_duel_grade_options
 
 
 class HistoryBattleGameTests(TestCase):
@@ -88,7 +88,8 @@ class HistoryBattleGameTests(TestCase):
     def test_games_hub_page_renders(self):
         response = self.client.get(reverse("games-hub"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Tarix jangi")
+        self.assertContains(response, "games-grid")
+        self.assertContains(response, "Imlo dueli")
 
     def test_history_battle_page_renders_setup_overlay(self):
         grade_7_test = Test.objects.create(
@@ -121,3 +122,109 @@ class HistoryBattleGameTests(TestCase):
         self.assertEqual(len(options), 1)
         self.assertEqual(options[0]["value"], "9")
         self.assertEqual(options[0]["label"], "9-sinf")
+
+
+class ImloDuelGameTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        self.user = get_user_model().objects.create_user(
+            username="speller",
+            password="testpass123",
+        )
+        self.client.force_login(self.user)
+        self.language_subject = Subject.objects.create(name="Ona tili, Adabiyot", price=30000)
+        self.practice_set = PracticeSet.objects.create(
+            subject=self.language_subject,
+            title="7-sinf Yozma savodxonlik (imlo) - 1-qism",
+            topic="Imlo",
+            difficulty="C",
+        )
+
+    def _make_imlo_exercise(self, prompt, correct, wrongs, difficulty="C", title="Imlo mashqi", source_book="7-sinf imlo"):
+        exercise = PracticeExercise.objects.create(
+            subject=self.language_subject,
+            practice_set=self.practice_set,
+            title=title,
+            topic="Imlo",
+            source_book=source_book,
+            prompt=prompt,
+            answer_mode="choice",
+            explanation="Imlo qoidasi bo'yicha tanlanadi.",
+            difficulty=difficulty,
+        )
+        PracticeChoice.objects.create(exercise=exercise, text=correct, is_correct=True)
+        for item in wrongs:
+            PracticeChoice.objects.create(exercise=exercise, text=item, is_correct=False)
+        return exercise
+
+    def test_imlo_grade_options_are_built_from_exercises(self):
+        self._make_imlo_exercise(
+            "Qaysi variant to'g'ri yozilgan?",
+            "mustaqillik",
+            ["mustaqilik", "mustaqillikg", "mustaqillik'"],
+            difficulty="C+",
+        )
+
+        options = get_imlo_duel_grade_options()
+
+        self.assertEqual(len(options), 1)
+        self.assertEqual(options[0]["value"], "7")
+        self.assertEqual(options[0]["label"], "7-sinf")
+
+    def test_imlo_duel_questions_endpoint_returns_questions(self):
+        self._make_imlo_exercise(
+            "Qaysi variant to'g'ri yozilgan?",
+            "muvaffaqiyat",
+            ["muvafaqiyat", "muvaffaqqiyat", "muvafaqqiyat"],
+            difficulty="C",
+            title="7-sinf imlo mashqi - 1",
+        )
+        self._make_imlo_exercise(
+            "Imlo jihatdan to'g'ri javobni toping.",
+            "ta'lim",
+            ["talim", "ta'limm", "ta lim"],
+            difficulty="C",
+            title="7-sinf imlo mashqi - 2",
+        )
+
+        response = self.client.get(reverse("imlo-duel-questions"), {"grade": "7"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["grade"], "7")
+        self.assertEqual(payload["grade_label"], "7-sinf")
+        self.assertEqual(len(payload["questions"]), 30)
+        self.assertTrue(all(item["grade"] == "7" for item in payload["questions"]))
+
+    def test_imlo_duel_page_renders_setup_overlay(self):
+        self._make_imlo_exercise(
+            "To'g'ri yozilgan so'zni toping.",
+            "ehtimol",
+            ["extimol", "ehтимол", "ehtmol"],
+            difficulty="C",
+        )
+
+        response = self.client.get(reverse("imlo-duel"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Imlo dueli")
+        self.assertContains(response, "Sinfni tanlang")
+
+    def test_imlo_duel_uses_aralash_fallback_when_grade_missing(self):
+        self.practice_set.title = "Yozma savodxonlik to'plami"
+        self.practice_set.save(update_fields=["title"])
+        self._make_imlo_exercise(
+            "Qaysi variant to'g'ri yozilgan?",
+            "xotira",
+            ["hotira", "xotiraa", "xatira"],
+            source_book="",
+            title="Imlo mashqi",
+        )
+
+        options = get_imlo_duel_grade_options()
+
+        self.assertEqual(len(options), 1)
+        self.assertEqual(options[0]["value"], "all")
+        self.assertEqual(options[0]["label"], "Aralash")

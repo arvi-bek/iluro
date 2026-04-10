@@ -17,38 +17,7 @@
         {% include "partials/app_sidebar_v2.html" %}
 
         <main class="dashboard-main games-main">
-            <header class="dashboard-topbar">
-                <div>
-                    <p class="tiny-label">O'yinlar</p>
-                    <h1>Tarixni tezkor battle formatida takrorlash uchun alohida maydon.</h1>
-                </div>
-                <a class="topbar-link" href="{% url 'dashboard' %}">Dashboardga qaytish</a>
-            </header>
-
-            <section class="games-hero">
-                <div class="games-hero-copy">
-                    <p class="tiny-label">Tarix jangi</p>
-                    <h2>Mavjud tarix testlaridan yangi duel deck tuziladi va har safar boshqa savollar bilan o'ynaysiz.</h2>
-                    <p>Avval sinfni tanlaysiz, keyin o'yin o'sha sinf bo'yicha saytdagi savollardan battle turini yig'ib beradi.</p>
-                    <div class="games-hero-actions">
-                        <a class="hero-action-primary" href="{% url 'history-battle' %}" target="_blank" rel="noopener noreferrer">Tarix jangini ochish</a>
-                    </div>
-                </div>
-                <div class="games-hero-aside">
-                    <span class="games-hero-badge">Mavjud sinflar</span>
-                    <strong>{% if grade_options %}{{ grade_options|length }} ta{% else %}0 ta{% endif %}</strong>
-                    <small>Hozircha tarix savollaridan avtomatik yig'iladigan battle tayyor.</small>
-                </div>
-            </section>
-
-            <section class="games-section">
-                <div class="section-head">
-                    <div>
-                        <p class="tiny-label">Aktiv o'yinlar</p>
-                        <h3>Hozircha bitta o'yin bor, keyin boshqa fanlar ham ulanadi.</h3>
-                    </div>
-                </div>
-
+            <section class="games-section games-section--plain">
                 <div class="games-grid">
                     {% for game in games %}
                     <article class="game-card {% if game.href %}is-active{% else %}is-muted{% endif %}">
@@ -59,7 +28,7 @@
                         <h4>{{ game.title }}</h4>
                         <p>{{ game.description }}</p>
                         {% if game.href %}
-                        <a class="card-link" href="{% url game.href %}" {% if game.href == 'history-battle' %}target="_blank" rel="noopener noreferrer"{% endif %}>Ochish</a>
+                        <a class="card-link" href="{% url game.href %}" target="_blank" rel="noopener noreferrer">Ochish</a>
                         {% else %}
                         <span class="card-link disabled">Tez orada</span>
                         {% endif %}

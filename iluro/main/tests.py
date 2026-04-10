@@ -11,6 +11,7 @@ from .models import (
     PracticeChoice,
     PracticeExercise,
     PracticeSet,
+    PracticeSetAttempt,
     Profile,
     Question,
     SubjectSectionEntry,
@@ -31,7 +32,7 @@ from .services import (
     revoke_subject_access,
     trim_user_assessment_history,
 )
-from .selectors import get_user_math_mistake_items
+from .selectors import get_math_formula_quiz_payload, get_user_math_mistake_items
 from .utils import (
     calculate_essay_topic_xp,
     calculate_grammar_lesson_xp,
@@ -240,12 +241,22 @@ class MainSmokeTests(TestCase):
 
     def test_math_tools_sections_show_expected_content(self):
         formula_response = self.client.get(reverse("subject-workspace-section", args=[self.math.id, "formula-quiz"]))
-        self.assertContains(formula_response, "Formula quiz")
-        self.assertContains(formula_response, self.formula_entry_one.title)
+        self.assertContains(formula_response, "Formulalar bo'yicha savol-javob")
+        self.assertContains(formula_response, "Formula testi")
 
         mistakes_response = self.client.get(reverse("subject-workspace-section", args=[self.math.id, "mistakes"]))
         self.assertContains(mistakes_response, "Mening xatolarim")
         self.assertContains(mistakes_response, self.practice_exercise.prompt)
+
+    def test_math_formula_quiz_payload_builds_multiple_question_types(self):
+        payload = get_math_formula_quiz_payload(self.math, max_questions=6)
+
+        self.assertGreaterEqual(len(payload), 4)
+        self.assertTrue(any(item["question_type"] == "name_from_formula" for item in payload))
+        self.assertTrue(any(item["question_type"] == "usage_from_formula" for item in payload))
+        self.assertTrue(any(item["question_type"] == "formula_from_name" for item in payload))
+        self.assertTrue(any(item["question_type"] == "name_from_usage" for item in payload))
+        self.assertTrue(all(len(item["choices"]) >= 2 for item in payload))
 
     def test_books_root_shows_subject_cards_before_subject_filter(self):
         response = self.client.get(reverse("books"))
@@ -549,6 +560,34 @@ class XPEconomyTests(TestCase):
         trim_user_assessment_history(user)
 
         remaining_ids = list(UserTest.objects.filter(user=user).values_list("id", flat=True))
+        self.assertIn(fresh_attempt.id, remaining_ids)
+        self.assertNotIn(old_attempt.id, remaining_ids)
+
+    def test_trim_history_removes_practice_set_attempts_older_than_week(self):
+        user = User.objects.create_user(username="practiceweektrim", password="StrongPass123")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+        practice_set = PracticeSet.objects.create(subject=subject, title="Misol / Masala set", difficulty="C")
+
+        old_attempt = PracticeSetAttempt.objects.create(
+            user=user,
+            practice_set=practice_set,
+            total_count=10,
+            correct_count=4,
+            score=40,
+        )
+        fresh_attempt = PracticeSetAttempt.objects.create(
+            user=user,
+            practice_set=practice_set,
+            total_count=10,
+            correct_count=8,
+            score=80,
+        )
+        PracticeSetAttempt.objects.filter(id=old_attempt.id).update(created_at=timezone.now() - timezone.timedelta(days=7, hours=1))
+        PracticeSetAttempt.objects.filter(id=fresh_attempt.id).update(created_at=timezone.now() - timezone.timedelta(days=3))
+
+        trim_user_assessment_history(user)
+
+        remaining_ids = list(PracticeSetAttempt.objects.filter(user=user).values_list("id", flat=True))
         self.assertIn(fresh_attempt.id, remaining_ids)
         self.assertNotIn(old_attempt.id, remaining_ids)
 

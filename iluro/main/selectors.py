@@ -71,6 +71,15 @@ LITERATURE_KEYWORDS = (
 HISTORY_GRADE_PATTERN = re.compile(r"(?<!\d)(5|6|7|8|9|10|11)\s*[- ]?\s*sinf", re.IGNORECASE)
 HISTORY_GAME_CACHE_SECONDS = 900
 HISTORY_BATTLE_QUESTION_TARGET = 30
+IMLO_KEYWORDS = (
+    "imlo",
+    "imloviy",
+    "to'g'ri yoz",
+    "to‘g‘ri yoz",
+    "yozma savodxonlik",
+    "orfograf",
+)
+IMLO_DUEL_QUESTION_TARGET = 30
 
 
 def is_language_subject(subject_or_name):
@@ -79,14 +88,18 @@ def is_language_subject(subject_or_name):
     return "ona tili" in lowered or "adab" in lowered
 
 
-def extract_history_grade_label(title):
+def extract_grade_label(title):
     match = HISTORY_GRADE_PATTERN.search(title or "")
     return match.group(1) if match else ""
 
 
+def extract_history_grade_label(title):
+    return extract_grade_label(title)
+
+
 def extract_history_grade_from_parts(*parts):
     for part in parts:
-        grade = extract_history_grade_label(part)
+        grade = extract_grade_label(part)
         if grade:
             return grade
     return ""
@@ -244,6 +257,142 @@ def get_history_battle_questions(grade="", limit=8):
                 "difficulty": normalize_difficulty_label(exercise.difficulty),
                 "source_title": source_title,
                 "grade": grade,
+            }
+        )
+
+    random.shuffle(question_pool)
+    return _top_up_history_question_pool(question_pool, limit)
+
+
+def _get_language_subject():
+    return Subject.objects.filter(Q(name__icontains="ona tili") | Q(name__icontains="adab")).order_by("name").first()
+
+
+def _is_imlo_exercise(exercise):
+    haystack = " ".join(
+        [
+            exercise.title or "",
+            exercise.topic or "",
+            exercise.source_book or "",
+            exercise.prompt or "",
+            exercise.explanation or "",
+        ]
+    ).lower()
+    return any(keyword in haystack for keyword in IMLO_KEYWORDS)
+
+
+def extract_imlo_grade_from_parts(*parts):
+    for part in parts:
+        grade = extract_grade_label(part)
+        if grade:
+            return grade
+    return ""
+
+
+def _get_imlo_grade_label(exercise):
+    return extract_imlo_grade_from_parts(
+        getattr(exercise, "title", ""),
+        getattr(exercise, "topic", ""),
+        getattr(exercise, "source_book", ""),
+        getattr(getattr(exercise, "practice_set", None), "title", ""),
+        getattr(getattr(exercise, "practice_set", None), "topic", ""),
+        getattr(getattr(exercise, "practice_set", None), "source_book", ""),
+    )
+
+
+def get_imlo_duel_grade_options():
+    language_subject = _get_language_subject()
+    if not language_subject:
+        return []
+
+    exercises = (
+        PracticeExercise.objects.filter(subject=language_subject, answer_mode="choice").select_related("practice_set")
+        .annotate(choice_count=Count("choices"))
+        .order_by("-created_at")
+    )
+    buckets = {}
+    fallback_count = 0
+    for exercise in exercises:
+        if exercise.choice_count < 4 or not _is_imlo_exercise(exercise):
+            continue
+        grade = _get_imlo_grade_label(exercise)
+        if not grade:
+            fallback_count += 1
+            continue
+        bucket = buckets.setdefault(
+            grade,
+            {
+                "value": grade,
+                "label": f"{grade}-sinf",
+                "question_count": 0,
+                "test_count": 0,
+            },
+        )
+        bucket["question_count"] += 1
+
+    options = [
+        buckets[key]
+        for key in sorted(buckets.keys(), key=lambda item: int(item))
+        if key in buckets and buckets[key]["question_count"] > 0
+    ]
+    if fallback_count:
+        options.append(
+            {
+                "value": "all",
+                "label": "Aralash",
+                "question_count": fallback_count,
+                "test_count": 0,
+            }
+        )
+    return options
+
+
+def get_imlo_duel_level_options():
+    return get_imlo_duel_grade_options()
+
+
+def get_imlo_duel_questions(level="", limit=8):
+    language_subject = _get_language_subject()
+    if not language_subject:
+        return []
+
+    selected_level = str(level or "").strip()
+    exercises = list(
+        PracticeExercise.objects.filter(subject=language_subject, answer_mode="choice")
+        .select_related("practice_set")
+        .prefetch_related("choices")
+    )
+    if selected_level:
+        if selected_level == "all":
+            exercises = [exercise for exercise in exercises if not _get_imlo_grade_label(exercise)]
+        else:
+            exercises = [exercise for exercise in exercises if _get_imlo_grade_label(exercise) == selected_level]
+
+    question_pool = []
+    for exercise in exercises:
+        if not _is_imlo_exercise(exercise):
+            continue
+        choices = list(exercise.choices.all())
+        correct_choices = [choice for choice in choices if choice.is_correct]
+        wrong_choices = [choice for choice in choices if not choice.is_correct]
+        if len(correct_choices) != 1 or len(wrong_choices) < 3:
+            continue
+
+        selected_choices = [correct_choices[0], *random.sample(wrong_choices, 3)]
+        random.shuffle(selected_choices)
+        correct_index = next(
+            (index for index, choice in enumerate(selected_choices) if choice.is_correct),
+            0,
+        )
+        source_title = exercise.topic or exercise.title or exercise.source_book or "Imlo mashqi"
+        question_pool.append(
+            {
+                "text": exercise.prompt.strip(),
+                "options": [choice.text.strip() for choice in selected_choices],
+                "correct_index": correct_index,
+                "difficulty": normalize_difficulty_label(exercise.difficulty),
+                "source_title": source_title,
+                "grade": _get_imlo_grade_label(exercise) or "all",
             }
         )
 
@@ -580,48 +729,131 @@ def _build_choice_question_payload(source_id, prompt, options, explanation="", d
     }
 
 
-def get_math_formula_quiz_payload(subject, *, max_questions=8):
+def _normalize_formula_quiz_text(value, fallback=""):
+    text = " ".join((value or "").split())
+    return text or fallback
+
+
+def _short_formula_quiz_text(value, *, limit=220, fallback=""):
+    text = _normalize_formula_quiz_text(value, fallback)
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
+
+
+def _build_formula_quiz_options(pool, correct_entry, index, text_getter):
+    correct_text = _normalize_formula_quiz_text(text_getter(correct_entry))
+    if not correct_text:
+        return []
+
+    distractors = [item for item in pool if item.id != correct_entry.id]
+    offset = index % len(distractors) if distractors else 0
+    rotated = distractors[offset:] + distractors[:offset]
+
+    option_rows = [{"text": correct_text, "is_correct": True}]
+    seen = {correct_text}
+    for item in rotated:
+        text = _normalize_formula_quiz_text(text_getter(item))
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        option_rows.append({"text": text, "is_correct": False})
+        if len(option_rows) == 4:
+            break
+
+    if len(option_rows) < 2:
+        return []
+
+    option_rows = option_rows[:4]
+    random.shuffle(option_rows)
+    return option_rows
+
+
+def _build_formula_quiz_question(entry, pool, index, question_type):
+    title = _normalize_formula_quiz_text(entry.title, "Formula mavzusi")
+    summary = _normalize_formula_quiz_text(entry.summary, "")
+    body = _normalize_formula_quiz_text(entry.body, "")
+    usage = _normalize_formula_quiz_text(entry.usage_note, "")
+    context_line = usage or summary or "Bu formula matematikaning asosiy tayanchlaridan biri."
+
+    if question_type == "name_from_formula" and body:
+        options = _build_formula_quiz_options(pool, entry, index, lambda item: item.title)
+        payload = _build_choice_question_payload(
+            source_id=f"{entry.id}-name-{index}",
+            prefix="formula",
+            prompt="Quyidagi formulani nomini toping.",
+            detail=body,
+            explanation=f"{title}. {context_line}".strip(),
+            options=options,
+        )
+    elif question_type == "usage_from_formula" and body and context_line:
+        options = _build_formula_quiz_options(pool, entry, index, lambda item: item.usage_note or item.summary)
+        payload = _build_choice_question_payload(
+            source_id=f"{entry.id}-usage-{index}",
+            prefix="formula",
+            prompt="Quyidagi formula asosan qayerda ishlatiladi?",
+            detail=body,
+            explanation=f"{title}. {context_line}".strip(),
+            options=options,
+        )
+    elif question_type == "formula_from_name" and title and body:
+        descriptor = summary or usage or "Quyidagi mavzuga mos formulani toping."
+        options = _build_formula_quiz_options(pool, entry, index, lambda item: item.body)
+        payload = _build_choice_question_payload(
+            source_id=f"{entry.id}-body-{index}",
+            prefix="formula",
+            prompt=f'"{title}" formulasiga mos yozuvni toping.',
+            detail=_short_formula_quiz_text(descriptor, limit=180),
+            explanation=f"{title}. {context_line}".strip(),
+            options=options,
+        )
+    elif question_type == "name_from_usage" and context_line:
+        options = _build_formula_quiz_options(pool, entry, index, lambda item: item.title)
+        payload = _build_choice_question_payload(
+            source_id=f"{entry.id}-context-{index}",
+            prefix="formula",
+            prompt="Quyidagi qo'llanish tavsifi qaysi formula mavzusiga tegishli?",
+            detail=_short_formula_quiz_text(context_line, limit=220),
+            explanation=f"{title}. {body or context_line}".strip(),
+            options=options,
+        )
+    else:
+        payload = None
+
+    if payload:
+        payload["answer_title"] = title
+        payload["question_type"] = question_type
+        payload["question_type_label"] = {
+            "name_from_formula": "Nomini toping",
+            "usage_from_formula": "Qayerda ishlatiladi",
+            "formula_from_name": "Formulani toping",
+            "name_from_usage": "Mavzuni toping",
+        }.get(question_type, "Formula savoli")
+    return payload
+
+
+def get_math_formula_quiz_payload(subject, *, max_questions=10):
     entries = get_formula_entries(subject)
     if len(entries) < 2:
         return []
 
-    pool = entries[: max(max_questions + 3, 4)]
+    pool = entries[: max(max_questions + 6, 6)]
     questions = []
-    for index, entry in enumerate(pool[:max_questions]):
-        distractors = [item for item in pool if item.id != entry.id]
-        if not distractors:
-            continue
-
-        offset = index % len(distractors)
-        rotated = distractors[offset:] + distractors[:offset]
-        option_entries = [entry] + rotated[: min(3, len(rotated))]
-        option_entries = sorted(option_entries, key=lambda item: item.title.lower())
-
-        detail = (
-            entry.usage_note
-            or entry.summary
-            or entry.body
-            or "Bu formula mavzusi matematika blokidagi asosiy tayanchlardan biri."
-        )
-        detail = " ".join(detail.split())[:240]
-
-        payload = _build_choice_question_payload(
-            source_id=entry.id,
-            prefix="formula",
-            prompt="Quyidagi izoh qaysi formula mavzusiga tegishli?",
-            detail=detail,
-            explanation=entry.body or entry.usage_note or entry.summary or "",
-            options=[
-                {
-                    "text": option.title,
-                    "is_correct": option.id == entry.id,
-                }
-                for option in option_entries
-            ],
-        )
-        if payload:
-            payload["answer_title"] = entry.title
+    question_types = (
+        "name_from_formula",
+        "usage_from_formula",
+        "formula_from_name",
+        "name_from_usage",
+    )
+    safety_limit = max_questions * 4
+    cursor = 0
+    while len(questions) < max_questions and cursor < safety_limit:
+        entry = pool[cursor % len(pool)]
+        question_type = question_types[cursor % len(question_types)]
+        payload = _build_formula_quiz_question(entry, pool, cursor, question_type)
+        if payload and not any(item["id"] == payload["id"] for item in questions):
             questions.append(payload)
+        cursor += 1
 
     return questions
 

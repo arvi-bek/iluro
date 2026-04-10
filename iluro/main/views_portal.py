@@ -168,10 +168,10 @@ def _get_workspace_section_catalog(subject_theme_key):
             "empty_note": "Formulalar hali kiritilmagan.",
         },
         "formula-quiz": {
-            "description": "Formulani izoh va qo'llanishga qarab topish uchun tezkor quiz bo'limi.",
-            "cta": "Quizni boshlash",
-            "unit": "quiz",
-            "empty_note": "Formula quiz uchun hali yetarli material yo'q.",
+            "description": "Formulalar bo'yicha test uslubidagi savol-javob bloki: nomi, qo'llanish joyi va yozilishini tekshiradi.",
+            "cta": "Savol-javobni ochish",
+            "unit": "savol",
+            "empty_note": "Formula savol-javob bo'limi uchun hali yetarli formula kiritilmagan.",
         },
         "problems": {
             "description": (

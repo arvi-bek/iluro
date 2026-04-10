@@ -351,9 +351,9 @@ def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
         UserAnswer.objects.filter(user=user).delete()
 
     kept_session_ids = list(
-        PracticeSetAttempt.objects.filter(user=user)
+        PracticeSetAttempt.objects.filter(user=user, created_at__gte=cutoff)
         .order_by("-created_at", "-id")
-        .values_list("id", flat=True)[:keep_recent]
+        .values_list("id", flat=True)
     )
     if kept_session_ids:
         PracticeSetAttempt.objects.filter(user=user).exclude(id__in=kept_session_ids).delete()
@@ -378,12 +378,17 @@ def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
     else:
         UserPracticeAttempt.objects.filter(user=user).delete()
 
-    PracticeSetAttempt.objects.filter(user=user).exclude(
-        id__in=UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=False).values_list(
+    active_session_ids = set(kept_session_ids)
+    active_session_ids.update(
+        UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=False).values_list(
             "practice_session_id",
             flat=True,
         )
-    ).delete()
+    )
+    if active_session_ids:
+        PracticeSetAttempt.objects.filter(user=user).exclude(id__in=list(active_session_ids)).delete()
+    else:
+        PracticeSetAttempt.objects.filter(user=user).delete()
 
 
 def ensure_default_subscription_plans():
@@ -547,7 +552,7 @@ def get_subject_theme(subject_name):
             ],
             "extra_sections": [
                 {"key": "formulas", "label": "Formulalar"},
-                {"key": "formula-quiz", "label": "Formula quiz"},
+                {"key": "formula-quiz", "label": "Formula savol-javob"},
                 {"key": "problems", "label": "Misol / Masalalar"},
                 {"key": "mistakes", "label": "Mening xatolarim"},
             ],

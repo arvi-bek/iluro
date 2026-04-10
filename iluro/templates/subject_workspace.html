@@ -405,61 +405,87 @@
                     <div class="content-panel math-tools-panel">
                         <div class="workspace-section-intro">
                             <div class="workspace-section-copy">
-                                <p class="eyebrow">Formula quiz</p>
-                                <h2>{{ subject.name }} formulalarini tez tekshirish</h2>
-                                <p class="workspace-section-text">Izoh yoki qo'llanishga qarab formulani toping. Bu bo'lim formulani yoddan emas, ishlatilish joyi bilan birga eslab qolishga yordam beradi.</p>
+                                <p class="eyebrow">Formulalar bo'yicha savol-javob</p>
+                                <h2>{{ subject.name }} formulalarini test ko'rinishida ishlash</h2>
+                                <p class="workspace-section-text">Formulani nomi, qo'llanish joyi va yozilishi bo'yicha savollar yeching. Admin paneldan qo'shilgan formulalar shu bo'limdan avtomatik savolga aylanadi.</p>
                             </div>
                             <div class="workspace-section-meta">
                                 <span class="workspace-section-pill">{{ math_formula_quiz|length }} ta savol</span>
-                                <span class="workspace-section-pill is-soft">Tezkor recall</span>
+                                <span class="workspace-section-pill is-soft">Test style</span>
                             </div>
-                        </div>
-                        <div class="math-tool-metrics">
-                            <article class="metric-card">
-                                <div class="metric-card-head">
-                                    <span>Format</span>
-                                    <span class="metric-dot"></span>
-                                </div>
-                                <strong>4 variant</strong>
-                                <small>Har savolda formula mavzusini to'g'ri nom bilan topasiz.</small>
-                            </article>
-                            <article class="metric-card">
-                                <div class="metric-card-head">
-                                    <span>Fokus</span>
-                                    <span class="metric-dot"></span>
-                                </div>
-                                <strong>Izoh + qo'llanish</strong>
-                                <small>Faqat yozilishini emas, qayerda ishlashini ham eslab qolasiz.</small>
-                            </article>
                         </div>
                         {% if math_formula_quiz %}
                             {{ math_formula_quiz|json_script:"formula-quiz-data" }}
-                            <section class="math-quiz-stage" data-math-quiz="formula">
-                                <div class="math-quiz-stage-head">
-                                    <div>
-                                        <p class="eyebrow">Joriy savol</p>
-                                        <h3>Formula quiz</h3>
+                            <section class="formula-test-shell" data-math-quiz="formula">
+                                <article class="formula-test-hero" data-quiz-intro>
+                                    <div class="formula-test-hero-copy">
+                                        <p class="eyebrow">Boshlashdan oldin</p>
+                                        <h3>Formula quiz session</h3>
+                                        <p>Bu blok formulani yodlash emas, uni tanish, nomlash va qayerda ishlatilishini bog'lab eslab qolishga yordam beradi.</p>
                                     </div>
-                                    <div class="math-quiz-stage-meta">
-                                        <span data-quiz-progress>1 / {{ math_formula_quiz|length }}</span>
-                                        <span data-quiz-score>0 ta to'g'ri</span>
+                                    <div class="formula-test-summary">
+                                        <div class="formula-test-summary-card">
+                                            <span>Savollar</span>
+                                            <strong>{{ math_formula_quiz|length }}</strong>
+                                        </div>
+                                        <div class="formula-test-summary-card">
+                                            <span>Format</span>
+                                            <strong>4 variant</strong>
+                                        </div>
+                                        <div class="formula-test-summary-card">
+                                            <span>Turlar</span>
+                                            <strong>Nomi / Qo'llanish / Formula</strong>
+                                        </div>
                                     </div>
-                                </div>
-                                <article class="math-quiz-card">
-                                    <p class="math-quiz-detail" data-quiz-detail></p>
-                                    <h4 class="math-quiz-prompt" data-quiz-prompt></h4>
-                                    <div class="math-quiz-options" data-quiz-options></div>
-                                    <div class="math-quiz-feedback" data-quiz-feedback hidden></div>
+                                    <button class="mini-link formula-test-start" type="button" data-quiz-start>Testni boshlash</button>
                                 </article>
-                                <div class="math-quiz-actions">
-                                    <button class="mini-link secondary" type="button" data-quiz-reset>Qaytadan boshlash</button>
-                                    <button class="mini-link" type="button" data-quiz-next>Keyingi savol</button>
+
+                                <div class="formula-test-stage" data-quiz-stage hidden>
+                                    <div class="formula-test-stage-head">
+                                        <div>
+                                            <p class="eyebrow">Joriy savol</p>
+                                            <h3>Formula testi</h3>
+                                        </div>
+                                        <div class="formula-test-stage-meta">
+                                            <span class="formula-test-meta-chip" data-quiz-type>Nomini toping</span>
+                                            <span class="formula-test-meta-chip" data-quiz-progress>1 / {{ math_formula_quiz|length }}</span>
+                                            <span class="formula-test-meta-chip is-strong" data-quiz-score>0 ta to'g'ri</span>
+                                        </div>
+                                    </div>
+
+                                    <article class="formula-test-card">
+                                        <div class="formula-test-focus">
+                                            <span class="formula-test-focus-label">Ko'rsatilgan signal</span>
+                                            <div class="formula-test-detail" data-quiz-detail></div>
+                                        </div>
+                                        <div class="formula-test-question">
+                                            <h4 class="formula-test-prompt" data-quiz-prompt></h4>
+                                            <div class="formula-test-options" data-quiz-options></div>
+                                        </div>
+                                        <div class="formula-test-feedback" data-quiz-feedback hidden></div>
+                                    </article>
+
+                                    <div class="formula-test-actions">
+                                        <button class="mini-link secondary" type="button" data-quiz-reset>Qaytadan boshlash</button>
+                                        <button class="mini-link" type="button" data-quiz-next hidden>Keyingi savol</button>
+                                    </div>
                                 </div>
+
+                                <article class="formula-test-result" data-quiz-result hidden>
+                                    <p class="eyebrow">Session yakuni</p>
+                                    <h3>Formula quiz tugadi</h3>
+                                    <p class="formula-test-result-score"><strong data-quiz-final-score>0</strong> / {{ math_formula_quiz|length }}</p>
+                                    <p class="workspace-section-text" data-quiz-final-note>Natija shu yerda ko'rinadi.</p>
+                                    <div class="formula-test-actions">
+                                        <button class="mini-link secondary" type="button" data-quiz-review>Qayta ishlash</button>
+                                        <button class="mini-link" type="button" data-quiz-restart>Yana boshlash</button>
+                                    </div>
+                                </article>
                             </section>
                         {% else %}
                             <article class="mini-card empty-card">
                                 <h3>Formula quiz hali tayyor emas</h3>
-                                <p>Kamida bir nechta formula kiritilgach bu bo'lim avtomatik ishlaydi.</p>
+                                <p>Admin paneldagi import markazidan <strong>Formulalar</strong> turini tanlab JSON yuklang. Kamida 2 ta formula bo'lsa savollar avtomatik tuziladi.</p>
                             </article>
                         {% endif %}
                     </div>
@@ -1414,14 +1440,23 @@
                 const questions = JSON.parse(dataTag.textContent || "[]");
                 if (!questions.length) return;
 
+                const introNode = root.querySelector("[data-quiz-intro]");
+                const stageNode = root.querySelector("[data-quiz-stage]");
+                const resultNode = root.querySelector("[data-quiz-result]");
+                const startButton = root.querySelector("[data-quiz-start]");
                 const promptNode = root.querySelector("[data-quiz-prompt]");
                 const detailNode = root.querySelector("[data-quiz-detail]");
                 const optionsNode = root.querySelector("[data-quiz-options]");
                 const feedbackNode = root.querySelector("[data-quiz-feedback]");
                 const progressNode = root.querySelector("[data-quiz-progress]");
                 const scoreNode = root.querySelector("[data-quiz-score]");
+                const typeNode = root.querySelector("[data-quiz-type]");
                 const nextButton = root.querySelector("[data-quiz-next]");
                 const resetButton = root.querySelector("[data-quiz-reset]");
+                const reviewButton = root.querySelector("[data-quiz-review]");
+                const restartButton = root.querySelector("[data-quiz-restart]");
+                const finalScoreNode = root.querySelector("[data-quiz-final-score]");
+                const finalNoteNode = root.querySelector("[data-quiz-final-note]");
                 let index = 0;
                 let score = 0;
                 let locked = false;
@@ -1431,78 +1466,120 @@
                     if (scoreNode) scoreNode.textContent = `${score} ta to'g'ri`;
                 }
 
+                function showScreen(name) {
+                    if (introNode) introNode.hidden = name !== "intro";
+                    if (stageNode) stageNode.hidden = name !== "stage";
+                    if (resultNode) resultNode.hidden = name !== "result";
+                }
+
+                function finishQuiz() {
+                    showScreen("result");
+                    if (finalScoreNode) finalScoreNode.textContent = score;
+                    if (finalNoteNode) {
+                        if (score === questions.length) {
+                            finalNoteNode.textContent = "Zo'r. Formulalarning nomi va qo'llanishi ikkalasi ham yaxshi yodda qolgan.";
+                        } else if (score >= Math.ceil(questions.length * 0.7)) {
+                            finalNoteNode.textContent = "Yaxshi natija. Endi ayniqsa xato qilgan formulalarni formulalar bo'limidan yana bir ko'rib chiqing.";
+                        } else {
+                            finalNoteNode.textContent = "Avval formulalar katalogini bir marta ko'rib chiqing, keyin shu testni qayta ishlang.";
+                        }
+                    }
+                }
+
                 function renderQuestion() {
                     const question = questions[index];
                     if (!question) return;
                     locked = false;
                     setMeta();
+                    showScreen("stage");
+                    if (typeNode) typeNode.textContent = question.question_type_label || "Formula savoli";
                     if (promptNode) promptNode.textContent = question.prompt || "";
                     if (detailNode) detailNode.textContent = question.detail || "";
                     if (feedbackNode) {
                         feedbackNode.hidden = true;
-                        feedbackNode.className = "math-quiz-feedback";
+                        feedbackNode.className = "formula-test-feedback";
                         feedbackNode.textContent = "";
                     }
+                    if (nextButton) nextButton.hidden = true;
                     optionsNode.innerHTML = "";
 
                     question.choices.forEach((choice) => {
                         const button = document.createElement("button");
                         button.type = "button";
-                        button.className = "math-quiz-option";
+                        button.className = "formula-test-option";
                         button.innerHTML = `<span>${choice.letter}</span><strong>${choice.text}</strong>`;
                         button.addEventListener("click", () => {
                             if (locked) return;
                             locked = true;
                             const isCorrect = choice.letter === question.correct_letter;
-                            if (isCorrect) {
-                                score += 1;
-                                button.classList.add("is-correct");
-                            } else {
-                                button.classList.add("is-wrong");
-                                const correctButton = [...optionsNode.querySelectorAll(".math-quiz-option")].find(
-                                    (item) => item.firstElementChild && item.firstElementChild.textContent === question.correct_letter
-                                );
-                                if (correctButton) correctButton.classList.add("is-correct");
-                            }
-                            if (feedbackNode) {
-                                feedbackNode.hidden = false;
-                                feedbackNode.classList.add(isCorrect ? "is-correct" : "is-wrong");
-                                feedbackNode.textContent = isCorrect
-                                    ? "To'g'ri. Keyingi savolga o'tishingiz mumkin."
-                                    : `To'g'ri javob: ${question.correct_letter}. ${question.explanation || ""}`.trim();
-                            }
-                            setMeta();
-                        });
-                        optionsNode.appendChild(button);
-                    });
+                              if (isCorrect) {
+                                  score += 1;
+                                  button.classList.add("is-correct");
+                              } else {
+                                  button.classList.add("is-wrong");
+                                  const correctButton = [...optionsNode.querySelectorAll(".formula-test-option")].find(
+                                      (item) => item.firstElementChild && item.firstElementChild.textContent === question.correct_letter
+                                  );
+                                  if (correctButton) correctButton.classList.add("is-correct");
+                              }
+                              if (feedbackNode) {
+                                  feedbackNode.hidden = false;
+                                  feedbackNode.classList.add(isCorrect ? "is-correct" : "is-wrong");
+                                  feedbackNode.textContent = isCorrect
+                                      ? "To'g'ri. Keyingi savolga o'tishingiz mumkin."
+                                      : `To'g'ri javob: ${question.correct_letter}. ${question.explanation || ""}`.trim();
+                              }
+                              if (nextButton) {
+                                  nextButton.hidden = false;
+                                  nextButton.textContent = index < questions.length - 1 ? "Keyingi savol" : "Natijani ko'rish";
+                              }
+                              setMeta();
+                          });
+                          optionsNode.appendChild(button);
+                      });
+                  }
+
+                function restartQuiz() {
+                    index = 0;
+                    score = 0;
+                    renderQuestion();
                 }
 
-                if (nextButton) {
-                    nextButton.addEventListener("click", () => {
-                        if (index < questions.length - 1) {
-                            index += 1;
-                        } else {
-                            index = 0;
-                            score = 0;
-                        }
-                        renderQuestion();
-                    });
-                }
+                  if (nextButton) {
+                      nextButton.addEventListener("click", () => {
+                          if (index < questions.length - 1) {
+                              index += 1;
+                              renderQuestion();
+                          } else {
+                              finishQuiz();
+                          }
+                      });
+                  }
 
-                if (resetButton) {
-                    resetButton.addEventListener("click", () => {
-                        index = 0;
-                        score = 0;
-                        renderQuestion();
-                    });
-                }
+                  if (resetButton) {
+                      resetButton.addEventListener("click", restartQuiz);
+                  }
 
-                renderQuestion();
-            }
+                  if (reviewButton) {
+                      reviewButton.addEventListener("click", restartQuiz);
+                  }
 
-            document.querySelectorAll("[data-math-quiz]").forEach((root) => {
-                initQuiz("formula-quiz-data", root);
-            });
+                  if (restartButton) {
+                      restartButton.addEventListener("click", () => {
+                          restartQuiz();
+                      });
+                  }
+
+                  if (startButton) {
+                      startButton.addEventListener("click", restartQuiz);
+                  }
+
+                  showScreen("intro");
+              }
+
+              document.querySelectorAll("[data-math-quiz]").forEach((root) => {
+                  initQuiz("formula-quiz-data", root);
+              });
         })();
     </script>
     {% endif %}

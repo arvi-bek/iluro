@@ -2,13 +2,13 @@
     const board = document.querySelector(".battle-board");
     if (!board) return;
 
-    const storageKey = "iluro-history-battle-setup";
+    const storageKey = "iluro-imlo-duel-setup";
     const questionUrl = board.dataset.questionUrl;
     const initialGrade = board.dataset.selectedGrade || "";
     const gradeOptions = JSON.parse(document.getElementById("history-battle-grade-options")?.textContent || "[]");
     const MATCH_DURATION_SECONDS = 180;
     const QUESTION_BATCH_SIZE = 30;
-    const LOW_WATERMARK_PAIRS = 4;
+    const LOW_WATERMARK_QUESTIONS = 4;
     const FRONTLINE_TARGET = 5;
     const POINTS_PER_CORRECT = 1;
     const RESOLVE_DELAY_MS = 900;
@@ -58,7 +58,7 @@
 
     const state = {
         grade: "",
-        gradeLabel: "Tarix",
+        gradeLabel: "Aralash",
         leftQueue: [],
         rightQueue: [],
         leftCurrent: null,
@@ -95,10 +95,7 @@
     }
 
     function persist() {
-        localStorage.setItem(
-            storageKey,
-            JSON.stringify({ grade: state.grade, leftName: state.leftName, rightName: state.rightName }),
-        );
+        localStorage.setItem(storageKey, JSON.stringify({ grade: state.grade, leftName: state.leftName, rightName: state.rightName }));
     }
 
     function normalize(value, fallback) {
@@ -120,27 +117,31 @@
         els.overlay.classList.add("is-visible");
         document.body.style.overflow = "hidden";
     }
+
     function closeOverlay() {
         els.overlay.classList.remove("is-visible");
         if (!els.resultOverlay?.classList.contains("is-visible")) {
             document.body.style.overflow = "";
         }
     }
+
     function openResultOverlay() {
         els.resultOverlay?.classList.add("is-visible");
         document.body.style.overflow = "hidden";
     }
+
     function closeResultOverlay() {
         els.resultOverlay?.classList.remove("is-visible");
         if (!els.overlay.classList.contains("is-visible")) {
             document.body.style.overflow = "";
         }
     }
+
     function setGrade(next) {
         state.grade = next;
         els.gradeCards.forEach((card) => card.classList.toggle("is-active", card.dataset.grade === next));
         const info = meta(next);
-        state.gradeLabel = info ? info.label : "Tarix";
+        state.gradeLabel = info ? info.label : "Aralash";
         setGradeTexts(state.gradeLabel);
         els.topbarCount.textContent = "3 daqiqa";
     }
@@ -152,8 +153,8 @@
         els.rightLabel.textContent = state.rightName;
         els.leftIconLabel.textContent = state.leftName;
         els.rightIconLabel.textContent = state.rightName;
-        els.teamOneMeta.textContent = `${state.gradeLabel} bo'yicha hujum qiladi.`;
-        els.teamTwoMeta.textContent = `${state.gradeLabel} bo'yicha qarshi turadi.`;
+        els.teamOneMeta.textContent = `${state.gradeLabel} bo'yicha imlo savollari bilan o'ynaydi.`;
+        els.teamTwoMeta.textContent = `${state.gradeLabel} bo'yicha imlo savollari bilan o'ynaydi.`;
     }
 
     function clearTimers() {
@@ -169,9 +170,7 @@
         board.style.setProperty("--team-left-shift", `${Math.round(shift * 0.34)}px`);
         board.style.setProperty("--team-right-shift", `${Math.round(shift * 0.34)}px`);
         els.banner.classList.remove("is-player-pulse", "is-bot-pulse");
-        if (tone) {
-            els.banner.classList.add(tone);
-        }
+        if (tone) els.banner.classList.add(tone);
     }
 
     function renderLog() {
@@ -201,19 +200,16 @@
     }
 
     async function fetchBatch() {
-        if (state.loadingBatch) {
-            return state.loadingBatch;
-        }
-        state.loadingBatch = fetch(
-            `${questionUrl}?grade=${encodeURIComponent(state.grade)}&limit=${QUESTION_BATCH_SIZE}`,
-            { headers: { "X-Requested-With": "XMLHttpRequest" } },
-        )
+        if (state.loadingBatch) return state.loadingBatch;
+        state.loadingBatch = fetch(`${questionUrl}?grade=${encodeURIComponent(state.grade)}&limit=${QUESTION_BATCH_SIZE}`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
             .then(async (response) => {
                 const payload = await response.json();
                 if (!response.ok || !payload.ok) {
                     throw new Error(payload.message || "Savollarni yuklab bo'lmadi.");
                 }
-                state.gradeLabel = payload.grade_label || state.gradeLabel || "Tarix";
+                state.gradeLabel = payload.grade_label || state.gradeLabel || "Aralash";
                 setGradeTexts(state.gradeLabel);
                 distributeQuestions(payload.questions || []);
                 return payload;
@@ -227,15 +223,11 @@
     async function ensureUpcomingQuestions() {
         const leftNeeds = state.leftQueue.length + (state.leftCurrent ? 1 : 0);
         const rightNeeds = state.rightQueue.length + (state.rightCurrent ? 1 : 0);
-        if (leftNeeds > LOW_WATERMARK_PAIRS && rightNeeds > LOW_WATERMARK_PAIRS) {
-            return;
-        }
+        if (leftNeeds > LOW_WATERMARK_QUESTIONS && rightNeeds > LOW_WATERMARK_QUESTIONS) return;
         try {
             await fetchBatch();
         } catch (error) {
-            if (state.running) {
-                els.status.textContent = error.message || "Yangi savollarni yuklab bo'lmadi.";
-            }
+            if (state.running) els.status.textContent = error.message || "Yangi savollarni yuklab bo'lmadi.";
         }
     }
 
@@ -275,10 +267,10 @@
         els.roundLabel.textContent = "Duel";
         els.timer.textContent = formatSeconds(MATCH_DURATION_SECONDS);
         els.status.textContent = "Sinfni tanlang va o'yinni boshlang.";
-        els.leftQuestion.textContent = "O'yin boshlangach ko'k jamoaga savol shu yerda chiqadi.";
-        els.rightQuestion.textContent = "O'yin boshlangach qizil jamoaga savol shu yerda chiqadi.";
-        els.leftSource.textContent = "Tarix";
-        els.rightSource.textContent = "Tarix";
+        els.leftQuestion.textContent = "O'yin boshlangach chap jamoaga savol shu yerda chiqadi.";
+        els.rightQuestion.textContent = "O'yin boshlangach o'ng jamoaga savol shu yerda chiqadi.";
+        els.leftSource.textContent = "Imlo";
+        els.rightSource.textContent = "Imlo";
         els.leftOptions.innerHTML = "";
         els.rightOptions.innerHTML = "";
         updateFrontline();
@@ -287,7 +279,7 @@
     }
 
     function paintOptions(container, q, side) {
-        container.innerHTML = q.options.map((opt, idx) => `<button class="battle-option" type="button" data-side="${side}" data-index="${idx}"><strong>${String.fromCharCode(65 + idx)}. ${opt}</strong><small>${q.difficulty} daraja</small></button>`).join("");
+        container.innerHTML = q.options.map((opt, idx) => `<button class="battle-option" type="button" data-side="${side}" data-index="${idx}"><strong>${String.fromCharCode(65 + idx)}. ${opt}</strong></button>`).join("");
         container.querySelectorAll(".battle-option").forEach((button) => {
             button.addEventListener("click", () => answer(side, Number(button.dataset.index)));
         });
@@ -301,8 +293,8 @@
 
         if (!current) {
             questionNode.textContent = side === "left"
-                ? "Ko'k jamoa uchun yangi savol yuklanmoqda."
-                : "Qizil jamoa uchun yangi savol yuklanmoqda.";
+                ? "Chap jamoa uchun yangi savol yuklanmoqda."
+                : "O'ng jamoa uchun yangi savol yuklanmoqda.";
             sourceNode.textContent = "Kutilmoqda";
             optionsNode.innerHTML = "";
             return;
@@ -366,11 +358,7 @@
         addLog(
             "O'yin yakuni",
             els.resultSummary.textContent,
-            state.leftScore === state.rightScore && state.frontline === 0
-                ? "is-draw"
-                : state.frontline >= 0
-                    ? "is-player"
-                    : "is-bot",
+            state.leftScore === state.rightScore && state.frontline === 0 ? "is-draw" : state.frontline >= 0 ? "is-player" : "is-bot",
         );
         openResultOverlay();
     }
@@ -380,15 +368,20 @@
         const isLeft = side === "left";
         const current = isLeft ? state.leftCurrent : state.rightCurrent;
         if (!current) return;
+
         const lockedKey = isLeft ? "leftLocked" : "rightLocked";
         const countKey = isLeft ? "leftAnswered" : "rightAnswered";
         const scoreKey = isLeft ? "leftScore" : "rightScore";
         if (state[lockedKey]) return;
+
         state[lockedKey] = true;
         state[countKey] += 1;
         const isCorrect = selectedIndex === current.correct_index;
         mark(isLeft ? els.leftOptions : els.rightOptions, current.correct_index, selectedIndex);
-        let tone = "", title = "", text = "";
+
+        let tone = "";
+        let title = "";
+        let text = "";
         if (isCorrect) {
             state[scoreKey] += POINTS_PER_CORRECT;
             state.frontline += isLeft ? 1 : -1;
@@ -401,15 +394,18 @@
             title = isLeft ? `${state.rightName} foyda oldi` : `${state.leftName} foyda oldi`;
             text = `${isLeft ? state.leftName : state.rightName} xato topdi, arqon raqib tomonga ketdi.`;
         }
+
         setScores();
         updateProgress();
         els.status.textContent = text;
         updateFrontline(tone);
         addLog(title, `${text} (${current.source_title})`, tone === "is-player-pulse" ? "is-player" : "is-bot");
+
         if (Math.abs(state.frontline) >= FRONTLINE_TARGET) {
             finish();
             return;
         }
+
         setTimeout(() => {
             if (state.finished) return;
             updateFrontline();
@@ -442,18 +438,24 @@
     async function startBattle() {
         state.leftName = normalize(els.teamOneInput.value, "1-jamoa");
         state.rightName = normalize(els.teamTwoInput.value, "2-jamoa");
-        if (!state.grade) { els.status.textContent = "Avval sinfni tanlang."; openOverlay(); return; }
-        persist(); syncTeams();
-        els.startButton.disabled = true; els.startButton.textContent = "Yuklanmoqda...";
+        if (!state.grade) {
+            els.status.textContent = "Avval sinfni tanlang.";
+            openOverlay();
+            return;
+        }
+        persist();
+        syncTeams();
+        els.startButton.disabled = true;
+        els.startButton.textContent = "Yuklanmoqda...";
         try {
             resetBoard();
             const payload = await fetchBatch();
             if (!state.leftQueue.length || !state.rightQueue.length) {
-                throw new Error("Bu sinf uchun duel boshlashga yetarli savol topilmadi.");
+                throw new Error("Bu sinf uchun duel boshlashga yetarli imlo savoli topilmadi.");
             }
             state.running = true;
             state.matchSecondsLeft = MATCH_DURATION_SECONDS;
-            setGradeTexts(payload.grade_label || state.gradeLabel || "Tarix");
+            setGradeTexts(payload.grade_label || state.gradeLabel || "Aralash");
             els.topbarCount.textContent = "3 daqiqa";
             setScores();
             renderLog();

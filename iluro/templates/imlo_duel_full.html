@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iluro | Tarix jangi</title>
+    <title>Iluro | Imlo dueli</title>
     {% include "partials/favicon.html" %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
 </head>
 <body class="game-page {% if screen_mode == 'board' %}game-page--board{% endif %}">
     <main class="game-shell battle-board battle-board--arena"
-          data-question-url="{% url 'history-battle-questions' %}"
+          data-question-url="{% url 'imlo-duel-questions' %}"
           data-selected-grade="{{ selected_grade }}"
           data-screen-mode="{{ screen_mode }}">
         <header class="game-topbar">
@@ -23,7 +23,7 @@
             </a>
             <div class="game-branding">
                 <p class="game-brand-kicker">Iluro battle</p>
-                <h1>Qal'a o'yini</h1>
+                <h1>Imlo dueli</h1>
                 <p>To'g'ri javob arqonni o'z tomoningizga tortadi.</p>
             </div>
             <div class="game-topbar-actions">
@@ -31,7 +31,7 @@
                     Jamoalarni sozlash
                 </button>
                 <div class="game-topbar-badge">
-                    <span id="battle-topbar-grade">Tarix</span>
+                    <span id="battle-topbar-grade">Sinf</span>
                     <strong id="battle-topbar-count">3 daqiqa</strong>
                 </div>
             </div>
@@ -48,7 +48,7 @@
                 </div>
                 <div class="battle-question-card__body is-blue-soft">
                     <div class="question-meta">
-                        <span id="battle-left-source-badge">Tarix</span>
+                        <span id="battle-left-source-badge">Imlo</span>
                     </div>
                     <h3 id="battle-left-question-text">O'yin boshlangach ko'k jamoaga savol shu yerda chiqadi.</h3>
                     <div class="battle-options battle-options--stack" id="battle-left-options"></div>
@@ -103,7 +103,7 @@
                 </div>
                 <div class="battle-question-card__body is-red-soft">
                     <div class="question-meta">
-                        <span id="battle-right-source-badge">Tarix</span>
+                        <span id="battle-right-source-badge">Imlo</span>
                     </div>
                     <h3 id="battle-right-question-text">O'yin boshlangach qizil jamoaga savol shu yerda chiqadi.</h3>
                     <div class="battle-options battle-options--stack" id="battle-right-options"></div>
@@ -125,7 +125,7 @@
 
     <section class="game-overlay is-visible" id="battle-setup-overlay" aria-label="Jamoalarni tayyorlash">
         <div class="game-setup-modal">
-            <p class="game-brand-kicker">Tarix jangi</p>
+            <p class="game-brand-kicker">Imlo dueli</p>
             <h2>Jamoalarni tayyorlang</h2>
             <p class="game-setup-note">Sinfni tanlang, keyin ikki jamoa nomini kiriting. Nomlar brauzerning o'zida vaqtincha saqlanadi, bazaga yozilmaydi.</p>
 
@@ -138,7 +138,7 @@
                     <small>{{ option.question_count }} ta savol</small>
                 </button>
                 {% empty %}
-                <div class="battle-empty">Tarix savollari topilmadi.</div>
+                <div class="battle-empty">Imlo savollari topilmadi.</div>
                 {% endfor %}
             </div>
 
@@ -168,7 +168,7 @@
 
     <section class="game-overlay" id="battle-result-overlay" aria-label="O'yin yakuni">
         <div class="game-setup-modal">
-            <p class="game-brand-kicker">Qal'a o'yini</p>
+            <p class="game-brand-kicker">Imlo dueli</p>
             <h2 id="battle-result-title">O'yin yakuni</h2>
             <p class="game-setup-note" id="battle-result-summary">Natija shu yerda ko'rinadi.</p>
             <div class="game-setup-actions">
@@ -179,6 +179,6 @@
     </section>
 
     {{ grade_options|json_script:"history-battle-grade-options" }}
-    <script src="{% static 'js/history_battle_duel.js' %}?v=20260410-games9"></script>
+    <script src="{% static 'js/imlo_duel.js' %}?v=20260410-games3"></script>
 </body>
 </html>
