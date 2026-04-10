@@ -544,6 +544,270 @@ def get_formula_entries(subject, formula_query="", formula_filter="all"):
     return list(formulas_queryset)
 
 
+def _normalize_math_topic_label(*parts):
+    for part in parts:
+        normalized = " ".join((part or "").replace("_", " ").split()).strip(" -")
+        if normalized:
+            return normalized
+    return "Aralash mavzu"
+
+
+def _build_choice_question_payload(source_id, prompt, options, explanation="", detail="", prefix="quiz"):
+    normalized_options = []
+    correct_letter = ""
+    for index, option in enumerate(options):
+        letter = chr(65 + index)
+        normalized_options.append(
+            {
+                "letter": letter,
+                "text": option["text"],
+                "is_correct": bool(option["is_correct"]),
+            }
+        )
+        if option["is_correct"]:
+            correct_letter = letter
+
+    if not correct_letter:
+        return None
+
+    return {
+        "id": f"{prefix}-{source_id}",
+        "prompt": prompt,
+        "detail": detail,
+        "choices": normalized_options,
+        "correct_letter": correct_letter,
+        "explanation": explanation or "",
+    }
+
+
+def get_math_formula_quiz_payload(subject, *, max_questions=8):
+    entries = get_formula_entries(subject)
+    if len(entries) < 2:
+        return []
+
+    pool = entries[: max(max_questions + 3, 4)]
+    questions = []
+    for index, entry in enumerate(pool[:max_questions]):
+        distractors = [item for item in pool if item.id != entry.id]
+        if not distractors:
+            continue
+
+        offset = index % len(distractors)
+        rotated = distractors[offset:] + distractors[:offset]
+        option_entries = [entry] + rotated[: min(3, len(rotated))]
+        option_entries = sorted(option_entries, key=lambda item: item.title.lower())
+
+        detail = (
+            entry.usage_note
+            or entry.summary
+            or entry.body
+            or "Bu formula mavzusi matematika blokidagi asosiy tayanchlardan biri."
+        )
+        detail = " ".join(detail.split())[:240]
+
+        payload = _build_choice_question_payload(
+            source_id=entry.id,
+            prefix="formula",
+            prompt="Quyidagi izoh qaysi formula mavzusiga tegishli?",
+            detail=detail,
+            explanation=entry.body or entry.usage_note or entry.summary or "",
+            options=[
+                {
+                    "text": option.title,
+                    "is_correct": option.id == entry.id,
+                }
+                for option in option_entries
+            ],
+        )
+        if payload:
+            payload["answer_title"] = entry.title
+            questions.append(payload)
+
+    return questions
+
+
+def get_math_topic_quiz_groups(subject, profile_level, *, max_questions=8):
+    exercises = (
+        filter_by_allowed_level(
+            PracticeExercise.objects.filter(subject=subject, answer_mode="choice").select_related("practice_set"),
+            "difficulty",
+            profile_level,
+        )
+        .prefetch_related("choices")
+        .order_by("-is_featured", "-created_at", "-id")
+    )
+
+    grouped = {}
+    for exercise in exercises:
+        choice_rows = list(exercise.choices.all())
+        correct_choices = [choice for choice in choice_rows if choice.is_correct]
+        wrong_choices = [choice for choice in choice_rows if not choice.is_correct]
+        if len(correct_choices) != 1 or len(wrong_choices) < 1:
+            continue
+
+        topic_label = _normalize_math_topic_label(
+            exercise.topic,
+            getattr(exercise.practice_set, "topic", ""),
+            exercise.title,
+            getattr(exercise.practice_set, "title", ""),
+        )
+        topic_key = re.sub(r"[^a-z0-9]+", "-", topic_label.lower()).strip("-") or f"topic-{exercise.id}"
+        group = grouped.setdefault(
+            topic_key,
+            {
+                "key": topic_key,
+                "title": topic_label,
+                "summary": getattr(exercise.practice_set, "description", "") or exercise.explanation or "",
+                "difficulty": normalize_difficulty_label(exercise.difficulty),
+                "question_total": 0,
+                "questions": [],
+                "practice_set_id": exercise.practice_set_id,
+                "source_title": getattr(exercise.practice_set, "title", "") or topic_label,
+                "is_featured": bool(exercise.is_featured or getattr(exercise.practice_set, "is_featured", False)),
+            },
+        )
+
+        group["question_total"] += 1
+        if len(group["questions"]) >= max_questions:
+            continue
+
+        option_rows = [correct_choices[0], *wrong_choices[:3]]
+        random.shuffle(option_rows)
+        payload = _build_choice_question_payload(
+            source_id=exercise.id,
+            prefix="topic",
+            prompt=exercise.prompt,
+            detail=exercise.title or exercise.topic or topic_label,
+            explanation=exercise.explanation or "",
+            options=[
+                {
+                    "text": choice.text,
+                    "is_correct": choice.is_correct,
+                }
+                for choice in option_rows
+            ],
+        )
+        if payload:
+            group["questions"].append(payload)
+
+    topic_groups = [
+        {
+            **group,
+            "question_count": len(group["questions"]),
+        }
+        for group in grouped.values()
+        if len(group["questions"]) >= 2
+    ]
+    topic_groups.sort(key=lambda item: (-int(item["is_featured"]), -item["question_total"], item["title"].lower()))
+    return topic_groups
+
+
+def get_user_math_mistake_items(user, subject, *, limit=12):
+    items = []
+
+    practice_attempts = (
+        UserPracticeAttempt.objects.filter(user=user, exercise__subject=subject, is_correct=False)
+        .select_related("exercise", "exercise__practice_set", "selected_choice")
+        .prefetch_related("exercise__choices")
+        .order_by("exercise_id", "-created_at", "-id")
+    )
+    seen_exercise_ids = set()
+    for attempt in practice_attempts:
+        if attempt.exercise_id in seen_exercise_ids:
+            continue
+        seen_exercise_ids.add(attempt.exercise_id)
+
+        correct_choice = next((choice for choice in attempt.exercise.choices.all() if choice.is_correct), None)
+        items.append(
+            {
+                "kind": "practice",
+                "occurred_at": attempt.created_at,
+                "title": attempt.exercise.title or attempt.exercise.topic or "Mashq savoli",
+                "topic": _normalize_math_topic_label(
+                    attempt.exercise.topic,
+                    getattr(attempt.exercise.practice_set, "topic", ""),
+                    getattr(attempt.exercise.practice_set, "title", ""),
+                ),
+                "prompt": attempt.exercise.prompt,
+                "your_answer": (
+                    attempt.selected_choice.text
+                    if attempt.selected_choice
+                    else (attempt.answer_text or "Javob kiritilmagan")
+                ),
+                "correct_answer": (
+                    correct_choice.text
+                    if correct_choice
+                    else (attempt.exercise.correct_text or "To'g'ri javob belgilanmagan")
+                ),
+                "explanation": attempt.exercise.explanation or "",
+                "retry_href": (
+                    f"/practice/sets/{attempt.exercise.practice_set_id}/solve/?next=/subjects/{subject.id}/mistakes/"
+                    if attempt.exercise.practice_set_id
+                    else ""
+                ),
+                "source_label": "Mashq",
+            }
+        )
+
+    test_attempts = (
+        UserTest.objects.filter(user=user, test__subject=subject)
+        .select_related("test")
+        .order_by("-finished_at", "-started_at", "-id")
+    )
+    latest_wrong_answers = []
+    seen_question_ids = set()
+    question_ids = []
+    for attempt in test_attempts:
+        for answer in attempt.snapshot_json.get("answers", []):
+            question_id = answer.get("question_id")
+            if not question_id or question_id in seen_question_ids:
+                continue
+            if answer.get("is_correct"):
+                continue
+            seen_question_ids.add(question_id)
+            latest_wrong_answers.append(
+                {
+                    "question_id": question_id,
+                    "selected_choice_id": answer.get("selected_choice_id"),
+                    "occurred_at": attempt.finished_at or attempt.started_at,
+                    "test": attempt.test,
+                }
+            )
+            question_ids.append(question_id)
+
+    question_map = {
+        question.id: question
+        for question in Question.objects.filter(id__in=question_ids).select_related("test").prefetch_related("choice_set")
+    }
+    for answer in latest_wrong_answers:
+        question = question_map.get(answer["question_id"])
+        if not question:
+            continue
+
+        selected_choice = next(
+            (choice for choice in question.choice_set.all() if choice.id == answer["selected_choice_id"]),
+            None,
+        )
+        correct_choice = next((choice for choice in question.choice_set.all() if choice.is_correct), None)
+        items.append(
+            {
+                "kind": "test",
+                "occurred_at": answer["occurred_at"],
+                "title": question.test.title,
+                "topic": normalize_difficulty_label(question.difficulty),
+                "prompt": question.text,
+                "your_answer": selected_choice.text if selected_choice else "Javob tanlanmagan",
+                "correct_answer": correct_choice.text if correct_choice else "To'g'ri javob belgilanmagan",
+                "explanation": "",
+                "retry_href": f"/tests/{question.test_id}/start/?next=/subjects/{subject.id}/mistakes/",
+                "source_label": "Test",
+            }
+        )
+
+    items.sort(key=lambda item: item["occurred_at"] or timezone.now(), reverse=True)
+    return items[:limit]
+
+
 def get_user_profile_summary(user, current_level_label):
     subscriptions = get_user_subject_access_rows(user, active_only=False)
 

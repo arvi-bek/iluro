@@ -9,7 +9,7 @@
 
 {% block content %}
 <div id="content-main">
-    <form method="post" id="content-import-form">
+    <form method="post" id="content-import-form" enctype="multipart/form-data">
         {% csrf_token %}
         {% if form.non_field_errors %}
         <p class="errornote">{{ form.non_field_errors|join:", " }}</p>
@@ -49,10 +49,21 @@
 
             <div class="form-row">
                 <div>
+                    {{ form.json_file.errors }}
+                    {{ form.json_file.label_tag }}
+                    {{ form.json_file }}
+                    {% if form.json_file.help_text %}
+                    <div class="help">{{ form.json_file.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
                     {{ form.json_text.errors }}
                     {{ form.json_text.label_tag }}
                     {{ form.json_text }}
-                    <div class="help">JSON top-level dict yoki list bo'lishi mumkin. Fayl yuklash shart emas.</div>
+                    <div class="help">JSON top-level dict yoki list bo'lishi mumkin. Formulalar uchun `subject`, `section_key: "formulas"` va `entries` bilan ham ishlaydi.</div>
                 </div>
             </div>
         </fieldset>

@@ -68,8 +68,13 @@ class ContentImportCenterForm(forms.Form):
         label="Mavjud ma'lumotni yangilash / tozalash",
         help_text="Assessmentlarda replace, qolgan bloklarda esa eski ma'lumotni tozalash sifatida ishlaydi.",
     )
+    json_file = forms.FileField(
+        required=False,
+        label="JSON fayl",
+        help_text=".json fayl yuklash mumkin. Xohlasangiz pastdagi maydonga ham JSON paste qilishingiz mumkin.",
+    )
     json_text = forms.CharField(
-        required=True,
+        required=False,
         label="JSON matni",
         widget=forms.Textarea(attrs={"rows": 22, "class": "vLargeTextField"}),
     )
@@ -79,9 +84,19 @@ class ContentImportCenterForm(forms.Form):
         subject = cleaned_data.get("subject")
         import_kind = cleaned_data.get("import_kind")
         json_text = (cleaned_data.get("json_text") or "").strip()
+        json_file = cleaned_data.get("json_file")
 
-        if not subject or not import_kind or not json_text:
+        if not subject or not import_kind:
             return cleaned_data
+
+        if json_file and not json_text:
+            try:
+                json_text = json_file.read().decode("utf-8-sig").strip()
+            except UnicodeDecodeError as exc:
+                raise forms.ValidationError("JSON fayl UTF-8 formatda bo'lishi kerak.") from exc
+
+        if not json_text:
+            raise forms.ValidationError("JSON matnini kiriting yoki .json fayl yuklang.")
 
         try:
             payload = load_json_payload_from_text(json_text)
@@ -93,6 +108,7 @@ class ContentImportCenterForm(forms.Form):
             raise forms.ValidationError("Tanlangan fan uchun bu import turi mos emas.")
 
         cleaned_data["payload"] = payload
+        cleaned_data["json_text"] = json_text
         return cleaned_data
 
 
@@ -107,7 +123,7 @@ def get_allowed_import_kinds(subject_name):
 
 def import_center_view(request):
     if request.method == "POST":
-        form = ContentImportCenterForm(request.POST)
+        form = ContentImportCenterForm(request.POST, request.FILES)
         if form.is_valid():
             subject = form.cleaned_data["subject"]
             payload = form.cleaned_data["payload"]

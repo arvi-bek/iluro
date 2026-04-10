@@ -24,6 +24,8 @@ from .selectors import (
     get_book_filter_config,
     get_dashboard_subject_cards,
     get_formula_entries,
+    get_math_formula_quiz_payload,
+    get_user_math_mistake_items,
     get_language_problem_filter_config,
     get_latest_dashboard_resources,
     get_ranking_queryset,
@@ -165,6 +167,12 @@ def _get_workspace_section_catalog(subject_theme_key):
             "unit": "formula",
             "empty_note": "Formulalar hali kiritilmagan.",
         },
+        "formula-quiz": {
+            "description": "Formulani izoh va qo'llanishga qarab topish uchun tezkor quiz bo'limi.",
+            "cta": "Quizni boshlash",
+            "unit": "quiz",
+            "empty_note": "Formula quiz uchun hali yetarli material yo'q.",
+        },
         "problems": {
             "description": (
                 "Misol, masala va nazorat bloklarini bitta erkin ishlash oqimida birlashtiradigan bo'lim."
@@ -174,6 +182,12 @@ def _get_workspace_section_catalog(subject_theme_key):
             "cta": "Setlarni ochish",
             "unit": "set",
             "empty_note": "Mashq setlari hali tayyor emas.",
+        },
+        "mistakes": {
+            "description": "Oldingi xatolarni yig'ib, qayta ishlash uchun eng foydali blok.",
+            "cta": "Xatolarni ko'rish",
+            "unit": "xato",
+            "empty_note": "Hozircha xatolar yig'ilmagan.",
         },
         "terms": {
             "description": "Atamalarni qisqa mazmun va to'liq izoh bilan takrorlash katalogi.",
@@ -242,13 +256,18 @@ def _build_workspace_flow_steps(subject_theme_key):
             },
             {
                 "step": "02",
+                "title": "Formula quiz bilan tekshiring",
+                "text": "Izohga qarab formulani topib, yodlashni tez mustahkamlang.",
+            },
+            {
+                "step": "03",
                 "title": "Assessment blokini ishlang",
                 "text": "Misol, masala va nazorat savollarini bitta oqimda ishlab chiqing.",
             },
             {
-                "step": "03",
+                "step": "04",
                 "title": "Natijani tahlil qiling",
-                "text": "Oxirida qaysi savollarda qiynalganingizni ko'rib, keyingi blokka o'ting.",
+                "text": "Oxirida xatolar bo'limiga qaytib, qaysi savollarda qiynalganingizni tiklang.",
             },
         ]
 
@@ -625,6 +644,15 @@ def subject_workspace_view(request, subject_id, section=None):
             selected_formula = next((entry for entry in formula_entries if entry.id == int(selected_formula_id)), None)
         if selected_formula is None:
             selected_formula = formula_entries[0]
+    math_formula_quiz = []
+    math_mistake_items = []
+    if is_math_subject:
+        math_formula_quiz = get_math_formula_quiz_payload(subject)
+        math_mistake_items = get_user_math_mistake_items(
+            request.user,
+            subject,
+            limit=12 if current_section == "mistakes" else 4,
+        )
 
     history_query = (request.GET.get("q") or "").strip()
     history_page_obj = None
@@ -1011,7 +1039,9 @@ def subject_workspace_view(request, subject_id, section=None):
         "books": total_books_count,
         "tests": accessible_test_count,
         "formulas": SubjectSectionEntry.objects.filter(subject=subject, section_key="formulas").count(),
+        "formula-quiz": len(math_formula_quiz) if is_math_subject else 0,
         "problems": combined_problem_count,
+        "mistakes": len(math_mistake_items) if is_math_subject else 0,
         "terms": _filter_by_allowed_level(
             SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
             "access_level",
@@ -1054,7 +1084,9 @@ def subject_workspace_view(request, subject_id, section=None):
         .values_list("title", flat=True)
         .first()
         or "",
+        "formula-quiz": math_formula_quiz[0]["answer_title"] if math_formula_quiz else "",
         "problems": practice_sets[0].title if practice_sets else (tests[0].title if tests else ""),
+        "mistakes": math_mistake_items[0]["title"] if math_mistake_items else "",
         "terms": _filter_by_allowed_level(
             SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
             "access_level",
@@ -1165,6 +1197,8 @@ def subject_workspace_view(request, subject_id, section=None):
         "formula_query": formula_query,
         "formula_filter": formula_filter,
         "selected_formula": selected_formula,
+        "math_formula_quiz": math_formula_quiz,
+        "math_mistake_items": math_mistake_items,
         "selected_history_entry": selected_history_entry,
         "selected_reference_entry": selected_reference_entry,
         "reference_page_obj": reference_page_obj,

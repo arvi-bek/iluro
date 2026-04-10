@@ -13,6 +13,7 @@ from .models import (
     PracticeSet,
     Profile,
     Question,
+    SubjectSectionEntry,
     Subject,
     Subscription,
     SubscriptionPlan,
@@ -28,7 +29,9 @@ from .services import (
     get_or_sync_profile,
     record_single_practice_attempt_stats,
     revoke_subject_access,
+    trim_user_assessment_history,
 )
+from .selectors import get_user_math_mistake_items
 from .utils import (
     calculate_essay_topic_xp,
     calculate_grammar_lesson_xp,
@@ -112,6 +115,105 @@ class MainSmokeTests(TestCase):
             text="7",
             is_correct=False,
         )
+        PracticeChoice.objects.create(
+            exercise=self.practice_exercise,
+            text="8",
+            is_correct=False,
+        )
+        PracticeChoice.objects.create(
+            exercise=self.practice_exercise,
+            text="9",
+            is_correct=False,
+        )
+
+        self.formula_entry_one = SubjectSectionEntry.objects.create(
+            subject=self.math,
+            section_key="formulas",
+            title="Kvadrat tenglama formulasi",
+            summary="Diskriminant va ildizlarni topishda ishlatiladi.",
+            body="x = (-b ± √D) / 2a",
+            usage_note="ax² + bx + c = 0 ko'rinishidagi tenglamalarda.",
+            access_level="C",
+        )
+        SubjectSectionEntry.objects.create(
+            subject=self.math,
+            section_key="formulas",
+            title="Qisqartirilgan ko'paytirish formulalari",
+            summary="Ko'phadlarni tez ochish va yig'ishda ishlatiladi.",
+            body="(a+b)^2 = a^2 + 2ab + b^2",
+            usage_note="Algebraik almashtirishlarda.",
+            access_level="C",
+        )
+        SubjectSectionEntry.objects.create(
+            subject=self.math,
+            section_key="formulas",
+            title="Geometrik progressiya yig'indisi",
+            summary="Birinchi n ta had yig'indisini topish formulasi.",
+            body="S_n = b_1(q^n - 1)/(q - 1)",
+            usage_note="Geometrik progressiyada q ≠ 1 bo'lsa.",
+            access_level="C+",
+        )
+        SubjectSectionEntry.objects.create(
+            subject=self.math,
+            section_key="formulas",
+            title="Sinuslar teoremasi",
+            summary="Uchburchak tomonlari va qarshi burchaklari orasidagi bog'lanish.",
+            body="a/sin A = b/sin B = c/sin C",
+            usage_note="Uchburchak geometriyasi masalalarida.",
+            access_level="B",
+        )
+
+        self.topic_set = PracticeSet.objects.create(
+            subject=self.math,
+            title="Kvadrat tenglama mini test",
+            source_book="IDC 1",
+            topic="Kvadrat tenglama",
+            description="Kvadrat tenglama va diskriminant bo'yicha nazorat.",
+            difficulty="C",
+        )
+        self.topic_exercise_one = PracticeExercise.objects.create(
+            subject=self.math,
+            practice_set=self.topic_set,
+            title="Diskriminant",
+            topic="Kvadrat tenglama",
+            prompt="ax² + bx + c = 0 uchun diskriminant qaysi formula bilan topiladi?",
+            answer_mode="choice",
+            explanation="Diskriminant D = b² - 4ac formula bilan topiladi.",
+            difficulty="C",
+        )
+        for text, is_correct in [
+            ("D = b² - 4ac", True),
+            ("D = 2ab - c", False),
+            ("D = a² + c²", False),
+            ("D = b + 4ac", False),
+        ]:
+            PracticeChoice.objects.create(exercise=self.topic_exercise_one, text=text, is_correct=is_correct)
+
+        self.topic_exercise_two = PracticeExercise.objects.create(
+            subject=self.math,
+            practice_set=self.topic_set,
+            title="Ildizlar soni",
+            topic="Kvadrat tenglama",
+            prompt="Agar diskriminant noldan katta bo'lsa, kvadrat tenglama nechta haqiqiy ildizga ega bo'ladi?",
+            answer_mode="choice",
+            explanation="D > 0 bo'lsa, 2 ta haqiqiy ildiz bo'ladi.",
+            difficulty="C",
+        )
+        for text, is_correct in [
+            ("2 ta", True),
+            ("1 ta", False),
+            ("Haqiqiy ildiz yo'q", False),
+            ("Cheksiz ko'p", False),
+        ]:
+            PracticeChoice.objects.create(exercise=self.topic_exercise_two, text=text, is_correct=is_correct)
+
+        wrong_choice = next(choice for choice in self.practice_exercise.choices.all() if not choice.is_correct)
+        UserPracticeAttempt.objects.create(
+            user=self.user,
+            exercise=self.practice_exercise,
+            selected_choice=wrong_choice,
+            is_correct=False,
+        )
 
         self.client.force_login(self.user)
 
@@ -127,13 +229,23 @@ class MainSmokeTests(TestCase):
             reverse("subject-workspace", args=[self.math.id]),
             reverse("subject-workspace-section", args=[self.math.id, "books"]),
             reverse("subject-workspace-section", args=[self.math.id, "problems"]),
-            reverse("subject-workspace-section", args=[self.math.id, "problems"]),
+            reverse("subject-workspace-section", args=[self.math.id, "formula-quiz"]),
+            reverse("subject-workspace-section", args=[self.math.id, "mistakes"]),
         ]
 
         for url in urls:
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
+
+    def test_math_tools_sections_show_expected_content(self):
+        formula_response = self.client.get(reverse("subject-workspace-section", args=[self.math.id, "formula-quiz"]))
+        self.assertContains(formula_response, "Formula quiz")
+        self.assertContains(formula_response, self.formula_entry_one.title)
+
+        mistakes_response = self.client.get(reverse("subject-workspace-section", args=[self.math.id, "mistakes"]))
+        self.assertContains(mistakes_response, "Mening xatolarim")
+        self.assertContains(mistakes_response, self.practice_exercise.prompt)
 
     def test_books_root_shows_subject_cards_before_subject_filter(self):
         response = self.client.get(reverse("books"))
@@ -280,6 +392,165 @@ class XPEconomyTests(TestCase):
 
         profile = get_or_sync_profile(user)
         self.assertEqual(profile.xp, 1300 + earned_delta)
+
+    def test_trim_history_keeps_latest_wrong_practice_attempt_per_exercise(self):
+        user = User.objects.create_user(username="attemptkeeper", password="StrongPass123")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+        practice_set = PracticeSet.objects.create(subject=subject, title="Trim set", difficulty="C")
+        exercise = PracticeExercise.objects.create(
+            subject=subject,
+            practice_set=practice_set,
+            prompt="5 + 5 = ?",
+            answer_mode="choice",
+            difficulty="C",
+        )
+        correct_choice = PracticeChoice.objects.create(exercise=exercise, text="10", is_correct=True)
+        wrong_choice = PracticeChoice.objects.create(exercise=exercise, text="11", is_correct=False)
+
+        older_attempt = UserPracticeAttempt.objects.create(
+            user=user,
+            exercise=exercise,
+            selected_choice=wrong_choice,
+            is_correct=False,
+        )
+        newer_attempt = UserPracticeAttempt.objects.create(
+            user=user,
+            exercise=exercise,
+            selected_choice=correct_choice,
+            is_correct=True,
+        )
+
+        trim_user_assessment_history(user)
+
+        remaining_ids = list(UserPracticeAttempt.objects.filter(user=user).values_list("id", flat=True))
+        self.assertEqual(remaining_ids, [older_attempt.id])
+        self.assertNotIn(newer_attempt.id, remaining_ids)
+
+    def test_math_mistakes_uses_previous_wrong_attempt_when_latest_is_correct(self):
+        user = User.objects.create_user(username="mistakesfallback", password="StrongPass123")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+        practice_set = PracticeSet.objects.create(
+            subject=subject,
+            title="Mistakes set",
+            topic="Kasrlar",
+            difficulty="C",
+        )
+        exercise = PracticeExercise.objects.create(
+            subject=subject,
+            practice_set=practice_set,
+            title="Kasrni toping",
+            topic="Kasrlar",
+            prompt="1/2 ga teng variantni tanlang",
+            answer_mode="choice",
+            difficulty="C",
+            explanation="Maxraj va surat nisbatiga qaraladi.",
+        )
+        correct_choice = PracticeChoice.objects.create(exercise=exercise, text="2/4", is_correct=True)
+        wrong_choice = PracticeChoice.objects.create(exercise=exercise, text="3/4", is_correct=False)
+
+        UserPracticeAttempt.objects.create(
+            user=user,
+            exercise=exercise,
+            selected_choice=wrong_choice,
+            is_correct=False,
+        )
+        UserPracticeAttempt.objects.create(
+            user=user,
+            exercise=exercise,
+            selected_choice=correct_choice,
+            is_correct=True,
+        )
+
+        mistakes = get_user_math_mistake_items(user, subject)
+
+        self.assertEqual(len(mistakes), 1)
+        self.assertEqual(mistakes[0]["source_label"], "Mashq")
+        self.assertEqual(mistakes[0]["your_answer"], "3/4")
+        self.assertEqual(mistakes[0]["correct_answer"], "2/4")
+
+    def test_math_mistakes_uses_previous_wrong_test_answer_when_latest_is_correct(self):
+        user = User.objects.create_user(username="testmistakesfallback", password="StrongPass123")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+        test = Test.objects.create(subject=subject, title="Kasr testi", duration=10, difficulty="C")
+        question = Question.objects.create(test=test, text="Qaysi biri 1/2?", difficulty="C")
+        wrong_choice = Choice.objects.create(question=question, text="3/4", is_correct=False)
+        correct_choice = Choice.objects.create(question=question, text="2/4", is_correct=True)
+
+        UserTest.objects.create(
+            user=user,
+            test=test,
+            score=0,
+            correct_count=0,
+            started_at=timezone.now() - timezone.timedelta(days=2),
+            finished_at=timezone.now() - timezone.timedelta(days=2),
+            snapshot_json={
+                "status": "completed",
+                "question_count": 1,
+                "answers": [
+                    {
+                        "question_id": question.id,
+                        "selected_choice_id": wrong_choice.id,
+                        "is_correct": False,
+                    }
+                ],
+            },
+        )
+        UserTest.objects.create(
+            user=user,
+            test=test,
+            score=100,
+            correct_count=1,
+            started_at=timezone.now() - timezone.timedelta(days=1),
+            finished_at=timezone.now() - timezone.timedelta(days=1),
+            snapshot_json={
+                "status": "completed",
+                "question_count": 1,
+                "answers": [
+                    {
+                        "question_id": question.id,
+                        "selected_choice_id": correct_choice.id,
+                        "is_correct": True,
+                    }
+                ],
+            },
+        )
+
+        mistakes = get_user_math_mistake_items(user, subject)
+
+        self.assertEqual(len(mistakes), 1)
+        self.assertEqual(mistakes[0]["source_label"], "Test")
+        self.assertEqual(mistakes[0]["your_answer"], "3/4")
+        self.assertEqual(mistakes[0]["correct_answer"], "2/4")
+
+    def test_trim_history_removes_test_attempts_older_than_week(self):
+        user = User.objects.create_user(username="weektrim", password="StrongPass123")
+        subject = Subject.objects.create(name="Tarix", price=30000)
+        test = Test.objects.create(subject=subject, title="Tarix test", duration=10, difficulty="C")
+
+        old_attempt = UserTest.objects.create(
+            user=user,
+            test=test,
+            score=40,
+            correct_count=2,
+            started_at=timezone.now() - timezone.timedelta(days=10),
+            finished_at=timezone.now() - timezone.timedelta(days=10),
+            snapshot_json={"status": "completed", "question_count": 1, "answers": []},
+        )
+        fresh_attempt = UserTest.objects.create(
+            user=user,
+            test=test,
+            score=80,
+            correct_count=4,
+            started_at=timezone.now() - timezone.timedelta(days=2),
+            finished_at=timezone.now() - timezone.timedelta(days=2),
+            snapshot_json={"status": "completed", "question_count": 1, "answers": []},
+        )
+
+        trim_user_assessment_history(user)
+
+        remaining_ids = list(UserTest.objects.filter(user=user).values_list("id", flat=True))
+        self.assertIn(fresh_attempt.id, remaining_ids)
+        self.assertNotIn(old_attempt.id, remaining_ids)
 
 
 class SubscriptionAccessTests(TestCase):

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260409-rules-formulas1">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260410-math-tools1">
 </head>
 <body>
     <div class="workspace-shell">
@@ -401,6 +401,68 @@
                             </section>
                         </div>
                     </div>
+                    {% elif current_section == "formula-quiz" %}
+                    <div class="content-panel math-tools-panel">
+                        <div class="workspace-section-intro">
+                            <div class="workspace-section-copy">
+                                <p class="eyebrow">Formula quiz</p>
+                                <h2>{{ subject.name }} formulalarini tez tekshirish</h2>
+                                <p class="workspace-section-text">Izoh yoki qo'llanishga qarab formulani toping. Bu bo'lim formulani yoddan emas, ishlatilish joyi bilan birga eslab qolishga yordam beradi.</p>
+                            </div>
+                            <div class="workspace-section-meta">
+                                <span class="workspace-section-pill">{{ math_formula_quiz|length }} ta savol</span>
+                                <span class="workspace-section-pill is-soft">Tezkor recall</span>
+                            </div>
+                        </div>
+                        <div class="math-tool-metrics">
+                            <article class="metric-card">
+                                <div class="metric-card-head">
+                                    <span>Format</span>
+                                    <span class="metric-dot"></span>
+                                </div>
+                                <strong>4 variant</strong>
+                                <small>Har savolda formula mavzusini to'g'ri nom bilan topasiz.</small>
+                            </article>
+                            <article class="metric-card">
+                                <div class="metric-card-head">
+                                    <span>Fokus</span>
+                                    <span class="metric-dot"></span>
+                                </div>
+                                <strong>Izoh + qo'llanish</strong>
+                                <small>Faqat yozilishini emas, qayerda ishlashini ham eslab qolasiz.</small>
+                            </article>
+                        </div>
+                        {% if math_formula_quiz %}
+                            {{ math_formula_quiz|json_script:"formula-quiz-data" }}
+                            <section class="math-quiz-stage" data-math-quiz="formula">
+                                <div class="math-quiz-stage-head">
+                                    <div>
+                                        <p class="eyebrow">Joriy savol</p>
+                                        <h3>Formula quiz</h3>
+                                    </div>
+                                    <div class="math-quiz-stage-meta">
+                                        <span data-quiz-progress>1 / {{ math_formula_quiz|length }}</span>
+                                        <span data-quiz-score>0 ta to'g'ri</span>
+                                    </div>
+                                </div>
+                                <article class="math-quiz-card">
+                                    <p class="math-quiz-detail" data-quiz-detail></p>
+                                    <h4 class="math-quiz-prompt" data-quiz-prompt></h4>
+                                    <div class="math-quiz-options" data-quiz-options></div>
+                                    <div class="math-quiz-feedback" data-quiz-feedback hidden></div>
+                                </article>
+                                <div class="math-quiz-actions">
+                                    <button class="mini-link secondary" type="button" data-quiz-reset>Qaytadan boshlash</button>
+                                    <button class="mini-link" type="button" data-quiz-next>Keyingi savol</button>
+                                </div>
+                            </section>
+                        {% else %}
+                            <article class="mini-card empty-card">
+                                <h3>Formula quiz hali tayyor emas</h3>
+                                <p>Kamida bir nechta formula kiritilgach bu bo'lim avtomatik ishlaydi.</p>
+                            </article>
+                        {% endif %}
+                    </div>
                     {% elif current_section == "problems" %}
                     <div class="content-panel problems-panel">
                         <div class="workspace-section-intro problems-intro">
@@ -453,6 +515,53 @@
                             </article>
                             {% endfor %}
                         </div>
+                    </div>
+                    {% elif current_section == "mistakes" %}
+                    <div class="content-panel math-tools-panel">
+                        <div class="workspace-section-intro">
+                            <div class="workspace-section-copy">
+                                <p class="eyebrow">Mening xatolarim</p>
+                                <h2>Oldingi xatolarni qayta ishlash</h2>
+                                <p class="workspace-section-text">Mashq va testlarda xato bo'lgan savollar shu yerga yig'iladi. To'g'ri javobni ko'rib, kerak bo'lsa o'sha blokka qayta o'tishingiz mumkin.</p>
+                            </div>
+                            <div class="workspace-section-meta">
+                                <span class="workspace-section-pill">{{ math_mistake_items|length }} ta xato</span>
+                                <span class="workspace-section-pill is-soft">So'nggi urinishlar</span>
+                            </div>
+                        </div>
+                        {% if math_mistake_items %}
+                        <div class="math-mistakes-grid">
+                            {% for item in math_mistake_items %}
+                            <article class="math-mistake-card">
+                                <div class="mini-card-top">
+                                    <span>{{ item.topic }}</span>
+                                    <strong class="card-state">{{ item.source_label }}</strong>
+                                </div>
+                                <h3>{{ item.title }}</h3>
+                                <p class="math-mistake-prompt">{{ item.prompt }}</p>
+                                <div class="math-mistake-answer">
+                                    <span>Sizning javob</span>
+                                    <strong>{{ item.your_answer }}</strong>
+                                </div>
+                                <div class="math-mistake-answer is-correct">
+                                    <span>To'g'ri javob</span>
+                                    <strong>{{ item.correct_answer }}</strong>
+                                </div>
+                                {% if item.explanation %}
+                                <p class="math-mistake-note">{{ item.explanation }}</p>
+                                {% endif %}
+                                {% if item.retry_href %}
+                                <a class="mini-link" href="{{ item.retry_href }}">Qayta ishlash</a>
+                                {% endif %}
+                            </article>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                            <article class="mini-card empty-card">
+                                <h3>Xatolar topilmadi</h3>
+                                <p>Hozircha xato bo'lgan savollar yo'q. Mashq yoki test ishlagach shu yerda qayta ko'rish ro'yxati paydo bo'ladi.</p>
+                            </article>
+                        {% endif %}
                     </div>
                     {% elif current_section == "ai" %}
                     <div class="content-panel coming-soon-panel">
@@ -1291,6 +1400,108 @@
                 if (event.key === "Escape") {
                     closeModal();
                 }
+            });
+        })();
+    </script>
+    {% endif %}
+    {% if current_section == "formula-quiz" %}
+    <script>
+        (function () {
+            function initQuiz(scriptId, root) {
+                const dataTag = document.getElementById(scriptId);
+                if (!dataTag || !root) return;
+
+                const questions = JSON.parse(dataTag.textContent || "[]");
+                if (!questions.length) return;
+
+                const promptNode = root.querySelector("[data-quiz-prompt]");
+                const detailNode = root.querySelector("[data-quiz-detail]");
+                const optionsNode = root.querySelector("[data-quiz-options]");
+                const feedbackNode = root.querySelector("[data-quiz-feedback]");
+                const progressNode = root.querySelector("[data-quiz-progress]");
+                const scoreNode = root.querySelector("[data-quiz-score]");
+                const nextButton = root.querySelector("[data-quiz-next]");
+                const resetButton = root.querySelector("[data-quiz-reset]");
+                let index = 0;
+                let score = 0;
+                let locked = false;
+
+                function setMeta() {
+                    if (progressNode) progressNode.textContent = `${Math.min(index + 1, questions.length)} / ${questions.length}`;
+                    if (scoreNode) scoreNode.textContent = `${score} ta to'g'ri`;
+                }
+
+                function renderQuestion() {
+                    const question = questions[index];
+                    if (!question) return;
+                    locked = false;
+                    setMeta();
+                    if (promptNode) promptNode.textContent = question.prompt || "";
+                    if (detailNode) detailNode.textContent = question.detail || "";
+                    if (feedbackNode) {
+                        feedbackNode.hidden = true;
+                        feedbackNode.className = "math-quiz-feedback";
+                        feedbackNode.textContent = "";
+                    }
+                    optionsNode.innerHTML = "";
+
+                    question.choices.forEach((choice) => {
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.className = "math-quiz-option";
+                        button.innerHTML = `<span>${choice.letter}</span><strong>${choice.text}</strong>`;
+                        button.addEventListener("click", () => {
+                            if (locked) return;
+                            locked = true;
+                            const isCorrect = choice.letter === question.correct_letter;
+                            if (isCorrect) {
+                                score += 1;
+                                button.classList.add("is-correct");
+                            } else {
+                                button.classList.add("is-wrong");
+                                const correctButton = [...optionsNode.querySelectorAll(".math-quiz-option")].find(
+                                    (item) => item.firstElementChild && item.firstElementChild.textContent === question.correct_letter
+                                );
+                                if (correctButton) correctButton.classList.add("is-correct");
+                            }
+                            if (feedbackNode) {
+                                feedbackNode.hidden = false;
+                                feedbackNode.classList.add(isCorrect ? "is-correct" : "is-wrong");
+                                feedbackNode.textContent = isCorrect
+                                    ? "To'g'ri. Keyingi savolga o'tishingiz mumkin."
+                                    : `To'g'ri javob: ${question.correct_letter}. ${question.explanation || ""}`.trim();
+                            }
+                            setMeta();
+                        });
+                        optionsNode.appendChild(button);
+                    });
+                }
+
+                if (nextButton) {
+                    nextButton.addEventListener("click", () => {
+                        if (index < questions.length - 1) {
+                            index += 1;
+                        } else {
+                            index = 0;
+                            score = 0;
+                        }
+                        renderQuestion();
+                    });
+                }
+
+                if (resetButton) {
+                    resetButton.addEventListener("click", () => {
+                        index = 0;
+                        score = 0;
+                        renderQuestion();
+                    });
+                }
+
+                renderQuestion();
+            }
+
+            document.querySelectorAll("[data-math-quiz]").forEach((root) => {
+                initQuiz("formula-quiz-data", root);
             });
         })();
     </script>

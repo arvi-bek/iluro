@@ -1,9 +1,10 @@
 import json
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.utils import timezone
 
 from .models import (
@@ -45,6 +46,7 @@ from .utils import (
 
 
 ASSESSMENT_HISTORY_LIMIT = 5
+TEST_ATTEMPT_RETENTION_DAYS = 7
 
 
 def rebuild_user_statistics(user):
@@ -330,11 +332,14 @@ def record_single_practice_attempt_stats(attempt):
 
 def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
     keep_recent = max(int(keep_recent or ASSESSMENT_HISTORY_LIMIT), 1)
+    now = timezone.now()
+    cutoff = now - timedelta(days=TEST_ATTEMPT_RETENTION_DAYS)
 
     kept_test_ids = list(
         UserTest.objects.filter(user=user)
+        .filter(Q(finished_at__gte=cutoff) | Q(started_at__gte=cutoff))
         .order_by("-finished_at", "-started_at", "-id")
-        .values_list("id", flat=True)[:keep_recent]
+        .values_list("id", flat=True)
     )
     if kept_test_ids:
         UserTest.objects.filter(user=user).exclude(id__in=kept_test_ids).delete()
@@ -355,17 +360,30 @@ def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
     else:
         PracticeSetAttempt.objects.filter(user=user).delete()
 
-    kept_single_attempt_ids = list(
-        UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=True)
-        .order_by("-created_at", "-id")
-        .values_list("id", flat=True)[:keep_recent]
-    )
-    if kept_single_attempt_ids:
-        UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=True).exclude(
-            id__in=kept_single_attempt_ids
-        ).delete()
+    kept_attempt_ids = []
+    latest_wrong_attempt_map = {}
+    for attempt in (
+        UserPracticeAttempt.objects.filter(user=user, is_correct=False)
+        .order_by("exercise_id", "-created_at", "-id")
+        .values("id", "exercise_id")
+    ):
+        exercise_id = attempt["exercise_id"]
+        if exercise_id in latest_wrong_attempt_map:
+            continue
+        latest_wrong_attempt_map[exercise_id] = attempt["id"]
+        kept_attempt_ids.append(attempt["id"])
+
+    if kept_attempt_ids:
+        UserPracticeAttempt.objects.filter(user=user).exclude(id__in=kept_attempt_ids).delete()
     else:
-        UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=True).delete()
+        UserPracticeAttempt.objects.filter(user=user).delete()
+
+    PracticeSetAttempt.objects.filter(user=user).exclude(
+        id__in=UserPracticeAttempt.objects.filter(user=user, practice_session__isnull=False).values_list(
+            "practice_session_id",
+            flat=True,
+        )
+    ).delete()
 
 
 def ensure_default_subscription_plans():
@@ -529,7 +547,9 @@ def get_subject_theme(subject_name):
             ],
             "extra_sections": [
                 {"key": "formulas", "label": "Formulalar"},
+                {"key": "formula-quiz", "label": "Formula quiz"},
                 {"key": "problems", "label": "Misol / Masalalar"},
+                {"key": "mistakes", "label": "Mening xatolarim"},
             ],
         }
 
