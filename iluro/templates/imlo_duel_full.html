@@ -14,6 +14,7 @@
 <body class="game-page {% if screen_mode == 'board' %}game-page--board{% endif %}">
     <main class="game-shell battle-board battle-board--arena"
           data-question-url="{% url 'imlo-duel-questions' %}"
+          data-selected-subject="{{ selected_subject }}"
           data-selected-grade="{{ selected_grade }}"
           data-screen-mode="{{ screen_mode }}">
         <header class="game-topbar">
@@ -24,7 +25,7 @@
             <div class="game-branding">
                 <p class="game-brand-kicker">Iluro battle</p>
                 <h1>Imlo dueli</h1>
-                <p>To'g'ri javob arqonni o'z tomoningizga tortadi.</p>
+                <p>Tanlangan fan va sinf bo'yicha savollar duel formatida keladi.</p>
             </div>
             <div class="game-topbar-actions">
                 <button class="game-config-link" type="button" id="battle-configure-btn">
@@ -48,7 +49,7 @@
                 </div>
                 <div class="battle-question-card__body is-blue-soft">
                     <div class="question-meta">
-                        <span id="battle-left-source-badge">Imlo</span>
+                        <span id="battle-left-source-badge">Ona tili</span>
                     </div>
                     <h3 id="battle-left-question-text">O'yin boshlangach ko'k jamoaga savol shu yerda chiqadi.</h3>
                     <div class="battle-options battle-options--stack" id="battle-left-options"></div>
@@ -103,7 +104,7 @@
                 </div>
                 <div class="battle-question-card__body is-red-soft">
                     <div class="question-meta">
-                        <span id="battle-right-source-badge">Imlo</span>
+                        <span id="battle-right-source-badge">Ona tili</span>
                     </div>
                     <h3 id="battle-right-question-text">O'yin boshlangach qizil jamoaga savol shu yerda chiqadi.</h3>
                     <div class="battle-options battle-options--stack" id="battle-right-options"></div>
@@ -127,7 +128,17 @@
         <div class="game-setup-modal">
             <p class="game-brand-kicker">Imlo dueli</p>
             <h2>Jamoalarni tayyorlang</h2>
-            <p class="game-setup-note">Sinfni tanlang, keyin ikki jamoa nomini kiriting. Nomlar brauzerning o'zida vaqtincha saqlanadi, bazaga yozilmaydi.</p>
+            <p class="game-setup-note">Avval fan, keyin sinfni tanlang va ikki jamoa nomini kiriting. Nomlar brauzerning o'zida vaqtincha saqlanadi, bazaga yozilmaydi.</p>
+
+            <div class="game-subject-grid" role="tablist" aria-label="Fan tanlash">
+                {% for option in subject_options %}
+                <button class="game-subject-card {% if option.value == selected_subject %}is-active{% endif %}"
+                        type="button"
+                        data-subject="{{ option.value }}">
+                    <strong>{{ option.label }}</strong>
+                </button>
+                {% endfor %}
+            </div>
 
             <div class="game-grade-grid" role="tablist" aria-label="Sinf tanlash">
                 {% for option in grade_options %}
@@ -138,7 +149,7 @@
                     <small>{{ option.question_count }} ta savol</small>
                 </button>
                 {% empty %}
-                <div class="battle-empty">Imlo savollari topilmadi.</div>
+                <div class="battle-empty">Tanlangan fan bo'yicha savollar topilmadi.</div>
                 {% endfor %}
             </div>
 
@@ -178,7 +189,8 @@
         </div>
     </section>
 
-    {{ grade_options|json_script:"history-battle-grade-options" }}
-    <script src="{% static 'js/imlo_duel.js' %}?v=20260410-games3"></script>
+    {{ subject_options|json_script:"language-duel-subject-options" }}
+    {{ grade_options_map|json_script:"language-duel-grade-options" }}
+    <script src="{% static 'js/imlo_duel.js' %}?v=20260410-games11"></script>
 </body>
 </html>

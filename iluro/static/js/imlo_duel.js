@@ -4,8 +4,11 @@
 
     const storageKey = "iluro-imlo-duel-setup";
     const questionUrl = board.dataset.questionUrl;
+    const initialSubject = board.dataset.selectedSubject || "language";
     const initialGrade = board.dataset.selectedGrade || "";
-    const gradeOptions = JSON.parse(document.getElementById("history-battle-grade-options")?.textContent || "[]");
+    const subjectOptions = JSON.parse(document.getElementById("language-duel-subject-options")?.textContent || "[]");
+    const gradeOptionsMap = JSON.parse(document.getElementById("language-duel-grade-options")?.textContent || "{}");
+    const gradeOptions = Array.isArray(gradeOptionsMap?.[initialSubject]) ? gradeOptionsMap[initialSubject] : [];
     const MATCH_DURATION_SECONDS = 180;
     const QUESTION_BATCH_SIZE = 30;
     const LOW_WATERMARK_QUESTIONS = 4;
@@ -21,6 +24,7 @@
         resultSummary: $("battle-result-summary"),
         restartButton: $("battle-restart-btn"),
         resultConfigButton: $("battle-result-config-btn"),
+        subjectCards: Array.from(document.querySelectorAll(".game-subject-card")),
         gradeCards: Array.from(document.querySelectorAll(".game-grade-card")),
         teamOneInput: $("battle-team-one-input"),
         teamTwoInput: $("battle-team-two-input"),
@@ -57,6 +61,8 @@
     };
 
     const state = {
+        subject: initialSubject,
+        subjectLabel: "Ona tili",
         grade: "",
         gradeLabel: "Aralash",
         leftQueue: [],
@@ -80,10 +86,13 @@
         loadingBatch: null,
     };
 
-    const setGradeTexts = (value) => {
-        [els.leftGrade, els.rightGrade, els.topbarGrade].filter(Boolean).forEach((node) => {
-            node.textContent = value;
+    const setGradeTexts = () => {
+        [els.leftGrade, els.rightGrade].filter(Boolean).forEach((node) => {
+            node.textContent = state.gradeLabel;
         });
+        if (els.topbarGrade) {
+            els.topbarGrade.textContent = `${state.subjectLabel} • ${state.gradeLabel}`;
+        }
     };
 
     function saved() {
@@ -95,7 +104,15 @@
     }
 
     function persist() {
-        localStorage.setItem(storageKey, JSON.stringify({ grade: state.grade, leftName: state.leftName, rightName: state.rightName }));
+        localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+                subject: state.subject,
+                grade: state.grade,
+                leftName: state.leftName,
+                rightName: state.rightName,
+            }),
+        );
     }
 
     function normalize(value, fallback) {
@@ -104,6 +121,10 @@
 
     function meta(grade) {
         return gradeOptions.find((item) => item.value === grade) || null;
+    }
+
+    function subjectMeta(subject) {
+        return subjectOptions.find((item) => item.value === subject) || null;
     }
 
     function formatSeconds(value) {
@@ -117,32 +138,28 @@
         els.overlay.classList.add("is-visible");
         document.body.style.overflow = "hidden";
     }
-
     function closeOverlay() {
         els.overlay.classList.remove("is-visible");
         if (!els.resultOverlay?.classList.contains("is-visible")) {
             document.body.style.overflow = "";
         }
     }
-
     function openResultOverlay() {
         els.resultOverlay?.classList.add("is-visible");
         document.body.style.overflow = "hidden";
     }
-
     function closeResultOverlay() {
         els.resultOverlay?.classList.remove("is-visible");
         if (!els.overlay.classList.contains("is-visible")) {
             document.body.style.overflow = "";
         }
     }
-
     function setGrade(next) {
         state.grade = next;
         els.gradeCards.forEach((card) => card.classList.toggle("is-active", card.dataset.grade === next));
         const info = meta(next);
         state.gradeLabel = info ? info.label : "Aralash";
-        setGradeTexts(state.gradeLabel);
+        setGradeTexts();
         els.topbarCount.textContent = "3 daqiqa";
     }
 
@@ -153,8 +170,8 @@
         els.rightLabel.textContent = state.rightName;
         els.leftIconLabel.textContent = state.leftName;
         els.rightIconLabel.textContent = state.rightName;
-        els.teamOneMeta.textContent = `${state.gradeLabel} bo'yicha imlo savollari bilan o'ynaydi.`;
-        els.teamTwoMeta.textContent = `${state.gradeLabel} bo'yicha imlo savollari bilan o'ynaydi.`;
+        els.teamOneMeta.textContent = `${state.subjectLabel} • ${state.gradeLabel} bo'yicha savollar bilan o'ynaydi.`;
+        els.teamTwoMeta.textContent = `${state.subjectLabel} • ${state.gradeLabel} bo'yicha savollar bilan o'ynaydi.`;
     }
 
     function clearTimers() {
@@ -170,7 +187,9 @@
         board.style.setProperty("--team-left-shift", `${Math.round(shift * 0.34)}px`);
         board.style.setProperty("--team-right-shift", `${Math.round(shift * 0.34)}px`);
         els.banner.classList.remove("is-player-pulse", "is-bot-pulse");
-        if (tone) els.banner.classList.add(tone);
+        if (tone) {
+            els.banner.classList.add(tone);
+        }
     }
 
     function renderLog() {
@@ -200,17 +219,21 @@
     }
 
     async function fetchBatch() {
-        if (state.loadingBatch) return state.loadingBatch;
-        state.loadingBatch = fetch(`${questionUrl}?grade=${encodeURIComponent(state.grade)}&limit=${QUESTION_BATCH_SIZE}`, {
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-        })
+        if (state.loadingBatch) {
+            return state.loadingBatch;
+        }
+        state.loadingBatch = fetch(
+            `${questionUrl}?subject=${encodeURIComponent(state.subject)}&grade=${encodeURIComponent(state.grade)}&limit=${QUESTION_BATCH_SIZE}`,
+            { headers: { "X-Requested-With": "XMLHttpRequest" } },
+        )
             .then(async (response) => {
                 const payload = await response.json();
                 if (!response.ok || !payload.ok) {
                     throw new Error(payload.message || "Savollarni yuklab bo'lmadi.");
                 }
+                state.subjectLabel = payload.subject_label || state.subjectLabel || "Ona tili";
                 state.gradeLabel = payload.grade_label || state.gradeLabel || "Aralash";
-                setGradeTexts(state.gradeLabel);
+                setGradeTexts();
                 distributeQuestions(payload.questions || []);
                 return payload;
             })
@@ -223,11 +246,15 @@
     async function ensureUpcomingQuestions() {
         const leftNeeds = state.leftQueue.length + (state.leftCurrent ? 1 : 0);
         const rightNeeds = state.rightQueue.length + (state.rightCurrent ? 1 : 0);
-        if (leftNeeds > LOW_WATERMARK_QUESTIONS && rightNeeds > LOW_WATERMARK_QUESTIONS) return;
+        if (leftNeeds > LOW_WATERMARK_QUESTIONS && rightNeeds > LOW_WATERMARK_QUESTIONS) {
+            return;
+        }
         try {
             await fetchBatch();
         } catch (error) {
-            if (state.running) els.status.textContent = error.message || "Yangi savollarni yuklab bo'lmadi.";
+            if (state.running) {
+                els.status.textContent = error.message || "Yangi savollarni yuklab bo'lmadi.";
+            }
         }
     }
 
@@ -266,11 +293,11 @@
         updateProgress();
         els.roundLabel.textContent = "Duel";
         els.timer.textContent = formatSeconds(MATCH_DURATION_SECONDS);
-        els.status.textContent = "Sinfni tanlang va o'yinni boshlang.";
-        els.leftQuestion.textContent = "O'yin boshlangach chap jamoaga savol shu yerda chiqadi.";
-        els.rightQuestion.textContent = "O'yin boshlangach o'ng jamoaga savol shu yerda chiqadi.";
-        els.leftSource.textContent = "Imlo";
-        els.rightSource.textContent = "Imlo";
+        els.status.textContent = "Fan va sinfni tanlang, keyin o'yinni boshlang.";
+        els.leftQuestion.textContent = "O'yin boshlangach ko'k jamoaga savol shu yerda chiqadi.";
+        els.rightQuestion.textContent = "O'yin boshlangach qizil jamoaga savol shu yerda chiqadi.";
+        els.leftSource.textContent = state.subjectLabel;
+        els.rightSource.textContent = state.subjectLabel;
         els.leftOptions.innerHTML = "";
         els.rightOptions.innerHTML = "";
         updateFrontline();
@@ -293,8 +320,8 @@
 
         if (!current) {
             questionNode.textContent = side === "left"
-                ? "Chap jamoa uchun yangi savol yuklanmoqda."
-                : "O'ng jamoa uchun yangi savol yuklanmoqda.";
+                ? "Ko'k jamoa uchun yangi savol yuklanmoqda."
+                : "Qizil jamoa uchun yangi savol yuklanmoqda.";
             sourceNode.textContent = "Kutilmoqda";
             optionsNode.innerHTML = "";
             return;
@@ -358,7 +385,11 @@
         addLog(
             "O'yin yakuni",
             els.resultSummary.textContent,
-            state.leftScore === state.rightScore && state.frontline === 0 ? "is-draw" : state.frontline >= 0 ? "is-player" : "is-bot",
+            state.leftScore === state.rightScore && state.frontline === 0
+                ? "is-draw"
+                : state.frontline >= 0
+                    ? "is-player"
+                    : "is-bot",
         );
         openResultOverlay();
     }
@@ -368,20 +399,15 @@
         const isLeft = side === "left";
         const current = isLeft ? state.leftCurrent : state.rightCurrent;
         if (!current) return;
-
         const lockedKey = isLeft ? "leftLocked" : "rightLocked";
         const countKey = isLeft ? "leftAnswered" : "rightAnswered";
         const scoreKey = isLeft ? "leftScore" : "rightScore";
         if (state[lockedKey]) return;
-
         state[lockedKey] = true;
         state[countKey] += 1;
         const isCorrect = selectedIndex === current.correct_index;
         mark(isLeft ? els.leftOptions : els.rightOptions, current.correct_index, selectedIndex);
-
-        let tone = "";
-        let title = "";
-        let text = "";
+        let tone = "", title = "", text = "";
         if (isCorrect) {
             state[scoreKey] += POINTS_PER_CORRECT;
             state.frontline += isLeft ? 1 : -1;
@@ -394,18 +420,15 @@
             title = isLeft ? `${state.rightName} foyda oldi` : `${state.leftName} foyda oldi`;
             text = `${isLeft ? state.leftName : state.rightName} xato topdi, arqon raqib tomonga ketdi.`;
         }
-
         setScores();
         updateProgress();
         els.status.textContent = text;
         updateFrontline(tone);
         addLog(title, `${text} (${current.source_title})`, tone === "is-player-pulse" ? "is-player" : "is-bot");
-
         if (Math.abs(state.frontline) >= FRONTLINE_TARGET) {
             finish();
             return;
         }
-
         setTimeout(() => {
             if (state.finished) return;
             updateFrontline();
@@ -438,24 +461,20 @@
     async function startBattle() {
         state.leftName = normalize(els.teamOneInput.value, "1-jamoa");
         state.rightName = normalize(els.teamTwoInput.value, "2-jamoa");
-        if (!state.grade) {
-            els.status.textContent = "Avval sinfni tanlang.";
-            openOverlay();
-            return;
-        }
-        persist();
-        syncTeams();
-        els.startButton.disabled = true;
-        els.startButton.textContent = "Yuklanmoqda...";
+        if (!state.grade) { els.status.textContent = "Avval fan va sinfni tanlang."; openOverlay(); return; }
+        persist(); syncTeams();
+        els.startButton.disabled = true; els.startButton.textContent = "Yuklanmoqda...";
         try {
             resetBoard();
             const payload = await fetchBatch();
             if (!state.leftQueue.length || !state.rightQueue.length) {
-                throw new Error("Bu sinf uchun duel boshlashga yetarli imlo savoli topilmadi.");
+                throw new Error("Tanlangan fan va sinf bo'yicha duel boshlashga yetarli savol topilmadi.");
             }
             state.running = true;
             state.matchSecondsLeft = MATCH_DURATION_SECONDS;
-            setGradeTexts(payload.grade_label || state.gradeLabel || "Aralash");
+            state.subjectLabel = payload.subject_label || state.subjectLabel || "Ona tili";
+            state.gradeLabel = payload.grade_label || state.gradeLabel || "Aralash";
+            setGradeTexts();
             els.topbarCount.textContent = "3 daqiqa";
             setScores();
             renderLog();
@@ -464,7 +483,7 @@
             consumeNextQuestion("left");
             consumeNextQuestion("right");
             updateProgress();
-            els.status.textContent = "Jamoalar mustaqil javob beradi. To'g'ri javob arqonni o'z tomonga tortadi.";
+            els.status.textContent = `${state.subjectLabel} • ${state.gradeLabel} bo'yicha duel boshlandi.`;
             startMatchTimer();
         } catch (error) {
             els.status.textContent = error.message || "O'yinni boshlashda xatolik yuz berdi.";
@@ -476,15 +495,36 @@
     }
 
     const stored = saved();
-    setGrade((stored.grade && meta(stored.grade) && stored.grade) || initialGrade || gradeOptions[0]?.value || "");
+    const activeSubjectOption = subjectMeta(initialSubject) || subjectMeta(stored.subject) || subjectOptions[0] || null;
+    if (activeSubjectOption) {
+        state.subject = activeSubjectOption.value;
+        state.subjectLabel = activeSubjectOption.label;
+    }
+
     state.leftName = normalize(stored.leftName, "1-jamoa");
     state.rightName = normalize(stored.rightName, "2-jamoa");
     els.teamOneInput.value = stored.leftName || "";
     els.teamTwoInput.value = stored.rightName || "";
+
+    const initialGradeValue = (stored.grade && meta(stored.grade) && stored.grade) || initialGrade || gradeOptions[0]?.value || "";
+    setGrade(initialGradeValue);
     syncTeams();
     resetBoard();
     if (els.overlay.classList.contains("is-visible")) document.body.style.overflow = "hidden";
 
+    els.subjectCards.forEach((card) => {
+        card.classList.toggle("is-active", card.dataset.subject === state.subject);
+        card.addEventListener("click", () => {
+            const nextSubject = card.dataset.subject || "language";
+            if (nextSubject === state.subject) {
+                return;
+            }
+            const params = new URLSearchParams(window.location.search);
+            params.set("subject", nextSubject);
+            params.delete("grade");
+            window.location.search = params.toString();
+        });
+    });
     els.gradeCards.forEach((card) => card.addEventListener("click", () => setGrade(card.dataset.grade)));
     els.startButton?.addEventListener("click", startBattle);
     els.configButton?.addEventListener("click", openOverlay);

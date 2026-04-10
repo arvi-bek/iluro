@@ -7,6 +7,7 @@ from .selectors import (
     IMLO_DUEL_QUESTION_TARGET,
     get_history_battle_questions,
     get_history_game_grade_options,
+    get_language_duel_subject_options,
     get_imlo_duel_grade_options,
     get_imlo_duel_questions,
 )
@@ -20,7 +21,7 @@ def games_hub_view(request):
     level_info = get_level_info(profile.xp)
     xp_summary = get_user_progress_summary(request.user)
     grade_options = get_history_game_grade_options()
-    imlo_options = get_imlo_duel_grade_options()
+    imlo_options = get_imlo_duel_grade_options("language")
 
     games = [
         {
@@ -34,7 +35,7 @@ def games_hub_view(request):
         {
             "title": "Imlo dueli",
             "slug": "imlo-duel",
-            "description": "Imlo savollarini ikki jamoa formatida tezkor takrorlash uchun battle o'yini.",
+            "description": "Ona tili va adabiyot savollarini fan hamda sinf bo'yicha duel formatida takrorlash uchun o'yin.",
             "status": "Faol",
             "meta": f"{len(imlo_options)} ta sinf mavjud" if imlo_options else "Savollar kutilmoqda",
             "href": "imlo-duel",
@@ -125,7 +126,15 @@ def imlo_duel_view(request):
     profile = get_or_sync_profile(request.user)
     level_info = get_level_info(profile.xp)
     xp_summary = get_user_progress_summary(request.user)
-    level_options = get_imlo_duel_grade_options()
+    subject_options = get_language_duel_subject_options()
+    selected_subject = request.GET.get("subject", "").strip() or "language"
+    if selected_subject not in {item["value"] for item in subject_options}:
+        selected_subject = "language"
+    grade_options_map = {
+        item["value"]: get_imlo_duel_grade_options(item["value"])
+        for item in subject_options
+    }
+    level_options = grade_options_map.get(selected_subject, [])
     screen_mode = "board" if request.GET.get("screen") == "board" else "default"
     selected_level = request.GET.get("grade", "").strip()
     if selected_level and not any(item["value"] == selected_level for item in level_options):
@@ -133,8 +142,12 @@ def imlo_duel_view(request):
     if not selected_level and level_options:
         selected_level = level_options[0]["value"]
 
+    selected_subject_option = next((item for item in subject_options if item["value"] == selected_subject), None)
     selected_option = next((item for item in level_options if item["value"] == selected_level), None)
-    preview_questions = get_imlo_duel_questions(selected_level, limit=1) if selected_level else []
+    preview_questions = (
+        get_imlo_duel_questions(selected_level, limit=1, subject_kind=selected_subject)
+        if selected_level else []
+    )
 
     return render(
         request,
@@ -143,6 +156,10 @@ def imlo_duel_view(request):
             "profile": profile,
             "level_info": level_info,
             "xp_summary": xp_summary,
+            "subject_options": subject_options,
+            "grade_options_map": grade_options_map,
+            "selected_subject": selected_subject,
+            "selected_subject_option": selected_subject_option,
             "grade_options": level_options,
             "selected_grade": selected_level,
             "selected_option": selected_option,
@@ -154,6 +171,10 @@ def imlo_duel_view(request):
 
 @login_required
 def imlo_duel_questions_view(request):
+    selected_subject = request.GET.get("subject", "").strip() or "language"
+    subject_options = get_language_duel_subject_options()
+    if selected_subject not in {item["value"] for item in subject_options}:
+        selected_subject = "language"
     selected_level = request.GET.get("grade", "").strip()
     try:
         requested_limit = int(request.GET.get("limit") or IMLO_DUEL_QUESTION_TARGET)
@@ -161,15 +182,16 @@ def imlo_duel_questions_view(request):
         requested_limit = IMLO_DUEL_QUESTION_TARGET
     requested_limit = max(2, min(requested_limit, 60))
 
-    deck = get_imlo_duel_questions(selected_level, limit=requested_limit)
-    level_options = get_imlo_duel_grade_options()
+    deck = get_imlo_duel_questions(selected_level, limit=requested_limit, subject_kind=selected_subject)
+    level_options = get_imlo_duel_grade_options(selected_subject)
+    selected_subject_option = next((item for item in subject_options if item["value"] == selected_subject), None)
     selected_option = next((item for item in level_options if item["value"] == selected_level), None)
 
     if not deck:
         return JsonResponse(
             {
                 "ok": False,
-                "message": "Tanlangan sinf bo'yicha yetarli imlo savollari topilmadi.",
+                "message": f"Tanlangan fan va sinf bo'yicha yetarli savol topilmadi.",
             },
             status=404,
         )
@@ -177,8 +199,10 @@ def imlo_duel_questions_view(request):
     return JsonResponse(
         {
             "ok": True,
+            "subject": selected_subject,
+            "subject_label": selected_subject_option["label"] if selected_subject_option else "Ona tili",
             "grade": selected_level,
-            "grade_label": selected_option["label"] if selected_option else "Imlo",
+            "grade_label": selected_option["label"] if selected_option else "Aralash",
             "question_count": len(deck),
             "questions": deck,
         }

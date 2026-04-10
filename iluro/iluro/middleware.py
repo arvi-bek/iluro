@@ -14,6 +14,10 @@ class FriendlyErrorPagesMiddleware:
         response = self.get_response(request)
 
         if response.status_code == 404:
+            content_type = response.headers.get("Content-Type", "")
+            accepts_json = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            if accepts_json or content_type.startswith("application/json"):
+                return response
             return render(request, "404.html", status=404)
 
         return response

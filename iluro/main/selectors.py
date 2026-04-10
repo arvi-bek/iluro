@@ -80,6 +80,10 @@ IMLO_KEYWORDS = (
     "orfograf",
 )
 IMLO_DUEL_QUESTION_TARGET = 30
+LANGUAGE_DUEL_SUBJECT_OPTIONS = [
+    {"value": "language", "label": "Ona tili"},
+    {"value": "literature", "label": "Adabiyot"},
+]
 
 
 def is_language_subject(subject_or_name):
@@ -268,17 +272,33 @@ def _get_language_subject():
     return Subject.objects.filter(Q(name__icontains="ona tili") | Q(name__icontains="adab")).order_by("name").first()
 
 
-def _is_imlo_exercise(exercise):
-    haystack = " ".join(
-        [
-            exercise.title or "",
-            exercise.topic or "",
-            exercise.source_book or "",
-            exercise.prompt or "",
-            exercise.explanation or "",
-        ]
-    ).lower()
+def get_language_duel_subject_options():
+    return list(LANGUAGE_DUEL_SUBJECT_OPTIONS)
+
+
+def _language_content_haystack(*parts):
+    return " ".join(part or "" for part in parts).lower()
+
+
+def _is_literature_content(*parts):
+    haystack = _language_content_haystack(*parts)
+    return any(keyword in haystack for keyword in LITERATURE_KEYWORDS)
+
+
+def _is_imlo_content(*parts):
+    haystack = _language_content_haystack(*parts)
     return any(keyword in haystack for keyword in IMLO_KEYWORDS)
+
+
+def _matches_language_duel_subject(subject_kind, *parts):
+    subject_kind = (subject_kind or "language").strip() or "language"
+    is_literature = _is_literature_content(*parts)
+    is_imlo = _is_imlo_content(*parts)
+    if subject_kind == "literature":
+        return is_literature
+    if subject_kind == "language":
+        return not is_literature and not is_imlo
+    return not is_literature and not is_imlo
 
 
 def extract_imlo_grade_from_parts(*parts):
@@ -300,11 +320,21 @@ def _get_imlo_grade_label(exercise):
     )
 
 
-def get_imlo_duel_grade_options():
+def _get_language_game_grade_label(*parts):
+    return extract_imlo_grade_from_parts(*parts)
+
+
+def get_imlo_duel_grade_options(subject_kind="language"):
     language_subject = _get_language_subject()
     if not language_subject:
         return []
 
+    subject_kind = (subject_kind or "language").strip() or "language"
+    tests = list(
+        Test.objects.filter(subject=language_subject)
+        .annotate(question_count=Count("question"))
+        .values("title", "question_count")
+    )
     exercises = (
         PracticeExercise.objects.filter(subject=language_subject, answer_mode="choice").select_related("practice_set")
         .annotate(choice_count=Count("choices"))
@@ -312,8 +342,42 @@ def get_imlo_duel_grade_options():
     )
     buckets = {}
     fallback_count = 0
+
+    for test in tests:
+        if not test["question_count"]:
+            continue
+        if not _matches_language_duel_subject(subject_kind, test["title"]):
+            continue
+        grade = _get_language_game_grade_label(test["title"])
+        if not grade:
+            fallback_count += test["question_count"]
+            continue
+        bucket = buckets.setdefault(
+            grade,
+            {
+                "value": grade,
+                "label": f"{grade}-sinf",
+                "question_count": 0,
+                "test_count": 0,
+            },
+        )
+        bucket["question_count"] += test["question_count"]
+        bucket["test_count"] += 1
+
     for exercise in exercises:
-        if exercise.choice_count < 4 or not _is_imlo_exercise(exercise):
+        if exercise.choice_count < 4:
+            continue
+        if not _matches_language_duel_subject(
+            subject_kind,
+            exercise.title,
+            exercise.topic,
+            exercise.source_book,
+            exercise.prompt,
+            exercise.explanation,
+            getattr(getattr(exercise, "practice_set", None), "title", ""),
+            getattr(getattr(exercise, "practice_set", None), "topic", ""),
+            getattr(getattr(exercise, "practice_set", None), "source_book", ""),
+        ):
             continue
         grade = _get_imlo_grade_label(exercise)
         if not grade:
@@ -351,27 +415,79 @@ def get_imlo_duel_level_options():
     return get_imlo_duel_grade_options()
 
 
-def get_imlo_duel_questions(level="", limit=8):
+def get_imlo_duel_questions(level="", limit=8, subject_kind="language"):
     language_subject = _get_language_subject()
     if not language_subject:
         return []
 
     selected_level = str(level or "").strip()
+    subject_kind = (subject_kind or "language").strip() or "language"
+
+    tests = list(
+        Test.objects.filter(subject=language_subject)
+        .prefetch_related("question_set__choice_set")
+    )
     exercises = list(
         PracticeExercise.objects.filter(subject=language_subject, answer_mode="choice")
         .select_related("practice_set")
         .prefetch_related("choices")
     )
-    if selected_level:
-        if selected_level == "all":
-            exercises = [exercise for exercise in exercises if not _get_imlo_grade_label(exercise)]
-        else:
-            exercises = [exercise for exercise in exercises if _get_imlo_grade_label(exercise) == selected_level]
 
     question_pool = []
-    for exercise in exercises:
-        if not _is_imlo_exercise(exercise):
+
+    for test in tests:
+        if not _matches_language_duel_subject(subject_kind, test.title):
             continue
+        grade_label = _get_language_game_grade_label(test.title) or "all"
+        if selected_level:
+            if selected_level == "all" and grade_label != "all":
+                continue
+            if selected_level != "all" and grade_label != selected_level:
+                continue
+
+        for question in test.question_set.all():
+            choices = list(question.choice_set.all())
+            correct_choices = [choice for choice in choices if choice.is_correct]
+            wrong_choices = [choice for choice in choices if not choice.is_correct]
+            if len(correct_choices) != 1 or len(wrong_choices) < 3:
+                continue
+
+            selected_choices = [correct_choices[0], *random.sample(wrong_choices, 3)]
+            random.shuffle(selected_choices)
+            correct_index = next(
+                (index for index, choice in enumerate(selected_choices) if choice.is_correct),
+                0,
+            )
+            question_pool.append(
+                {
+                    "text": question.text.strip(),
+                    "options": [choice.text.strip() for choice in selected_choices],
+                    "correct_index": correct_index,
+                    "difficulty": normalize_difficulty_label(question.difficulty or test.difficulty),
+                    "source_title": test.title or ("Adabiyot savoli" if subject_kind == "literature" else "Ona tili savoli"),
+                    "grade": grade_label,
+                }
+            )
+
+    for exercise in exercises:
+        if not _matches_language_duel_subject(
+            subject_kind,
+            exercise.title,
+            exercise.topic,
+            exercise.source_book,
+            exercise.prompt,
+            exercise.explanation,
+            getattr(getattr(exercise, "practice_set", None), "title", ""),
+            getattr(getattr(exercise, "practice_set", None), "topic", ""),
+            getattr(getattr(exercise, "practice_set", None), "source_book", ""),
+        ):
+            continue
+        grade_label = _get_imlo_grade_label(exercise) or "all"
+        if selected_level:
+            if selected_level == "all" and grade_label != "all":
+                continue
+            if selected_level != "all" and grade_label != selected_level:
+                continue
         choices = list(exercise.choices.all())
         correct_choices = [choice for choice in choices if choice.is_correct]
         wrong_choices = [choice for choice in choices if not choice.is_correct]
@@ -392,7 +508,7 @@ def get_imlo_duel_questions(level="", limit=8):
                 "correct_index": correct_index,
                 "difficulty": normalize_difficulty_label(exercise.difficulty),
                 "source_title": source_title,
-                "grade": _get_imlo_grade_label(exercise) or "all",
+                "grade": grade_label,
             }
         )
 

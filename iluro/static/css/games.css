@@ -591,6 +591,34 @@ body.game-page--board {
     line-height: 1.65;
 }
 
+.game-subject-grid {
+    margin-top: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.game-subject-card {
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(47, 29, 17, 0.14);
+    background: #fbfaf8;
+    color: var(--games-deep);
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.game-subject-card:hover,
+.game-subject-card.is-active {
+    transform: translateY(-1px);
+    border-color: rgba(20, 128, 203, 0.4);
+    box-shadow: 0 10px 24px rgba(29, 134, 213, 0.14);
+}
+
 .game-grade-grid {
     margin-top: 24px;
     display: grid;
@@ -1914,6 +1942,18 @@ body.game-page--board {
 
     .game-grade-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .game-subject-grid {
+        margin-top: 18px;
+        gap: 8px;
+    }
+
+    .game-subject-card {
+        width: calc(50% - 6px);
+        min-height: 46px;
+        padding: 0 10px;
+        border-radius: 16px;
     }
 
     .team-setup-card input {
