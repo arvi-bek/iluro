@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260404-6">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260412-settings-photo1">
     <style>
-        .settings-header-override > div > .eyebrow:first-child {
+        .content-header > div > .eyebrow:first-child {
             display: none;
         }
     </style>
@@ -24,11 +24,11 @@
         {% include "partials/app_sidebar_v2.html" %}
         <main class="app-main">
             <div class="content-shell">
-                <header class="content-header settings-header-override">
+                <header class="content-header">
                     <div>
                         <p class="eyebrow">Настройка</p>
                         <p class="eyebrow">Sozlamalar</p>
-                        <h1>Profil, status va theme ni boshqaring.</h1>
+                        <h1>Profil, status va ko'rinishni boshqaring.</h1>
                     </div>
                     <a class="header-link" href="{% url 'profile' %}">Profilga qaytish</a>
                 </header>
@@ -42,7 +42,7 @@
                 {% endif %}
 
                 <section class="table-panel settings-panel">
-                    <form class="settings-form" method="post">
+                    <form class="settings-form" method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
                         <div class="settings-intro">
@@ -52,7 +52,7 @@
                                 <small>{{ profile.get_theme_display }} | {{ level_info.label }}</small>
                             </div>
                             <p>
-                                Bu bo'limda profilingizdagi asosiy ma'lumotlar va platforma ko'rinishini yangilaysiz.
+                                Bu bo'limda profilingizdagi asosiy ma'lumotlar, avatar va platforma ko'rinishini yangilaysiz.
                                 Fanlar ichidagi darajalar endi ochiq ko'rinadi, ular alohida sozlama talab qilmaydi.
                             </p>
                         </div>
@@ -75,6 +75,40 @@
                                         {% endfor %}
                                     </select>
                                 </label>
+                            </div>
+                        </section>
+
+                        <section class="settings-group">
+                            <div class="settings-group-head">
+                                <p class="eyebrow">Avatar</p>
+                                <h2>Profil rasmi</h2>
+                            </div>
+                            <div class="settings-photo-grid">
+                                <div class="settings-photo-preview">
+                                    {% if profile.photo %}
+                                    <img src="{{ profile.photo.url }}" alt="{{ profile.full_name }}">
+                                    {% else %}
+                                    <div class="settings-photo-fallback" aria-hidden="true">
+                                        {{ profile.full_name|default:request.user.username|first|upper }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="settings-photo-copy">
+                                    <label class="settings-file-field">
+                                        <span>Yangi rasm yuklash</span>
+                                        <input type="file" name="photo" accept="image/*">
+                                    </label>
+                                    <p class="settings-photo-help">
+                                        JPG, PNG yoki WEBP qabul qilinadi. Maksimal hajm {{ profile_photo_max_mb }} MB.
+                                        Yuklangandan keyin rasm avtomatik ixchamlanadi.
+                                    </p>
+                                    {% if profile.photo %}
+                                    <label class="settings-checkbox-row">
+                                        <input type="checkbox" name="remove_photo">
+                                        <span>Hozirgi rasmni olib tashlash</span>
+                                    </label>
+                                    {% endif %}
+                                </div>
                             </div>
                         </section>
 

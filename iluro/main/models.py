@@ -1,7 +1,13 @@
+from io import BytesIO
+from pathlib import Path
+
+from django.core.files.base import ContentFile
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+from PIL import Image, ImageOps
 
 
 DIFFICULTY_CHOICES = [
@@ -28,6 +34,56 @@ GRADE_CHOICES = [
     ("10", "10-sinf"),
     ("11", "11-sinf"),
 ]
+
+PROFILE_PHOTO_MAX_BYTES = 3 * 1024 * 1024
+PROFILE_PHOTO_MAX_DIMENSION = 600
+PROFILE_PHOTO_JPEG_QUALITY = 82
+
+
+def _delete_storage_file_quietly(storage, file_name):
+    if not file_name:
+        return
+    try:
+        if storage.exists(file_name):
+            storage.delete(file_name)
+    except OSError:
+        return
+
+
+def _normalize_profile_photo(uploaded_file):
+    try:
+        uploaded_file.seek(0)
+    except (AttributeError, OSError):
+        pass
+
+    try:
+        with Image.open(uploaded_file) as image:
+            image = ImageOps.exif_transpose(image)
+
+            if image.mode in {"RGBA", "LA"} or (image.mode == "P" and "transparency" in image.info):
+                flattened = Image.new("RGB", image.size, (255, 255, 255))
+                rgba_image = image.convert("RGBA")
+                flattened.paste(rgba_image, mask=rgba_image.getchannel("A"))
+                image = flattened
+            else:
+                image = image.convert("RGB")
+
+            if max(image.size) > PROFILE_PHOTO_MAX_DIMENSION:
+                image.thumbnail(
+                    (PROFILE_PHOTO_MAX_DIMENSION, PROFILE_PHOTO_MAX_DIMENSION),
+                    Image.Resampling.LANCZOS,
+                )
+
+            buffer = BytesIO()
+            image.save(
+                buffer,
+                format="JPEG",
+                quality=PROFILE_PHOTO_JPEG_QUALITY,
+                optimize=True,
+            )
+            return ContentFile(buffer.getvalue())
+    except (OSError, ValueError) as exc:
+        raise ValidationError("Yuklangan fayl to'g'ri rasm formatida emas.") from exc
 
 
 class Subject(models.Model):
@@ -70,17 +126,34 @@ class Subscription(models.Model):
 
 
 class SubscriptionPlan(models.Model):
+    STACK_MODE_CHOICES = [
+        ("additive", "Qo'shiladigan"),
+        ("replace", "Almashtiradigan"),
+    ]
+
     code = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
     subject_limit = models.PositiveIntegerField(null=True, blank=True)
     is_all_access = models.BooleanField(default=False)
     price = models.IntegerField(default=0)
     duration_days = models.PositiveIntegerField(default=30)
+    display_order = models.PositiveIntegerField(default=100)
+    stack_mode = models.CharField(max_length=20, choices=STACK_MODE_CHOICES, default="additive")
+    daily_test_limit = models.PositiveIntegerField(null=True, blank=True)
+    daily_ai_limit = models.PositiveIntegerField(null=True, blank=True)
+    is_public = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)
+    can_use_ai = models.BooleanField(default=False)
+    can_use_full_content = models.BooleanField(default=False)
+    can_use_advanced_content = models.BooleanField(default=False)
+    can_use_mock_exam = models.BooleanField(default=False)
+    can_use_progress_recommendations = models.BooleanField(default=False)
+    can_use_advanced_stats = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("price", "name")
+        ordering = ("display_order", "price", "name")
         verbose_name = "Obuna rejasi"
         verbose_name_plural = "Obuna rejalari"
 
@@ -113,6 +186,10 @@ class UserSubscription(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="purchase")
     is_all_access = models.BooleanField(default=False)
+    price_before_discount = models.PositiveIntegerField(default=0)
+    referral_discount_percent_applied = models.PositiveIntegerField(default=0)
+    referral_discount_amount = models.PositiveIntegerField(default=0)
+    final_price = models.PositiveIntegerField(default=0)
     started_at = models.DateTimeField(default=timezone.now)
     end_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -163,6 +240,29 @@ class UserSubscriptionSubject(models.Model):
 
     def __str__(self):
         return f"{self.subscription_id} - {self.subject.name}"
+
+
+class UserDailyQuotaUsage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="daily_quota_rows", db_index=True)
+    date = models.DateField(db_index=True)
+    tests_started = models.PositiveIntegerField(default=0)
+    ai_requests = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Kunlik kvota"
+        verbose_name_plural = "Kunlik kvotalar"
+        constraints = [
+            models.UniqueConstraint(fields=("user", "date"), name="unique_user_daily_quota_usage"),
+        ]
+        indexes = [
+            models.Index(fields=("date",), name="main_udq_date_idx"),
+            models.Index(fields=("user", "date"), name="main_udq_user_date_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.date}"
 
 class Test(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, db_index=True)
@@ -277,6 +377,26 @@ class Profile(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="student")
     theme = models.CharField(max_length=20, choices=THEME_CHOICES, default="warm")
     premium_until = models.DateTimeField(null=True, blank=True)
+    referral_code = models.CharField(max_length=24, unique=True, null=True, blank=True)
+    referred_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="referral_joined_profiles",
+    )
+    referred_at = models.DateTimeField(null=True, blank=True)
+    referral_discount_percent = models.PositiveIntegerField(default=0)
+    referral_discount_used_percent = models.PositiveIntegerField(default=0)
+    referral_discount_available_percent = models.PositiveIntegerField(default=0)
+    free_subject = models.ForeignKey(
+        Subject,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="free_profiles",
+    )
+    free_subject_locked_at = models.DateTimeField(null=True, blank=True)
 
     photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
 
@@ -288,6 +408,79 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    def save(self, *args, **kwargs):
+        previous_photo_name = None
+        if self.pk:
+            previous_photo_name = (
+                Profile.objects.filter(pk=self.pk).values_list("photo", flat=True).first() or None
+            )
+
+        should_process_photo = bool(self.photo and not getattr(self.photo, "_committed", True))
+        if should_process_photo:
+            base_name = Path(getattr(self.photo, "name", f"profile-{self.user_id or 'user'}")).stem
+            normalized_photo = _normalize_profile_photo(self.photo)
+            self.photo.save(f"{base_name[:80] or 'profile-photo'}.jpg", normalized_photo, save=False)
+
+        super().save(*args, **kwargs)
+
+        current_photo_name = self.photo.name if self.photo else None
+        if previous_photo_name and previous_photo_name != current_photo_name:
+            storage = self._meta.get_field("photo").storage
+            _delete_storage_file_quietly(storage, previous_photo_name)
+
+    def delete(self, *args, **kwargs):
+        photo_name = self.photo.name if self.photo else None
+        storage = self._meta.get_field("photo").storage
+        super().delete(*args, **kwargs)
+        _delete_storage_file_quietly(storage, photo_name)
+
+
+class ReferralEvent(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Kutilmoqda"),
+        ("qualified", "Qualified"),
+        ("rejected", "Rad etilgan"),
+    ]
+
+    invited_user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="referral_event",
+    )
+    inviter = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="sent_referral_events",
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    qualified_at = models.DateTimeField(null=True, blank=True)
+    reward_percent = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Referral hodisasi"
+        verbose_name_plural = "Referral hodisalari"
+        constraints = [
+            models.UniqueConstraint(fields=("inviter", "invited_user"), name="unique_referral_inviter_invited"),
+        ]
+        indexes = [
+            models.Index(fields=("inviter", "status"), name="main_ref_inv_stat_idx"),
+            models.Index(fields=("status", "qualified_at"), name="main_ref_stat_qat_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.inviter_id and self.invited_user_id and self.inviter_id == self.invited_user_id:
+            raise ValidationError("Self-referral ruxsat etilmaydi.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.inviter} -> {self.invited_user} ({self.status})"
 
 
 class UserStatSummary(models.Model):
@@ -410,7 +603,7 @@ class SubjectSectionEntry(models.Model):
         ("problems", "Misol / Masalalar"),
         ("terms", "Atamalar"),
         ("chronology", "Xronologiya"),
-        ("grammar", "Gramatika"),
+        ("grammar", "Grammatika"),
         ("rules", "Qoidalar"),
         ("essay", "Insho"),
         ("extras", "Qo'shimcha ma'lumotlar"),
@@ -465,8 +658,8 @@ class GrammarLessonQuestion(models.Model):
 
     class Meta:
         ordering = ("order", "id")
-        verbose_name = "Gramatika mini test savoli"
-        verbose_name_plural = "Gramatika mini test savollari"
+        verbose_name = "Grammatika mini test savoli"
+        verbose_name_plural = "Grammatika mini test savollari"
 
     def __str__(self):
         return f"{self.lesson.title} - {self.prompt[:60]}"
@@ -489,8 +682,8 @@ class GrammarLessonProgress(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        verbose_name = "Gramatika mavzu progressi"
-        verbose_name_plural = "Gramatika mavzu progresslari"
+        verbose_name = "Grammatika mavzu progressi"
+        verbose_name_plural = "Grammatika mavzu progresslari"
         constraints = [
             models.UniqueConstraint(fields=("user", "lesson"), name="unique_user_grammar_lesson_progress"),
         ]

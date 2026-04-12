@@ -616,7 +616,7 @@
                         <div class="grammar-shell">
                             <aside class="grammar-sidebar">
                                 <div class="grammar-sidebar-head">
-                                    <p class="eyebrow">Gramatika</p>
+                                    <p class="eyebrow">Grammatika</p>
                                     <h2>Mavzular</h2>
                                     <p>{{ grammar_total_count }} ta dars · barcha darajalar ochiq</p>
                                 </div>
@@ -636,7 +636,7 @@
                                     </div>
                                 </div>
 
-                                <div class="grammar-level-filter" aria-label="Gramatika daraja filtri">
+                                <div class="grammar-level-filter" aria-label="Grammatika daraja filtri">
                                     {% for item in grammar_groups %}
                                     <a class="grammar-level-chip {% if item.is_active %}is-active{% endif %}" href="{% url 'subject-workspace-section' subject.id 'grammar' %}?grammar_level={{ item.label|urlencode }}">
                                         <span>{{ item.label }}</span>
@@ -685,7 +685,7 @@
                                     {% empty %}
                                     <article class="grammar-empty-sidebar">
                                         <strong>Mavzular yo'q</strong>
-                                        <p>Admin paneldan `Gramatika` bo'limi uchun material qo'shing.</p>
+                                        <p>Admin paneldan `Grammatika` bo'limi uchun material qo'shing.</p>
                                     </article>
                                     {% endfor %}
                                 </div>
@@ -882,7 +882,7 @@
                                 {% endif %}
                                 {% else %}
                                 <article class="grammar-detail-empty">
-                                    <h3>Gramatika mavzusi tanlanmagan</h3>
+                                    <h3>Grammatika mavzusi tanlanmagan</h3>
                                     <p>Chap tomondan mavzuni tanlang yoki admin paneldan yangi mavzu qo'shing.</p>
                                 </article>
                                 {% endif %}

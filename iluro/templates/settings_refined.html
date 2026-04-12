@@ -1,0 +1,184 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Sozlamalar</title>
+    {% include "partials/favicon.html" %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/content_pages.css' %}?v=20260412-settings-photo1">
+    <link rel="stylesheet" href="{% static 'css/settings_refined.css' %}?v=20260412-settings-refined2">
+</head>
+<body class="theme-{{ profile.theme }}">
+    <div class="app-layout">
+        {% include "partials/app_sidebar_v2.html" %}
+
+        <main class="app-main">
+            <div class="content-shell settings-shell-v3">
+                <header class="settings-page-header-v3">
+                    <div>
+                        <p class="settings-page-eyebrow-v3">Boshqaruv paneli</p>
+                        <h1 class="settings-page-title-v3">Sozlamalar</h1>
+                        <p class="settings-page-subtitle-v3">Profilingizni zamonaviy ko‘rinishda boshqaring: avatar, theme va shaxsiy ma'lumotlar shu yerda.</p>
+                    </div>
+                    <div class="settings-page-actions-v3">
+                        <a class="settings-page-link-v3" href="{% url 'profile' %}">Profilga qaytish</a>
+                        <button class="settings-page-link-v3 settings-page-link-v3--primary" type="submit" form="settings-form-v3">Saqlash</button>
+                    </div>
+                </header>
+
+                {% if messages %}
+                <div class="message-stack">
+                    {% for message in messages %}
+                    <p class="message {{ message.tags }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form id="settings-form-v3" class="settings-form-v3" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <section class="settings-hero-grid-v3">
+                        <article class="settings-profile-card-v3">
+                            <div class="settings-avatar-stage-v3">
+                                <input class="settings-avatar-input-v3" id="profile-photo-input" type="file" name="photo" accept="image/*">
+                                <label class="settings-avatar-trigger-v3" for="profile-photo-input">
+                                    <div class="settings-avatar-frame-v3">
+                                        {% if profile.photo %}
+                                        <img id="settings-avatar-preview" src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+                                        <div id="settings-avatar-fallback" class="settings-avatar-fallback-v3 is-hidden">{{ profile.full_name|default:request.user.username|first|upper }}</div>
+                                        {% else %}
+                                        <img id="settings-avatar-preview" class="is-hidden" src="" alt="{{ profile.full_name|default:request.user.username }}">
+                                        <div id="settings-avatar-fallback" class="settings-avatar-fallback-v3">{{ profile.full_name|default:request.user.username|first|upper }}</div>
+                                        {% endif %}
+                                        <div class="settings-avatar-overlay-v3">
+                                            <span class="settings-avatar-overlay-icon-v3">+</span>
+                                            <span>Rasmni o'zgartirish</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="settings-profile-copy-v3">
+                                <p class="settings-card-eyebrow-v3">Profil kartasi</p>
+                                <h2>{{ profile.full_name|default:request.user.username }}</h2>
+                                <p class="settings-handle-v3">@{{ request.user.username }}</p>
+                                <p class="settings-email-v3">{{ request.user.email|default:"Email kiritilmagan" }}</p>
+
+                                <div class="settings-chip-row-v3">
+                                    <span class="settings-chip-v3 settings-chip-v3--accent">{{ level_info.label }}</span>
+                                    <span class="settings-chip-v3">{{ profile.get_role_display }}</span>
+                                    <span class="settings-chip-v3">{{ profile.xp }} XP</span>
+                                    {% if premium_is_active %}
+                                    <span class="settings-chip-v3 settings-chip-v3--success">Premium {{ profile.premium_until|date:"d/m/Y" }} gacha</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="settings-account-meta-v3">
+                                    <span>A'zo bo'lganidan beri: {{ member_since|date:"F, Y" }}</span>
+                                    <span>Rasm hajmi: max {{ profile_photo_max_mb }} MB</span>
+                                </div>
+
+                                <div class="settings-avatar-actions-v3">
+                                    <label class="settings-inline-upload-v3" for="profile-photo-input">Avatarni yangilash</label>
+                                    {% if profile.photo %}
+                                    <label class="settings-checkbox-row-v3">
+                                        <input type="checkbox" name="remove_photo">
+                                        <span>Hozirgi rasmni olib tashlash</span>
+                                    </label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </article>
+
+                        <div class="settings-panel-stack-v3">
+                            <article class="settings-form-card-v3 settings-form-card-v3--primary">
+                                <div class="settings-form-card-head-v3">
+                                    <p>Asosiy ma'lumotlar</p>
+                                    <h3>Profilni yangilash</h3>
+                                </div>
+                                <div class="settings-fields-grid-v3">
+                                    <label>
+                                        <span>To'liq ism</span>
+                                        <input type="text" name="full_name" value="{{ profile.full_name }}" required>
+                                    </label>
+                                    <label>
+                                        <span>Status</span>
+                                        <select name="role">
+                                            {% for value, label in role_choices %}
+                                            <option value="{{ value }}" {% if profile.role == value %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                </div>
+                            </article>
+
+                            <article class="settings-form-card-v3">
+                                <div class="settings-form-card-head-v3">
+                                    <p>Ko'rinish</p>
+                                    <h3>Theme va atmosfera</h3>
+                                </div>
+                                <div class="settings-fields-grid-v3 settings-fields-grid-v3--single">
+                                    <label>
+                                        <span>Theme</span>
+                                        <select name="theme">
+                                            {% for value, label in theme_choices %}
+                                            <option value="{{ value }}" {% if profile.theme == value %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                </div>
+                            </article>
+
+                            <article class="settings-status-card-v3">
+                                <div class="settings-mini-note-v3">
+                                    <span>Joriy daraja</span>
+                                    <strong>{{ level_info.label }}</strong>
+                                </div>
+                                <div class="settings-mini-note-v3">
+                                    <span>Premium holati</span>
+                                    <strong>{% if premium_is_active %}Faol{% else %}Standart{% endif %}</strong>
+                                </div>
+                                <div class="settings-mini-note-v3">
+                                    <span>Profil ko‘rinishi</span>
+                                    <strong>{{ profile.get_theme_display }}</strong>
+                                </div>
+                            </article>
+                        </div>
+                    </section>
+
+                    <div class="settings-save-row-v3">
+                        <button type="submit" class="settings-page-link-v3 settings-page-link-v3--primary">Saqlash</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            const input = document.getElementById("profile-photo-input");
+            const preview = document.getElementById("settings-avatar-preview");
+            const fallback = document.getElementById("settings-avatar-fallback");
+
+            if (!input || !preview || !fallback) return;
+
+            input.addEventListener("change", function () {
+                const file = input.files && input.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    preview.src = event.target.result;
+                    preview.classList.remove("is-hidden");
+                    fallback.classList.add("is-hidden");
+                };
+                reader.readAsDataURL(file);
+            });
+        })();
+    </script>
+</body>
+</html>

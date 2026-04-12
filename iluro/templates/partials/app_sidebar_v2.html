@@ -59,6 +59,13 @@
     <div class="app-mobile-drawer">
 
     <div class="app-mobile-meta">
+        <div class="app-sidebar-avatar" aria-hidden="true">
+            {% if profile.photo %}
+            <img src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+            {% else %}
+            {{ profile.full_name|default:request.user.username|first|upper }}
+            {% endif %}
+        </div>
         <div class="app-mobile-meta-copy">
             <strong>{{ profile.full_name|default:request.user.username|default:request.user.username }}</strong>
             {% if level_info %}
@@ -120,7 +127,13 @@
 
     <div class="app-sidebar-user">
         <div class="app-sidebar-user-top">
-            <div class="app-sidebar-avatar" aria-hidden="true">{{ profile.full_name|default:request.user.username|first|upper }}</div>
+            <div class="app-sidebar-avatar" aria-hidden="true">
+                {% if profile.photo %}
+                <img src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+                {% else %}
+                {{ profile.full_name|default:request.user.username|first|upper }}
+                {% endif %}
+            </div>
             <div>
                 <strong>{{ profile.full_name|default:request.user.username|default:request.user.username }}</strong>
                 {% if level_info %}
@@ -137,7 +150,7 @@
                 <strong>Beta guruh</strong>
                 <span>Yangiliklar va yopiq chat</span>
             </a>
-            <a class="app-sidebar-mini-link" href="https://t.me/arvibek_O" target="_blank" rel="noopener noreferrer">
+            <a class="app-sidebar-mini-link" href="https://t.me/umarovv_2" target="_blank" rel="noopener noreferrer">
                 <strong>Hamkorlik</strong>
                 <span>Jamoa bilan aloqa</span>
             </a>

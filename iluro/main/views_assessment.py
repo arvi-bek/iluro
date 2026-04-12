@@ -1,11 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .models import PracticeExercise, PracticeSet, PracticeSetAttempt, Question, Test, UserAnswer, UserPracticeAttempt, UserTest
 from .selectors import get_practice_review_items, get_test_answer_review
 from .services import get_or_sync_profile as _get_or_sync_profile
+from .services import ensure_daily_assessment_quota_available as _ensure_daily_assessment_quota_available
+from .services import register_daily_assessment_start as _register_daily_assessment_start
 from .services import record_practice_session_completion_stats as _record_practice_session_completion_stats
 from .services import record_single_practice_attempt_stats as _record_single_practice_attempt_stats
 from .services import record_test_completion_stats as _record_test_completion_stats
@@ -36,6 +39,12 @@ def test_start_view(request, test_id):
     )
 
     if request.method == "POST":
+        try:
+            _ensure_daily_assessment_quota_available(request.user)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect(subject_tests_url)
+
         started_at = timezone.now()
         user_test = UserTest.objects.create(
             user=request.user,
@@ -51,6 +60,7 @@ def test_start_view(request, test_id):
                 "next_url": next_url,
             },
         )
+        _register_daily_assessment_start(request.user)
         _trim_user_assessment_history(request.user)
         return redirect("test-solve", user_test_id=user_test.id)
 
@@ -204,6 +214,12 @@ def practice_set_solve_view(request, set_id):
     )
 
     if request.method == "POST":
+        try:
+            _ensure_daily_assessment_quota_available(request.user)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect(subject_problems_url)
+
         practice_session = PracticeSetAttempt.objects.create(
             user=request.user,
             practice_set=practice_set,
@@ -211,6 +227,7 @@ def practice_set_solve_view(request, set_id):
             correct_count=0,
             total_count=len(exercises),
         )
+        _register_daily_assessment_start(request.user)
         correct_count = 0
 
         for exercise in exercises:
@@ -302,6 +319,12 @@ def practice_solve_view(request, exercise_id):
     )
 
     if request.method == "POST":
+        try:
+            _ensure_daily_assessment_quota_available(request.user)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect(f"{request.path}?next={next_url}")
+
         selected_choice = None
         answer_text = ""
         is_correct = False
@@ -329,6 +352,7 @@ def practice_solve_view(request, exercise_id):
             answer_text=answer_text,
             is_correct=is_correct,
         )
+        _register_daily_assessment_start(request.user)
         _record_single_practice_attempt_stats(attempt)
         _trim_user_assessment_history(request.user)
         _get_or_sync_profile(request.user)

@@ -122,10 +122,10 @@ def index(request: HttpRequest):
         {"phase": "05", "stage": "05", "title": "Mentor layer", "text": "Mentor maslahatlari va yo'naltirilgan support."},
     ]
     business_model_cards = [
-        {"title": "1 fan", "text": "Bitta kerakli fan bilan boshlash uchun", "meta": "Entry subscription"},
-        {"title": "2 fan", "text": "Ikki fan bo'yicha birga tayyorlanish uchun", "meta": "Bundle step"},
-        {"title": "3 fan", "text": "Asosiy to'liq tayyorlov paketi", "meta": "Core offer"},
-        {"title": "All access", "text": "Barcha fan va keyingi yo'nalishlar uchun", "meta": "Expansion offer"},
+        {"title": "FREE", "text": "Boshlanish uchun 1 ta fan va cheklangan AI bilan kirish", "meta": "Entry"},
+        {"title": "SINGLE SUBJECT", "text": "Free ustiga 1 ta qo'shimcha fan ochish uchun", "meta": "Free + 1"},
+        {"title": "PRO", "text": "3 ta fan, progress tracking va kuchliroq AI bilan asosiy paket", "meta": "Core offer"},
+        {"title": "PREMIUM", "text": "Barcha fanlar, mock exam va to'liq AI analiz", "meta": "Top plan"},
     ]
     funding_ask = {
         "amount": "18k USD",
@@ -143,7 +143,7 @@ def index(request: HttpRequest):
     ]
     cta_links = [
         {"label": "Beta guruh", "href": "https://t.me/+c5-ItPYBkKcyNTU6"},
-        {"label": "Hamkorlik", "href": "https://t.me/arvibek_O"},
+        {"label": "Hamkorlik", "href": "https://t.me/umarovv_2"},
     ]
     faq_items = [
         {
@@ -156,7 +156,7 @@ def index(request: HttpRequest):
         },
         {
             "question": "Obuna qanday ishlaydi?",
-            "answer": "Foydalanuvchi 1 fan, 2 fan, 3 fan yoki all access formatida o'ziga mos variantni tanlaydi.",
+            "answer": "Foydalanuvchi FREE, SINGLE SUBJECT, PRO yoki PREMIUM formatida o'ziga mos variantni tanlaydi.",
         },
         {
             "question": "Progress qanday ko'rinadi?",

@@ -157,10 +157,18 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
     background: linear-gradient(135deg, var(--accent), var(--accent-strong));
     color: #fff8f0;
     font-size: 0.94rem;
     font-weight: 800;
+}
+
+.app-sidebar-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .app-sidebar-user strong {

@@ -9,26 +9,60 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260406-pitch2">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260412-modal2">
 </head>
 <body>
     <div class="dashboard-shell">
         {% include "partials/app_sidebar_v2.html" %}
 
         <main class="dashboard-main">
-            {% if show_beta_trial_notice %}
-            <section class="beta-trial-banner" aria-label="Beta taklif">
-                <div class="beta-trial-copy">
-                    <p class="tiny-label">Beta access</p>
-                    <h2>Sayt beta versiyada ishlayapti.</h2>
-                    <p>Sizga bepul <strong>2 haftalik obuna</strong> taqdim qilindi va u hozirgi barcha fanlar uchun amal qiladi.</p>
+            {% if messages %}
+            <section class="dashboard-message-stack" aria-label="Bildirishnomalar">
+                {% for message in messages %}
+                <div class="dashboard-message dashboard-message--{{ message.tags|default:'info' }}">
+                    {{ message }}
                 </div>
-                <form method="post" action="{% url 'dismiss-beta-notice' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="beta-trial-close">Tushunarli</button>
-                </form>
+                {% endfor %}
             </section>
             {% endif %}
+
+            <section class="beta-trial-banner referral-banner" aria-label="Taklif dasturi">
+                <div class="beta-trial-copy referral-copy">
+                    <p class="tiny-label">Taklif Dasturi</p>
+                    <h2 class="referral-headline">Sizda keyingi obuna uchun {{ referral_summary.available_percent }}% chegirma bor.</h2>
+                    <p class="referral-description">
+                        1 ta tasdiqlangan taklif = {{ referral_summary.reward_percent }}% chegirma.
+                        Maksimal limit {{ referral_summary.max_percent }}%.
+                        Chegirma faqat SINGLE, PRO va PREMIUM rejalari uchun ishlaydi.
+                    </p>
+                    <div class="referral-banner-meta">
+                        <span>Kod: {{ referral_summary.referral_code }}</span>
+                        <span>Tasdiqlangan: {{ referral_summary.qualified_count }}</span>
+                        <span>Kutilayotgan: {{ referral_summary.pending_count }}</span>
+                    </div>
+                    <div class="referral-cta-row">
+                        <button
+                            type="button"
+                            class="referral-copy-button referral-copy-button--primary"
+                            data-copy-text="{{ referral_summary.share_url }}"
+                            data-default-label="Do'stni taklif qilish"
+                            data-success-label="Taklif havolasi nusxalandi"
+                        >
+                            Do'stni taklif qilish
+                        </button>
+                        <a class="card-link" href="{% url 'subject-selection' %}">Obuna sahifasini ochish</a>
+                    </div>
+                    {% if referral_summary.qualification_progress %}
+                    <small class="referral-footnote">
+                        Siz {{ referral_summary.qualification_progress.inviter_name }} taklif havolasi orqali kirgansiz.
+                        Bepul fanni tanlang va kamida {{ referral_summary.required_completions }} ta mashq yoki testni tugating.
+                        Shunda taklif chegirmasi yoziladi.
+                    </small>
+                    {% else %}
+                    <small class="referral-footnote">Taklif chegirmasi promo kod bilan qo'shilmaydi va keyingi bitta xaridda to'liq ishlatiladi.</small>
+                    {% endif %}
+                </div>
+            </section>
 
             <section class="subject-strip" aria-label="Fanlar navigatsiyasi">
                 <div class="subject-strip-head">
@@ -199,7 +233,93 @@
                     {% endfor %}
                 </div>
             </section>
+
+            {% if free_selection_required %}
+            <section class="free-subject-modal" id="free-subject-modal" aria-label="Free fan tanlash">
+                <button type="button" class="free-subject-modal__backdrop" data-modal-close aria-label="Oynani yopish"></button>
+                <div class="free-subject-modal__sheet" role="dialog" aria-modal="true" aria-labelledby="free-subject-title">
+                    <div class="free-subject-modal__topbar">
+                        <div>
+                            <p class="tiny-label">Mini app</p>
+                            <h2 id="free-subject-title">Bepul fanni tanlang</h2>
+                        </div>
+                        <button type="button" class="free-subject-modal__close" data-modal-close aria-label="Yopish">×</button>
+                    </div>
+                    <p class="free-subject-modal__lead">Bu tanlov umrbod amal qiladi va keyin qayta o'zgartirib bo'lmaydi.</p>
+                    <p class="free-subject-modal__sublead">
+                        Bir marta tanlangandan keyin aynan shu fan sizning free kirishingiz bo'lib qoladi.
+                        Qolgan fanlar esa alohida reja orqali ochiladi.
+                    </p>
+
+                    <div class="free-subject-picker" aria-label="Mavjud fanlar">
+                        {% for subject in free_subject_choices %}
+                        <form method="post" class="free-subject-choice">
+                            {% csrf_token %}
+                            <input type="hidden" name="free_subject_id" value="{{ subject.id }}">
+                            <button type="submit" class="free-subject-choice__button">
+                                <div class="free-subject-choice__head">
+                                    <span class="free-subject-choice__meta">Free fan</span>
+                                    <span class="free-subject-choice__arrow" aria-hidden="true">↗</span>
+                                </div>
+                                <strong>{{ subject.name }}</strong>
+                                <small>{{ subject.meta }}</small>
+                            </button>
+                        </form>
+                        {% endfor %}
+                    </div>
+
+                    <div class="free-subject-modal__actions">
+                        <button type="button" class="free-subject-modal__secondary" data-modal-close>Hozircha yopish</button>
+                        <span class="free-subject-modal__footnote">Oyna keyingi kirishda yana avtomatik ochiladi.</span>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
         </main>
     </div>
+    <script>
+        (function () {
+            const modal = document.getElementById("free-subject-modal");
+            if (modal) {
+                const closeModal = function () {
+                    modal.classList.add("is-hidden");
+                };
+
+                modal.querySelectorAll("[data-modal-close]").forEach(function (element) {
+                    element.addEventListener("click", closeModal);
+                });
+            }
+
+            document.querySelectorAll("[data-copy-text]").forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    const copyText = button.getAttribute("data-copy-text") || "";
+                    const successLabel = button.getAttribute("data-success-label") || "Nusxalandi";
+                    const defaultLabel = button.getAttribute("data-default-label") || "Nusxalash";
+
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(copyText);
+                        } else {
+                            const helper = document.createElement("textarea");
+                            helper.value = copyText;
+                            helper.setAttribute("readonly", "");
+                            helper.style.position = "absolute";
+                            helper.style.left = "-9999px";
+                            document.body.appendChild(helper);
+                            helper.select();
+                            document.execCommand("copy");
+                            document.body.removeChild(helper);
+                        }
+                        button.textContent = successLabel;
+                        window.setTimeout(function () {
+                            button.textContent = defaultLabel;
+                        }, 1800);
+                    } catch (error) {
+                        button.textContent = "Nusxalab bo'lmadi";
+                    }
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

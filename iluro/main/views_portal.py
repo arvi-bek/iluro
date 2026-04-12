@@ -1,10 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -15,7 +17,6 @@ from .models import (
     GrammarLessonProgress,
     GrammarLessonQuestion,
     PracticeSet,
-    SubscriptionPlan,
     Subject,
     SubjectSectionEntry,
     Test,
@@ -39,15 +40,20 @@ from .selectors import (
     get_user_subject_best_score,
 )
 from .services import (
+    assign_free_subject as _assign_free_subject,
+    ensure_default_subscription_plans as _ensure_default_subscription_plans,
     get_active_subscription_ids as _get_active_subscription_ids,
     get_effective_subject_level as _get_effective_subject_level,
     get_or_sync_profile as _get_or_sync_profile,
+    get_referral_plan_quote as _get_referral_plan_quote,
+    get_referral_summary as _get_referral_summary,
     rebuild_user_statistics as _rebuild_user_statistics,
     get_subject_theme as _get_subject_theme,
     get_user_subject_access_rows as _get_user_subject_access_rows,
     get_user_progress_summary as _get_user_progress_summary,
     sidebar_context as _sidebar_context,
     user_can_access_subject as _user_can_access_subject,
+    user_requires_free_subject_selection as _user_requires_free_subject_selection,
 )
 from .utils import (
     LEVEL_ORDER,
@@ -80,6 +86,10 @@ def _build_grammar_groups(entries, progress_map, allowed_levels, selected_level)
             }
         )
     return groups
+
+
+def _format_price_label(value):
+    return f"{int(value or 0):,}".replace(",", " ") + " so'm"
 
 
 def _build_grammar_points(entry):
@@ -429,10 +439,32 @@ def _build_workspace_module_cards(section_items, section_catalog, section_totals
 def dashboard_view(request):
     profile = _get_or_sync_profile(request.user)
     xp_summary = _get_user_progress_summary(request.user)
+    referral_summary = _get_referral_summary(request.user)
+    referral_summary["share_url"] = request.build_absolute_uri(
+        reverse("referral-entry", args=[referral_summary["referral_code"]])
+    )
     selected_subject_id = request.GET.get("subject")
     subjects = get_dashboard_subject_cards(request.user)
     for subject in subjects:
         subject["is_selected"] = str(subject["id"]) == str(selected_subject_id)
+    free_selection_required = _user_requires_free_subject_selection(request.user)
+
+    if request.method == "POST":
+        selected_subject_id = (request.POST.get("free_subject_id") or "").strip()
+        if not free_selection_required:
+            messages.error(request, "Free fan tanlash hozir kerak emas.")
+            return redirect("dashboard")
+        if not selected_subject_id.isdigit():
+            messages.error(request, "Bitta fan tanlang.")
+            return redirect("dashboard")
+        subject = get_object_or_404(Subject, id=int(selected_subject_id))
+        try:
+            _assign_free_subject(request.user, subject)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect("dashboard")
+        messages.success(request, f"{subject.name} free fan sifatida biriktirildi.")
+        return redirect("dashboard")
 
     latest_test, featured_book = get_latest_dashboard_resources()
     level_info = get_level_info(profile.xp)
@@ -488,7 +520,13 @@ def dashboard_view(request):
             "value": profile.xp,
             "hint": "Daraja yig'ilgan XP orqali o'sadi.",
         },
+        {
+            "label": "Referral",
+            "value": f'{referral_summary["available_percent"]}%',
+            "hint": "Keyingi pullik obuna uchun tayyor chegirma.",
+        },
     ]
+    free_subject_choices = [subject for subject in subjects if not subject["is_owned"]]
     context = {
         "profile": profile,
         "stats": stats,
@@ -497,7 +535,9 @@ def dashboard_view(request):
         "quick_actions": quick_actions,
         "level_info": level_info,
         "xp_summary": xp_summary,
-        "show_beta_trial_notice": bool(request.session.get("beta_trial_notice")),
+        "referral_summary": referral_summary,
+        "free_selection_required": free_selection_required,
+        "free_subject_choices": free_subject_choices,
     }
     return render(request, "dashboard.html", context)
 
@@ -1220,6 +1260,7 @@ def profile_view(request):
     xp_summary = _get_user_progress_summary(request.user)
     level_info = get_level_info(profile.xp)
     profile_summary = get_user_profile_summary(request.user, level_info["label"])
+    premium_is_active = bool(profile.premium_until and profile.premium_until >= timezone.now())
     context = {
         "profile": profile,
         "level_info": level_info,
@@ -1230,8 +1271,9 @@ def profile_view(request):
         "active_subject_count": profile_summary["active_subject_count"],
         "member_since": profile.created_at,
         "xp_summary": xp_summary,
+        "premium_is_active": premium_is_active,
     }
-    return render(request, "profile.html", context)
+    return render(request, "profile_refined.html", context)
 
 
 @login_required
@@ -1240,6 +1282,12 @@ def subject_selection_view(request):
     access_rows = _get_user_subject_access_rows(request.user, active_only=True)
     subscribed_subject_ids = {row["subject_id"] for row in access_rows}
     access_map = {row["subject_id"]: row for row in access_rows}
+    purchase_contact_url = "https://t.me/umarovv_2"
+    referral_summary = _get_referral_summary(request.user)
+    referral_summary["share_url"] = request.build_absolute_uri(
+        reverse("referral-entry", args=[referral_summary["referral_code"]])
+    )
+    plan_catalog = _ensure_default_subscription_plans()
     subjects = list(Subject.objects.all().order_by("name"))
     subject_ids = [subject.id for subject in subjects]
 
@@ -1291,7 +1339,13 @@ def subject_selection_view(request):
                 ),
                 "is_active": subject.id in subscribed_subject_ids,
                 "status_label": "Faol" if subject.id in subscribed_subject_ids else "Mavjud",
-                "source_label": "Bundle" if access_row and access_row["source"] == "bundle" else "Fan obunasi",
+                "source_label": (
+                    "Free fan"
+                    if access_row and access_row["source"] == "free"
+                    else "Bundle"
+                    if access_row and access_row["source"] == "bundle"
+                    else "Fan obunasi"
+                ),
                 "end_at": access_row["end_at"] if access_row else None,
             }
         )
@@ -1301,49 +1355,145 @@ def subject_selection_view(request):
     available_count = len(subject_cards)
     active_count = len(active_subject_cards)
 
-    plan_cards = []
-    plan_queryset = (
-        SubscriptionPlan.objects.filter(is_active=True)
-        .exclude(code="beta-trial-all-access")
-        .order_by("price", "duration_days", "name")
-    )
-    for plan in plan_queryset:
-        if plan.is_all_access:
-            coverage_label = "Barcha fanlar"
-            status_text = "Hamma fanlarni ochadi" if active_count < available_count else "Sizda eng keng kirish ochiq"
-            is_current = active_count >= available_count and available_count > 0
-        else:
-            coverage_label = f"{plan.subject_limit} fan"
-            if active_count < (plan.subject_limit or 0):
-                status_text = f"{(plan.subject_limit or 0) - active_count} ta slot qoladi"
-            elif active_count == (plan.subject_limit or 0):
-                status_text = "Hozirgi holatingizga mos"
-            else:
-                status_text = "Kamroq fan uchun"
-            is_current = active_count == (plan.subject_limit or 0)
+    has_paid_access = active_count > 0
+    plan_cards = [
+        {
+            "code": "free",
+            "catalog_code": "free",
+            "name": "FREE",
+            "label": "Boshlang'ich",
+            "theme": "free",
+            "price_label": "0 so'm",
+            "coverage_label": "1 ta fan",
+            "status_text": "1 ta fan tanlanadi va keyin o'zgarmaydi",
+            "description": "Platformaga kirish, odat hosil qilish va foydalanuvchini ichkariga olib kirish uchun.",
+            "features": [
+                "1 ta fan ochiladi",
+                "Kuniga 3 ta mashq",
+                "Basic statistika",
+                "AI kuniga 2-3 marta",
+                "O'yinlar",
+            ],
+            "limits": [
+                "Boshqa fanlar yopiq",
+                "To'liq AI analiz yo'q",
+                "Advanced content yopiq",
+            ],
+            "note": "Maqsad: userni ichkariga olib kirish",
+            "is_featured": False,
+            "is_current": not has_paid_access,
+            "cta_label": "Default reja",
+            "cta_href": "",
+            "cta_external": False,
+        },
+        {
+            "code": "single-subject",
+            "catalog_code": "single-subject",
+            "name": "SINGLE SUBJECT",
+            "label": "1 ta qo'shimcha fan",
+            "theme": "single",
+            "price_label": "30,000 so'm",
+            "coverage_label": "Free + 1",
+            "status_text": "User tanlagan 1 ta qo'shimcha fan ochiladi",
+            "description": "Faqat 1-2 ta fan kerak bo'lganlar uchun eng sodda pullik paket.",
+            "features": [
+                "1 ta qo'shimcha fan ochiladi",
+                "Cheksiz mashqlar",
+                "To'liq content",
+                "AI o'rtacha darajada",
+            ],
+            "limits": [],
+            "note": "Kim uchun: faqat 1-2 fan kerak bo'lganlar",
+            "is_featured": False,
+            "is_current": False,
+            "cta_label": "Sotib olish",
+            "cta_href": purchase_contact_url,
+            "cta_external": True,
+        },
+        {
+            "code": "pro",
+            "catalog_code": "triple-subject",
+            "name": "PRO",
+            "label": "Eng ko'p sotiladigan",
+            "theme": "pro",
+            "price_label": "70,000 so'm",
+            "coverage_label": "3 ta fan",
+            "status_text": "Asosiy daromad modeli sifatida 3 ta fan tanlab olinadi",
+            "description": "Ko'pchilik uchun asosiy paket: keng content, kuchli AI va progress tracking.",
+            "features": [
+                "3 ta fan ochiladi",
+                "Cheksiz mashqlar",
+                "To'liq content",
+                "AI analiz to'liqroq",
+                "Progress tracking va tavsiyalar",
+            ],
+            "limits": [],
+            "note": "Maqsad: asosiy daromad shu yerda",
+            "is_featured": True,
+            "is_current": False,
+            "cta_label": "Sotib olish",
+            "cta_href": purchase_contact_url,
+            "cta_external": True,
+        },
+        {
+            "code": "premium",
+            "catalog_code": "all-access",
+            "name": "PREMIUM",
+            "label": "Top reja",
+            "theme": "premium",
+            "price_label": "100,000 - 120,000 so'm",
+            "coverage_label": "Barcha fanlar",
+            "status_text": "Eng katta revenue uchun maksimal kirish va AI tahlil",
+            "description": "Barcha fanlar, mock exam, to'liq AI analiz va advanced statistika bitta rejada.",
+            "features": [
+                "Barcha fanlar ochiq",
+                "Cheksiz mashqlar va mock exam",
+                "AI to'liq analiz",
+                "Reyting, XP va advanced statistika",
+                "Yangi materiallarga early access",
+            ],
+            "limits": [],
+            "note": "Maqsad: eng katta revenue shu plan",
+            "is_featured": True,
+            "is_current": available_count > 0 and active_count >= available_count,
+            "cta_label": "Sotib olish",
+            "cta_href": purchase_contact_url,
+            "cta_external": True,
+        },
+    ]
 
-        plan_cards.append(
-            {
-                "name": plan.name,
-                "price": plan.price,
-                "coverage_label": coverage_label,
-                "status_text": status_text,
-                "duration_days": plan.duration_days,
-                "is_all_access": plan.is_all_access,
-                "is_current": is_current,
-                "is_featured": plan.code in {"triple-subject", "all-access"},
-            }
+    for plan in plan_cards:
+        catalog_plan = plan_catalog.get(plan.get("catalog_code") or plan["code"])
+        quote = _get_referral_plan_quote(catalog_plan, referral_summary["available_percent"]) if catalog_plan else {
+            "eligible": False,
+            "base_price": 0,
+            "discount_percent": 0,
+            "discount_amount": 0,
+            "final_price": 0,
+        }
+        if catalog_plan and quote["base_price"] and plan["code"] != "premium":
+            plan["price_label"] = _format_price_label(quote["base_price"])
+        elif catalog_plan and quote["base_price"] and plan["code"] == "premium":
+            plan["price_label"] = _format_price_label(quote["base_price"])
+        plan["referral_discount_percent"] = quote["discount_percent"]
+        plan["referral_final_price_label"] = _format_price_label(quote["final_price"]) if quote["discount_percent"] else ""
+        plan["referral_note"] = (
+            f"Taklif chegirmasi bilan keyingi xarid {plan['referral_final_price_label']} bo'ladi."
+            if quote["discount_percent"]
+            else "Taklif chegirmasi promo kod bilan qo'shilmaydi."
+            if quote["eligible"]
+            else ""
         )
 
     if active_count == 0:
         access_title = "Fan tanlanmagan"
-        access_hint = "Kerakli fanlarni ochib, materiallarni bitta joyda boshqaring."
+        access_hint = "Yangi obuna modeli tayyorlandi. Hozircha mavjud foydalanuvchilar obunasi saqlanadi va yangi xaridlar Telegram orqali qabul qilinadi."
     elif active_count >= available_count and available_count > 0:
         access_title = "All access ochiq"
-        access_hint = "Hozir sizda barcha fanlar ochiq."
+        access_hint = "Sizdagi hozirgi kirish saqlanadi. Yangi rejalarga o'tish keyingi bosqichda ehtiyotkorlik bilan ulanadi."
     else:
         access_title = f"{active_count} ta fan ochiq"
-        access_hint = f"Yana {max(available_count - active_count, 0)} ta fan qo'shish mumkin."
+        access_hint = "Amaldagi fan kirishlari saqlanadi. Yangi planlar hozircha sotuv ko'rinishi sifatida qo'shildi."
 
     context = {
         **sidebar,
@@ -1356,6 +1506,9 @@ def subject_selection_view(request):
         "plan_cards": plan_cards,
         "access_title": access_title,
         "access_hint": access_hint,
+        "purchase_contact_url": purchase_contact_url,
+        "referral_summary": referral_summary,
+        "current_subscription_notice": "Mavjud userlar obunasi saqlanadi. Yangi xaridlar va qo'shimcha fan ochish hozircha Telegram orqali boshqariladi.",
     }
     return render(request, "subject_selection.html", context)
 

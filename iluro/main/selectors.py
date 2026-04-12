@@ -1166,7 +1166,7 @@ def get_user_profile_summary(user, current_level_label):
         for item in UserSubjectStat.objects.filter(user=user).select_related("subject")
     }
     for subscription in subscriptions:
-        is_active = subscription["end_at"] >= timezone.now()
+        is_active = subscription["is_permanent"] or (subscription["end_at"] and subscription["end_at"] >= timezone.now())
         if is_active:
             active_count += 1
         subject_stat = subject_stats_map.get(subscription["subject_id"])
@@ -1174,9 +1174,11 @@ def get_user_profile_summary(user, current_level_label):
             {
                 "subject": subscription["subject"].name,
                 "expires_at": subscription["end_at"],
+                "is_permanent": subscription["is_permanent"],
                 "is_active": is_active,
                 "level": get_effective_subject_level(user, subject_id=subscription["subject_id"]),
                 "score": subject_stat.best_score if subject_stat else 0,
+                "source": subscription["source"],
             }
         )
 

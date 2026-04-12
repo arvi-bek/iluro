@@ -1,33 +1,51 @@
+import html
+import os
+import shutil
+import uuid
+from io import BytesIO
 from urllib.parse import quote
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from .models import (
     Book,
     Choice,
+    PROFILE_PHOTO_MAX_BYTES,
     PracticeChoice,
     PracticeExercise,
     PracticeSet,
     PracticeSetAttempt,
     Profile,
     Question,
+    ReferralEvent,
     SubjectSectionEntry,
     Subject,
     Subscription,
     SubscriptionPlan,
     Test,
     UserPracticeAttempt,
+    UserDailyQuotaUsage,
     UserSubscription,
     UserSubscriptionSubject,
     UserStatSummary,
     UserTest,
 )
 from .services import (
+    assign_free_subject,
+    apply_referral_discount_to_subscription,
+    consume_referral_discount,
+    evaluate_referral_qualification,
     get_active_subscription_ids,
+    get_referral_summary,
+    get_user_subject_access_rows,
     get_or_sync_profile,
+    register_referral_for_user,
     record_single_practice_attempt_stats,
     revoke_subject_access,
     trim_user_assessment_history,
@@ -44,6 +62,18 @@ from .utils import (
 
 class MainSmokeTests(TestCase):
     def setUp(self):
+        self.media_root_base = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            ".tmp-test-media",
+        )
+        os.makedirs(self.media_root_base, exist_ok=True)
+        self.media_root = os.path.join(self.media_root_base, uuid.uuid4().hex)
+        os.makedirs(self.media_root, exist_ok=True)
+        self.media_override = override_settings(MEDIA_ROOT=self.media_root)
+        self.media_override.enable()
+        self.addCleanup(self.media_override.disable)
+        self.addCleanup(lambda: shutil.rmtree(self.media_root, ignore_errors=True))
+
         self.user = User.objects.create_user(
             username="flowuser",
             password="StrongPass123",
@@ -271,6 +301,11 @@ class MainSmokeTests(TestCase):
 
         self.client.force_login(self.user)
 
+    def _make_test_image(self, name="avatar.png", size=(900, 900), color=(180, 120, 80)):
+        buffer = BytesIO()
+        Image.new("RGB", size, color).save(buffer, format="PNG")
+        return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
     def test_core_authenticated_pages_render(self):
         urls = [
             reverse("dashboard"),
@@ -323,6 +358,101 @@ class MainSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Kerakli daraja")
         self.assertNotContains(response, "subject_level_")
+
+    def test_settings_accepts_profile_photo_and_optimizes_it(self):
+        response = self.client.post(
+            reverse("settings"),
+            {
+                "full_name": "Flow User",
+                "role": self.profile.role,
+                "theme": self.profile.theme,
+                "photo": self._make_test_image(),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.profile.refresh_from_db()
+        self.assertTrue(self.profile.photo.name.endswith(".jpg"))
+
+        with Image.open(self.profile.photo.path) as image:
+            self.assertLessEqual(max(image.size), 600)
+
+    def test_replacing_profile_photo_updates_to_new_file_without_error(self):
+        self.client.post(
+            reverse("settings"),
+            {
+                "full_name": "Flow User",
+                "role": self.profile.role,
+                "theme": self.profile.theme,
+                "photo": self._make_test_image(name="first.png", color=(150, 90, 80)),
+            },
+        )
+        self.profile.refresh_from_db()
+        old_path = self.profile.photo.path
+
+        self.client.post(
+            reverse("settings"),
+            {
+                "full_name": "Flow User",
+                "role": self.profile.role,
+                "theme": self.profile.theme,
+                "photo": self._make_test_image(name="second.png", color=(80, 120, 170)),
+            },
+        )
+
+        self.profile.refresh_from_db()
+        self.assertTrue(self.profile.photo.path.endswith(".jpg"))
+        self.assertNotEqual(self.profile.photo.path, old_path)
+        self.assertTrue(os.path.exists(self.profile.photo.path))
+
+    def test_settings_rejects_oversized_profile_photo(self):
+        oversized_photo = SimpleUploadedFile(
+            "big.jpg",
+            b"x" * (PROFILE_PHOTO_MAX_BYTES + 1),
+            content_type="image/jpeg",
+        )
+
+        response = self.client.post(
+            reverse("settings"),
+            {
+                "full_name": "Flow User",
+                "role": self.profile.role,
+                "theme": self.profile.theme,
+                "photo": oversized_photo,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "Profil rasmi 3 MB dan katta bo'lmasligi kerak.",
+            html.unescape(response.content.decode("utf-8", errors="ignore")),
+        )
+
+    def test_settings_rejects_invalid_image_payload(self):
+        invalid_photo = SimpleUploadedFile(
+            "fake.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("settings"),
+            {
+                "full_name": "Flow User",
+                "role": self.profile.role,
+                "theme": self.profile.theme,
+                "photo": invalid_photo,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "Yuklangan fayl to'g'ri rasm formatida emas.",
+            html.unescape(response.content.decode("utf-8", errors="ignore")),
+        )
 
     def test_math_formula_quiz_payload_builds_multiple_question_types(self):
         payload = get_math_formula_quiz_payload(self.math, max_questions=6)
@@ -721,3 +851,293 @@ class SubscriptionAccessTests(TestCase):
         self.assertFalse(Subscription.objects.filter(user=user, subject=subject).exists())
         self.assertFalse(UserSubscriptionSubject.objects.filter(subscription=bundle, subject=subject).exists())
         self.assertEqual(get_active_subscription_ids(user), [])
+
+
+class FreeAccessFlowTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="freeuser", password="StrongPass123")
+        self.profile = Profile.objects.create(user=self.user, full_name="Free User", role="student", xp=0, level="C")
+        self.math = Subject.objects.create(name="Matematika", price=30000)
+        self.history = Subject.objects.create(name="Tarix", price=30000)
+        self.client.force_login(self.user)
+
+    def _create_basic_test(self, subject, title):
+        test = Test.objects.create(subject=subject, title=title, duration=10, difficulty="C")
+        question = Question.objects.create(test=test, text=f"{title} savoli", difficulty="C")
+        Choice.objects.create(question=question, text="To'g'ri", is_correct=True)
+        Choice.objects.create(question=question, text="Noto'g'ri", is_correct=False)
+        return test
+
+    def test_dashboard_shows_free_subject_modal_without_any_active_access(self):
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bepul fanni tanlang")
+        self.assertContains(response, "Bu tanlov umrbod amal qiladi")
+
+    def test_user_can_still_open_profile_before_choosing_free_subject(self):
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_user_can_choose_one_free_subject_and_it_becomes_permanent_access(self):
+        response = self.client.post(
+            reverse("dashboard"),
+            {"free_subject_id": str(self.math.id)},
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("dashboard"))
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.free_subject_id, self.math.id)
+        self.assertIsNotNone(self.profile.free_subject_locked_at)
+        self.assertEqual(get_active_subscription_ids(self.user), [self.math.id])
+
+        math_response = self.client.get(reverse("subject-workspace", args=[self.math.id]))
+        self.assertEqual(math_response.status_code, 200)
+
+        history_response = self.client.get(reverse("subject-workspace", args=[self.history.id]))
+        self.assertEqual(history_response.status_code, 302)
+        self.assertEqual(history_response["Location"], reverse("subject-selection"))
+
+    def test_games_hub_is_available_for_free_user_after_subject_selection(self):
+        assign_free_subject(self.user, self.math)
+
+        response = self.client.get(reverse("games-hub"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Qal&#x27;a o&#x27;yini", html=True)
+        self.assertContains(response, "Imlo dueli")
+
+    def test_free_user_can_start_only_three_assessments_per_day(self):
+        assign_free_subject(self.user, self.math)
+        tests = [self._create_basic_test(self.math, f"Math test {index}") for index in range(1, 5)]
+
+        for test in tests[:3]:
+            response = self.client.post(reverse("test-start", args=[test.id]))
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response["Location"].startswith("/tests/session/"))
+
+        fourth_response = self.client.post(reverse("test-start", args=[tests[3].id]))
+
+        self.assertEqual(fourth_response.status_code, 302)
+        self.assertEqual(fourth_response["Location"], f"/subjects/{self.math.id}/problems/")
+        self.assertEqual(UserTest.objects.filter(user=self.user).count(), 3)
+
+        usage = UserDailyQuotaUsage.objects.get(user=self.user, date=timezone.localdate())
+        self.assertEqual(usage.tests_started, 3)
+
+    def test_free_subject_stays_active_after_bundle_subscription_expires(self):
+        assign_free_subject(self.user, self.math)
+        plan = SubscriptionPlan.objects.create(code="expired-bundle", name="1 fan", subject_limit=1, price=30000)
+        expired_bundle = UserSubscription.objects.create(
+            user=self.user,
+            plan=plan,
+            title="1 fan",
+            source="manual",
+            status="expired",
+            is_all_access=False,
+            started_at=timezone.now() - timezone.timedelta(days=40),
+            end_at=timezone.now() - timezone.timedelta(days=10),
+        )
+        UserSubscriptionSubject.objects.create(subscription=expired_bundle, subject=self.math)
+
+        active_rows = get_user_subject_access_rows(self.user, active_only=True)
+        full_rows = get_user_subject_access_rows(self.user, active_only=False)
+
+        self.assertEqual(get_active_subscription_ids(self.user), [self.math.id])
+        self.assertEqual(active_rows[0]["subject_id"], self.math.id)
+        self.assertTrue(active_rows[0]["is_permanent"])
+        self.assertIsNone(active_rows[0]["end_at"])
+        self.assertEqual(full_rows[0]["subject_id"], self.math.id)
+        self.assertTrue(full_rows[0]["is_permanent"])
+        self.assertEqual(full_rows[0]["source"], "free")
+
+
+class ReferralProgramTests(TestCase):
+    def setUp(self):
+        self.inviter = User.objects.create_user(username="inviter", password="StrongPass123", first_name="Inviter")
+        self.inviter_profile = get_or_sync_profile(self.inviter)
+        self.subject = Subject.objects.create(name="Tarix", price=30000)
+
+    def test_register_view_captures_referral_code_and_creates_pending_event(self):
+        response = self.client.get(reverse("referral-entry", args=[self.inviter_profile.referral_code]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("register"))
+
+        post_response = self.client.post(
+            reverse("register"),
+            {
+                "full_name": "Referral User",
+                "username": "ref_user",
+                "email": "ref_user@example.com",
+                "password": "StrongPass123",
+                "password2": "StrongPass123",
+                "role": "student",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(post_response.status_code, 302)
+        referred_user = User.objects.get(username="ref_user")
+        referred_profile = Profile.objects.get(user=referred_user)
+        self.assertEqual(referred_profile.referred_by_id, self.inviter.id)
+        event = ReferralEvent.objects.get(invited_user=referred_user)
+        self.assertEqual(event.inviter_id, self.inviter.id)
+        self.assertEqual(event.status, "pending")
+
+    def test_referral_qualifies_once_after_free_subject_and_three_assessments(self):
+        referred_user = User.objects.create_user(username="qualified_ref", password="StrongPass123")
+        Profile.objects.create(user=referred_user, full_name="Qualified Referral")
+        register_referral_for_user(referred_user, self.inviter_profile.referral_code)
+
+        assign_free_subject(referred_user, self.subject)
+        attempt = UserPracticeAttempt.objects.create(
+            user=referred_user,
+            exercise=PracticeExercise.objects.create(
+                subject=self.subject,
+                prompt="1+1?",
+                answer_mode="input",
+                correct_text="2",
+                difficulty="C",
+            ),
+            answer_text="2",
+            is_correct=True,
+        )
+        record_single_practice_attempt_stats(attempt)
+        event = evaluate_referral_qualification(referred_user)
+        self.inviter_profile.refresh_from_db()
+
+        self.assertEqual(event.status, "qualified")
+        self.assertEqual(event.reward_percent, 2)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 2)
+        self.assertEqual(self.inviter_profile.referral_discount_percent, 2)
+
+        event = evaluate_referral_qualification(referred_user)
+        self.inviter_profile.refresh_from_db()
+        self.assertEqual(event.reward_percent, 2)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 2)
+
+    def test_referral_reward_respects_fifty_percent_cap(self):
+        self.inviter_profile.referral_discount_percent = 50
+        self.inviter_profile.referral_discount_available_percent = 50
+        self.inviter_profile.save(update_fields=["referral_discount_percent", "referral_discount_available_percent"])
+
+        referred_user = User.objects.create_user(username="cap_ref", password="StrongPass123")
+        Profile.objects.create(user=referred_user, full_name="Cap Referral")
+        register_referral_for_user(referred_user, self.inviter_profile.referral_code)
+        assign_free_subject(referred_user, self.subject)
+        attempt = UserPracticeAttempt.objects.create(
+            user=referred_user,
+            exercise=PracticeExercise.objects.create(
+                subject=self.subject,
+                prompt="2+2?",
+                answer_mode="input",
+                correct_text="4",
+                difficulty="C",
+            ),
+            answer_text="4",
+            is_correct=True,
+        )
+        record_single_practice_attempt_stats(attempt)
+
+        event = evaluate_referral_qualification(referred_user)
+        self.inviter_profile.refresh_from_db()
+
+        self.assertEqual(event.status, "qualified")
+        self.assertEqual(event.reward_percent, 0)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 50)
+
+    def test_next_paid_subscription_consumes_full_referral_wallet(self):
+        self.inviter_profile.referral_discount_percent = 12
+        self.inviter_profile.referral_discount_available_percent = 12
+        self.inviter_profile.save(update_fields=["referral_discount_percent", "referral_discount_available_percent"])
+
+        plan = SubscriptionPlan.objects.get(code="single-subject")
+        subscription = UserSubscription.objects.create(
+            user=self.inviter,
+            plan=plan,
+            title=plan.name,
+            source="manual",
+            status="active",
+            is_all_access=False,
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=30),
+        )
+
+        applied_percent = apply_referral_discount_to_subscription(subscription)
+        subscription.refresh_from_db()
+        self.inviter_profile.refresh_from_db()
+
+        self.assertEqual(applied_percent, 12)
+        self.assertEqual(subscription.price_before_discount, 30000)
+        self.assertEqual(subscription.referral_discount_amount, 3600)
+        self.assertEqual(subscription.final_price, 26400)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 0)
+        self.assertEqual(self.inviter_profile.referral_discount_used_percent, 12)
+
+    def test_user_can_start_collecting_referral_discount_again_after_balance_is_used(self):
+        self.inviter_profile.referral_discount_percent = 50
+        self.inviter_profile.referral_discount_available_percent = 50
+        self.inviter_profile.save(update_fields=["referral_discount_percent", "referral_discount_available_percent"])
+
+        consumed_percent = consume_referral_discount(self.inviter_profile)
+        self.inviter_profile.refresh_from_db()
+
+        self.assertEqual(consumed_percent, 50)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 0)
+        self.assertEqual(self.inviter_profile.referral_discount_used_percent, 50)
+
+        referred_user = User.objects.create_user(username="recollect_ref", password="StrongPass123")
+        Profile.objects.create(user=referred_user, full_name="Recollect Referral")
+        register_referral_for_user(referred_user, self.inviter_profile.referral_code)
+        assign_free_subject(referred_user, self.subject)
+        attempt = UserPracticeAttempt.objects.create(
+            user=referred_user,
+            exercise=PracticeExercise.objects.create(
+                subject=self.subject,
+                prompt="4+4?",
+                answer_mode="input",
+                correct_text="8",
+                difficulty="C",
+            ),
+            answer_text="8",
+            is_correct=True,
+        )
+        record_single_practice_attempt_stats(attempt)
+
+        event = evaluate_referral_qualification(referred_user)
+        self.inviter_profile.refresh_from_db()
+
+        self.assertEqual(event.status, "qualified")
+        self.assertEqual(event.reward_percent, 2)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 2)
+        self.assertEqual(self.inviter_profile.referral_discount_used_percent, 50)
+        self.assertEqual(self.inviter_profile.referral_discount_percent, 52)
+
+    def test_referral_summary_reports_progress_for_referred_user(self):
+        referred_user = User.objects.create_user(username="progress_ref", password="StrongPass123")
+        Profile.objects.create(user=referred_user, full_name="Progress Referral")
+        register_referral_for_user(referred_user, self.inviter_profile.referral_code)
+        assign_free_subject(referred_user, self.subject)
+        attempt = UserPracticeAttempt.objects.create(
+            user=referred_user,
+            exercise=PracticeExercise.objects.create(
+                subject=self.subject,
+                prompt="3+3?",
+                answer_mode="input",
+                correct_text="6",
+                difficulty="C",
+            ),
+            answer_text="6",
+            is_correct=True,
+        )
+        record_single_practice_attempt_stats(attempt)
+
+        summary = get_referral_summary(referred_user)
+
+        self.assertIsNotNone(summary["qualification_progress"])
+        self.assertEqual(summary["qualification_progress"]["completion_remaining"], 0)
+        self.assertTrue(summary["qualification_progress"]["free_subject_selected"])

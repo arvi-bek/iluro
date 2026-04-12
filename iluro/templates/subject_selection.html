@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260406-subjects3">
+    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260412-subscription-final1">
 </head>
 <body>
     <div class="app-layout">
@@ -25,12 +25,52 @@
                     <a class="header-link secondary-link" href="{% url 'dashboard' %}">Dashboard</a>
                 </header>
 
+                <section class="migration-note">
+                    <strong>Hozirgi userlar uchun xavfsiz holat</strong>
+                    <p>{{ current_subscription_notice }}</p>
+                </section>
+
+                <section class="referral-panel">
+                    <div>
+                        <p class="eyebrow">Taklif Dasturi</p>
+                        <h2>Keyingi obuna uchun {{ referral_summary.available_percent }}% chegirma tayyor.</h2>
+                        <p>
+                            1 ta tasdiqlangan taklif = {{ referral_summary.reward_percent }}% chegirma.
+                            Maksimal limit {{ referral_summary.max_percent }}%.
+                            Taklif chegirmasi promo kod bilan birikmaydi.
+                        </p>
+                        <p>Shart: bepul fanni tanlang va kamida {{ referral_summary.required_completions }} ta mashq yoki testni tugating.</p>
+                        <p>Taklif kodi: <strong>{{ referral_summary.referral_code }}</strong></p>
+                    </div>
+                    <div class="referral-panel-actions">
+                        <button
+                            type="button"
+                            class="referral-copy-action referral-copy-action--primary"
+                            data-copy-text="{{ referral_summary.share_url }}"
+                            data-default-label="Do'stni taklif qilish"
+                            data-success-label="Taklif havolasi nusxalandi"
+                        >
+                            Do'stni taklif qilish
+                        </button>
+                        <div class="referral-badge">Kod: {{ referral_summary.referral_code }}</div>
+                        <button
+                            type="button"
+                            class="referral-copy-action"
+                            data-copy-text="{{ referral_summary.share_url }}"
+                            data-default-label="Havolani nusxalash"
+                            data-success-label="Nusxalandi"
+                        >
+                            Havolani nusxalash
+                        </button>
+                    </div>
+                </section>
+
                 <section class="access-stage">
                     <article class="access-summary">
                         <div class="access-summary-copy">
                             <p class="eyebrow">Holat</p>
                             <h2>{{ active_count }} ta fan ochiq</h2>
-                            <p>{{ inactive_count }} ta fan hali tanlanmagan. Paketlar fanlar soniga qarab boshqariladi.</p>
+                            <p>{{ inactive_count }} ta fan hali tanlanmagan. Paid rejalar vaqtincha Telegram orqali aktivlashtiriladi.</p>
                         </div>
                         <div class="access-stats">
                             <article>
@@ -42,22 +82,66 @@
                                 <strong>{{ available_count }}</strong>
                             </article>
                             <article>
-                                <span>Faollashuv</span>
-                                <strong>Admin orqali</strong>
+                                <span>Sotib olish</span>
+                                <strong>Telegram orqali</strong>
                             </article>
                         </div>
                     </article>
 
                     <div class="bundle-grid">
                         {% for plan in plan_cards %}
-                        <article class="bundle-card {% if plan.is_featured %}is-featured{% endif %} {% if plan.is_current %}is-current{% endif %}">
+                        <article class="bundle-card bundle-card--{{ plan.theme }} {% if plan.is_featured %}is-featured{% endif %} {% if plan.is_current %}is-current{% endif %}">
                             <div class="bundle-card-top">
                                 <span class="plan-pill {% if plan.is_current %}plan-pill-accent{% endif %}">{{ plan.coverage_label }}</span>
-                                <strong>{{ plan.price }} so'm</strong>
+                                <strong>{{ plan.price_label }}</strong>
                             </div>
                             <h3>{{ plan.name }}</h3>
-                            <p>{{ plan.status_text }}</p>
-                            <small>{{ plan.duration_days }} kunlik reja</small>
+                            <p class="bundle-plan-label">{{ plan.label }}</p>
+                            <p>{{ plan.description }}</p>
+                            <div class="bundle-plan-meta">{{ plan.status_text }}</div>
+
+                            <div class="bundle-list-block">
+                                <span>Nima beradi</span>
+                                <ul class="bundle-list">
+                                    {% for feature in plan.features %}
+                                    <li>{{ feature }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            {% if plan.limits %}
+                            <div class="bundle-list-block bundle-list-block--limits">
+                                <span>Cheklov</span>
+                                <ul class="bundle-list">
+                                    {% for limit in plan.limits %}
+                                    <li>{{ limit }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            <small>{{ plan.note }}</small>
+                            {% if plan.referral_note %}
+                            <small class="bundle-referral-note">
+                                {% if plan.referral_discount_percent %}
+                                Referral {{ plan.referral_discount_percent }}%: {{ plan.referral_note }}
+                                {% else %}
+                                {{ plan.referral_note }}
+                                {% endif %}
+                            </small>
+                            {% endif %}
+
+                            {% if plan.cta_href %}
+                            <a
+                                class="bundle-card-action"
+                                href="{{ plan.cta_href }}"
+                                {% if plan.cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                            >
+                                {{ plan.cta_label }}
+                            </a>
+                            {% else %}
+                            <div class="bundle-card-action bundle-card-action--muted">{{ plan.cta_label }}</div>
+                            {% endif %}
                         </article>
                         {% endfor %}
                     </div>
@@ -105,12 +189,45 @@
                         </div>
                         <h2>{{ subject.name }}</h2>
                         <p>{{ subject.material_count }} ta material</p>
-                        <div class="status-chip muted">Tanlash mumkin</div>
+                        <a class="status-chip muted status-chip-link" href="{{ purchase_contact_url }}" target="_blank" rel="noopener noreferrer">Sotib olish</a>
                     </article>
                     {% endfor %}
                 </section>
             </div>
         </main>
     </div>
+    <script>
+        (function () {
+            document.querySelectorAll("[data-copy-text]").forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    const copyText = button.getAttribute("data-copy-text") || "";
+                    const successLabel = button.getAttribute("data-success-label") || "Nusxalandi";
+                    const defaultLabel = button.getAttribute("data-default-label") || "Nusxalash";
+
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(copyText);
+                        } else {
+                            const helper = document.createElement("textarea");
+                            helper.value = copyText;
+                            helper.setAttribute("readonly", "");
+                            helper.style.position = "absolute";
+                            helper.style.left = "-9999px";
+                            document.body.appendChild(helper);
+                            helper.select();
+                            document.execCommand("copy");
+                            document.body.removeChild(helper);
+                        }
+                        button.textContent = successLabel;
+                        window.setTimeout(function () {
+                            button.textContent = defaultLabel;
+                        }, 1800);
+                    } catch (error) {
+                        button.textContent = "Nusxalab bo'lmadi";
+                    }
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -1,0 +1,210 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iluro | Profil</title>
+    {% include "partials/favicon.html" %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260406-7">
+    <link rel="stylesheet" href="{% static 'css/profile_refined.css' %}?v=20260412-profile-refined1">
+</head>
+<body class="theme-{{ profile.theme }}">
+    <div class="profile-layout">
+        {% include "partials/app_sidebar_v2.html" %}
+
+        <main class="profile-shell profile-shell--refined">
+            <header class="profile-page-header">
+                <div>
+                    <p class="profile-page-eyebrow">Shaxsiy kabinet</p>
+                    <h1 class="profile-page-title">Profil</h1>
+                    <p class="profile-page-subtitle">Progress, status va faollikni bir joyda ko'ring.</p>
+                </div>
+                <div class="profile-page-actions">
+                    <a class="profile-pill-action" href="{% url 'dashboard' %}">Dashboard</a>
+                    <a class="profile-pill-action profile-pill-action--primary" href="{% url 'settings' %}">Sozlamalar</a>
+                </div>
+            </header>
+
+            <section class="profile-hero-wrap-v2">
+                <article class="profile-hero-card-v2">
+                    <div class="profile-hero-avatar-v2">
+                        {% if profile.photo %}
+                        <img src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+                        {% else %}
+                        <div class="profile-hero-fallback-v2">{{ profile.full_name|default:request.user.username|first|upper }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="profile-hero-copy-v2">
+                        <h2>{{ profile.full_name|default:request.user.username }}</h2>
+                        <p class="profile-hero-username-v2">@{{ request.user.username }}</p>
+                        <p class="profile-hero-email-v2">{{ request.user.email|default:"Email kiritilmagan" }}</p>
+                        <div class="profile-chip-row-v2">
+                            <span class="profile-chip-v2 profile-chip-v2--accent">{{ level_info.label }}</span>
+                            <span class="profile-chip-v2">{{ profile.get_role_display }}</span>
+                            {% if premium_is_active %}
+                            <span class="profile-chip-v2 profile-chip-v2--success">Premium {{ profile.premium_until|date:"d/m/Y" }} gacha</span>
+                            {% endif %}
+                            <span class="profile-chip-v2">{{ profile.xp }} XP</span>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="profile-stat-grid-v2">
+                <article class="profile-stat-card-v2">
+                    <div class="profile-stat-icon-v2 profile-stat-icon-v2--gold">XP</div>
+                    <div class="profile-stat-copy-v2">
+                        <strong>{{ profile.xp }}</strong>
+                        <span>Jami tajriba</span>
+                    </div>
+                </article>
+                <article class="profile-stat-card-v2">
+                    <div class="profile-stat-icon-v2 profile-stat-icon-v2--orange">TS</div>
+                    <div class="profile-stat-copy-v2">
+                        <strong>{{ total_tests }}</strong>
+                        <span>Yechilgan testlar</span>
+                    </div>
+                </article>
+                <article class="profile-stat-card-v2">
+                    <div class="profile-stat-icon-v2 profile-stat-icon-v2--mint">FN</div>
+                    <div class="profile-stat-copy-v2">
+                        <strong>{{ active_subject_count }}</strong>
+                        <span>Faol fanlar</span>
+                    </div>
+                </article>
+                <article class="profile-stat-card-v2">
+                    <div class="profile-stat-icon-v2 profile-stat-icon-v2--violet">RT</div>
+                    <div class="profile-stat-copy-v2">
+                        <strong>{% if rank_position %}#{{ rank_position }}{% else %}-{% endif %}</strong>
+                        <span>Reyting</span>
+                    </div>
+                </article>
+            </section>
+
+            <section class="profile-detail-grid-v2">
+                <article class="profile-progress-card-v2">
+                    <div class="profile-progress-head-v2">
+                        <div>
+                            <p class="profile-card-eyebrow-v2">Daraja progressi</p>
+                            <h3>{{ level_info.label }}</h3>
+                        </div>
+                        <div class="profile-progress-side-v2">
+                            <span>Keyingi: {{ level_info.next_label }}</span>
+                            <strong>{{ level_info.xp_to_next }} XP qoldi</strong>
+                        </div>
+                    </div>
+                    <div class="profile-progress-track-v2">
+                        <div class="profile-progress-fill-v2" style="width: {{ level_info.progress_percent }}%;"></div>
+                    </div>
+                    <div class="profile-progress-foot-v2">
+                        <span>{{ profile.xp }} XP</span>
+                        <span>{{ level_info.range_text }}</span>
+                    </div>
+                </article>
+
+                <article class="profile-detail-card-v2">
+                    <div class="profile-detail-card-head-v2">
+                        <p class="profile-card-eyebrow-v2">Asosiy ma'lumotlar</p>
+                        <h3>Status va hisob</h3>
+                    </div>
+                    <div class="profile-detail-list-v2">
+                        <div>
+                            <span>Status</span>
+                            <strong>{{ profile.get_role_display }}</strong>
+                        </div>
+                        <div>
+                            <span>Theme</span>
+                            <strong>{{ profile.get_theme_display }}</strong>
+                        </div>
+                        <div>
+                            <span>A'zo bo'lganidan beri</span>
+                            <strong>{{ member_since|date:"F, Y" }}</strong>
+                        </div>
+                        <div>
+                            <span>Premium</span>
+                            <strong>{% if premium_is_active %}Faol{% else %}Standart{% endif %}</strong>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="profile-detail-grid-v2 profile-detail-grid-v2--bottom">
+                <article class="profile-detail-card-v2">
+                    <div class="profile-detail-card-head-v2">
+                        <p class="profile-card-eyebrow-v2">Faollik</p>
+                        <h3>Oxirgi natijalar</h3>
+                    </div>
+                    <div class="profile-detail-list-v2 profile-detail-list-v2--compact">
+                        <div>
+                            <span>To'g'ri test javoblari</span>
+                            <strong>{{ xp_summary.correct_tests }}</strong>
+                        </div>
+                        <div>
+                            <span>To'g'ri mashq javoblari</span>
+                            <strong>{{ xp_summary.correct_practice }}</strong>
+                        </div>
+                        <div>
+                            <span>Tugallangan grammatika</span>
+                            <strong>{{ xp_summary.grammar_completed }}</strong>
+                        </div>
+                        <div>
+                            <span>Tugallangan esse mavzulari</span>
+                            <strong>{{ xp_summary.essay_completed }}</strong>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="profile-detail-card-v2">
+                    <div class="profile-detail-card-head-v2">
+                        <p class="profile-card-eyebrow-v2">Fanlar</p>
+                        <h3>Ochiq yo'nalishlar</h3>
+                    </div>
+                    <div class="profile-subject-chip-row-v2">
+                        {% for name in purchased_subject_names %}
+                        <span>{{ name }}</span>
+                        {% empty %}
+                        <span>Hali fan biriktirilmagan</span>
+                        {% endfor %}
+                    </div>
+                </article>
+            </section>
+
+            <section class="profile-subscription-panel-v2">
+                <div class="profile-detail-card-head-v2">
+                    <p class="profile-card-eyebrow-v2">Obunalar</p>
+                    <h3>Fanlar holati va eng yaxshi natijalar</h3>
+                </div>
+
+                <div class="profile-subject-status-list-v2">
+                    {% for item in subject_statuses %}
+                    <article class="profile-subject-row-v2">
+                        <div class="profile-subject-row-main-v2">
+                            <div>
+                                <h4>{{ item.subject }}</h4>
+                                <p>{% if item.is_permanent %}Doimiy kirish{% elif item.expires_at %}{{ item.expires_at|date:"d.m.Y" }} gacha{% else %}Faol kirish{% endif %}</p>
+                            </div>
+                            <span class="profile-status-pill-v2 {% if item.is_active %}profile-status-pill-v2--active{% else %}profile-status-pill-v2--inactive{% endif %}">
+                                {% if item.is_active %}Faol{% else %}Tugagan{% endif %}
+                            </span>
+                        </div>
+                        <div class="profile-subject-row-side-v2">
+                            <span>{{ item.level }}</span>
+                            <strong>{{ item.score }}%</strong>
+                        </div>
+                    </article>
+                    {% empty %}
+                    <article class="profile-empty-v2">
+                        <h4>Obuna topilmadi</h4>
+                        <p>Admin panel orqali userga fan biriktirilgach shu yerda ko'rinadi.</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

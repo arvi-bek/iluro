@@ -1,4 +1,6 @@
 import json
+import secrets
+import string
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -19,6 +21,7 @@ from .models import (
     PracticeSet,
     Question,
     Profile,
+    ReferralEvent,
     SubscriptionPlan,
     SubjectSectionEntry,
     Subject,
@@ -27,6 +30,7 @@ from .models import (
     UserAnswer,
     UserSubscription,
     UserSubscriptionSubject,
+    UserDailyQuotaUsage,
     UserStatSummary,
     UserSubjectStat,
     UserPracticeAttempt,
@@ -47,6 +51,400 @@ from .utils import (
 
 ASSESSMENT_HISTORY_LIMIT = 5
 TEST_ATTEMPT_RETENTION_DAYS = 7
+REFERRAL_SESSION_KEY = "pending_referral_code"
+REFERRAL_REWARD_PERCENT = 2
+REFERRAL_MAX_AVAILABLE_PERCENT = 50
+REFERRAL_REQUIRED_COMPLETIONS = 1
+REFERRAL_ELIGIBLE_PLAN_CODES = {"single-subject", "triple-subject", "all-access"}
+REFERRAL_DISCOUNT_STACKS_WITH_PROMO = False
+REFERRAL_CODE_ALPHABET = string.ascii_uppercase + string.digits
+DEFAULT_SUBSCRIPTION_PLAN_CATALOG = [
+    {
+        "code": "free",
+        "name": "FREE",
+        "subject_limit": 1,
+        "is_all_access": False,
+        "price": 0,
+        "duration_days": 30,
+        "display_order": 10,
+        "stack_mode": "replace",
+        "daily_test_limit": 3,
+        "daily_ai_limit": 3,
+        "is_public": True,
+        "is_featured": False,
+        "can_use_ai": True,
+        "can_use_full_content": False,
+        "can_use_advanced_content": False,
+        "can_use_mock_exam": False,
+        "can_use_progress_recommendations": False,
+        "can_use_advanced_stats": False,
+        "is_active": True,
+    },
+    {
+        "code": "single-subject",
+        "name": "SINGLE SUBJECT",
+        "subject_limit": 1,
+        "is_all_access": False,
+        "price": 30000,
+        "duration_days": 30,
+        "display_order": 20,
+        "stack_mode": "additive",
+        "daily_test_limit": None,
+        "daily_ai_limit": None,
+        "is_public": True,
+        "is_featured": False,
+        "can_use_ai": True,
+        "can_use_full_content": True,
+        "can_use_advanced_content": False,
+        "can_use_mock_exam": False,
+        "can_use_progress_recommendations": False,
+        "can_use_advanced_stats": False,
+        "is_active": True,
+    },
+    {
+        "code": "triple-subject",
+        "name": "PRO",
+        "subject_limit": 3,
+        "is_all_access": False,
+        "price": 70000,
+        "duration_days": 30,
+        "display_order": 30,
+        "stack_mode": "additive",
+        "daily_test_limit": None,
+        "daily_ai_limit": None,
+        "is_public": True,
+        "is_featured": True,
+        "can_use_ai": True,
+        "can_use_full_content": True,
+        "can_use_advanced_content": True,
+        "can_use_mock_exam": False,
+        "can_use_progress_recommendations": True,
+        "can_use_advanced_stats": False,
+        "is_active": True,
+    },
+    {
+        "code": "all-access",
+        "name": "PREMIUM",
+        "subject_limit": None,
+        "is_all_access": True,
+        "price": 120000,
+        "duration_days": 30,
+        "display_order": 40,
+        "stack_mode": "replace",
+        "daily_test_limit": None,
+        "daily_ai_limit": None,
+        "is_public": True,
+        "is_featured": True,
+        "can_use_ai": True,
+        "can_use_full_content": True,
+        "can_use_advanced_content": True,
+        "can_use_mock_exam": True,
+        "can_use_progress_recommendations": True,
+        "can_use_advanced_stats": True,
+        "is_active": True,
+    },
+    {
+        "code": "beta-trial-all-access",
+        "name": "Beta trial",
+        "subject_limit": None,
+        "is_all_access": True,
+        "price": 0,
+        "duration_days": 14,
+        "display_order": 90,
+        "stack_mode": "replace",
+        "daily_test_limit": None,
+        "daily_ai_limit": None,
+        "is_public": False,
+        "is_featured": False,
+        "can_use_ai": True,
+        "can_use_full_content": True,
+        "can_use_advanced_content": True,
+        "can_use_mock_exam": True,
+        "can_use_progress_recommendations": True,
+        "can_use_advanced_stats": True,
+        "is_active": True,
+    },
+]
+
+
+def _normalize_referral_code(value):
+    return "".join(ch for ch in str(value or "").upper() if ch.isalnum())[:24]
+
+
+def normalize_referral_wallet(profile, *, save=False):
+    total_percent = max(int(profile.referral_discount_percent or 0), 0)
+    used_percent = max(int(profile.referral_discount_used_percent or 0), 0)
+    used_percent = min(used_percent, total_percent)
+    max_available_percent = max(total_percent - used_percent, 0)
+    available_percent = max(int(profile.referral_discount_available_percent or 0), 0)
+    available_percent = min(available_percent, max_available_percent, REFERRAL_MAX_AVAILABLE_PERCENT)
+
+    updated_fields = []
+    if profile.referral_discount_percent != total_percent:
+        profile.referral_discount_percent = total_percent
+        updated_fields.append("referral_discount_percent")
+    if profile.referral_discount_used_percent != used_percent:
+        profile.referral_discount_used_percent = used_percent
+        updated_fields.append("referral_discount_used_percent")
+    if profile.referral_discount_available_percent != available_percent:
+        profile.referral_discount_available_percent = available_percent
+        updated_fields.append("referral_discount_available_percent")
+
+    if save and updated_fields:
+        profile.save(update_fields=updated_fields)
+    return profile
+
+
+def _generate_unique_referral_code():
+    for _ in range(32):
+        candidate = "".join(secrets.choice(REFERRAL_CODE_ALPHABET) for _ in range(8))
+        if not Profile.objects.filter(referral_code=candidate).exists():
+            return candidate
+    raise RuntimeError("Referral code yaratib bo'lmadi.")
+
+
+def ensure_profile_referral_code(profile, *, save=False):
+    before_total = profile.referral_discount_percent
+    before_used = profile.referral_discount_used_percent
+    before_available = profile.referral_discount_available_percent
+    updated_fields = []
+    if not profile.referral_code:
+        profile.referral_code = _generate_unique_referral_code()
+        updated_fields.append("referral_code")
+    normalize_referral_wallet(profile, save=False)
+    if profile.referral_discount_percent != before_total:
+        updated_fields.append("referral_discount_percent")
+    if profile.referral_discount_used_percent != before_used:
+        updated_fields.append("referral_discount_used_percent")
+    if profile.referral_discount_available_percent != before_available:
+        updated_fields.append("referral_discount_available_percent")
+    if save and updated_fields:
+        profile.save(update_fields=list(dict.fromkeys(updated_fields)))
+    return profile
+
+
+def get_total_referral_completion_count(user):
+    completed_test_count = UserTest.objects.filter(
+        user=user,
+        snapshot_json__status="completed",
+    ).count()
+    completed_practice_set_count = PracticeSetAttempt.objects.filter(user=user).count()
+    completed_single_practice_count = UserPracticeAttempt.objects.filter(
+        user=user,
+        practice_session__isnull=True,
+    ).count()
+    return completed_test_count + completed_practice_set_count + completed_single_practice_count
+
+
+def credit_referral_discount(profile, percent):
+    percent = max(int(percent or 0), 0)
+    if percent <= 0:
+        normalize_referral_wallet(profile, save=True)
+        return 0
+
+    normalize_referral_wallet(profile, save=False)
+    available_room = max(REFERRAL_MAX_AVAILABLE_PERCENT - int(profile.referral_discount_available_percent or 0), 0)
+    applied_percent = min(percent, available_room)
+    if applied_percent <= 0:
+        return 0
+
+    profile.referral_discount_percent = int(profile.referral_discount_percent or 0) + applied_percent
+    profile.referral_discount_available_percent = int(profile.referral_discount_available_percent or 0) + applied_percent
+    profile.save(update_fields=["referral_discount_percent", "referral_discount_available_percent"])
+    normalize_referral_wallet(profile, save=True)
+    return applied_percent
+
+
+def consume_referral_discount(profile):
+    normalize_referral_wallet(profile, save=False)
+    available_percent = int(profile.referral_discount_available_percent or 0)
+    if available_percent <= 0:
+        return 0
+
+    profile.referral_discount_used_percent = int(profile.referral_discount_used_percent or 0) + available_percent
+    profile.referral_discount_available_percent = 0
+    profile.save(update_fields=["referral_discount_used_percent", "referral_discount_available_percent"])
+    normalize_referral_wallet(profile, save=True)
+    return available_percent
+
+
+def stash_pending_referral_code(request, referral_code):
+    normalized_code = _normalize_referral_code(referral_code)
+    if not normalized_code:
+        request.session.pop(REFERRAL_SESSION_KEY, None)
+        return None
+    request.session[REFERRAL_SESSION_KEY] = normalized_code
+    return normalized_code
+
+
+def get_pending_referral_code(request):
+    return _normalize_referral_code(request.session.get(REFERRAL_SESSION_KEY))
+
+
+def clear_pending_referral_code(request):
+    request.session.pop(REFERRAL_SESSION_KEY, None)
+
+
+@transaction.atomic
+def register_referral_for_user(user, referral_code):
+    normalized_code = _normalize_referral_code(referral_code)
+    if not normalized_code:
+        return None
+
+    profile = Profile.objects.select_for_update().select_related("user").get(user=user)
+    ensure_profile_referral_code(profile, save=True)
+    if profile.referred_by_id:
+        return ReferralEvent.objects.filter(invited_user=user).select_related("inviter").first()
+
+    inviter_profile = (
+        Profile.objects.select_for_update()
+        .select_related("user")
+        .filter(referral_code=normalized_code)
+        .exclude(user_id=user.id)
+        .first()
+    )
+    if inviter_profile is None:
+        raise ValidationError("Referral code topilmadi.")
+    if inviter_profile.user_id == user.id:
+        raise ValidationError("O'zingizning referral code bilan ro'yxatdan o'tib bo'lmaydi.")
+
+    profile.referred_by = inviter_profile.user
+    profile.referred_at = timezone.now()
+    profile.save(update_fields=["referred_by", "referred_at"])
+    event, _ = ReferralEvent.objects.get_or_create(
+        invited_user=user,
+        defaults={
+            "inviter": inviter_profile.user,
+            "status": "pending",
+            "reward_percent": 0,
+        },
+    )
+    return event
+
+
+@transaction.atomic
+def evaluate_referral_qualification(user):
+    event = (
+        ReferralEvent.objects.select_for_update()
+        .filter(invited_user=user)
+        .first()
+    )
+    if event is None or event.status == "qualified":
+        return event
+
+    invited_profile = getattr(event.invited_user, "profile", None)
+    if invited_profile is None:
+        invited_profile = Profile.objects.select_for_update().get(user=event.invited_user)
+
+    if not invited_profile.free_subject_id:
+        return event
+    if get_total_referral_completion_count(event.invited_user) < REFERRAL_REQUIRED_COMPLETIONS:
+        return event
+
+    inviter_profile = getattr(event.inviter, "profile", None)
+    if inviter_profile is None:
+        inviter_profile = Profile.objects.select_for_update().get(user=event.inviter)
+    ensure_profile_referral_code(inviter_profile, save=True)
+
+    reward_percent = credit_referral_discount(inviter_profile, REFERRAL_REWARD_PERCENT)
+    event.status = "qualified"
+    event.qualified_at = timezone.now()
+    event.reward_percent = reward_percent
+    event.save(update_fields=["status", "qualified_at", "reward_percent", "updated_at"])
+    return event
+
+
+def get_referral_plan_quote(plan, available_percent=0):
+    base_price = int(getattr(plan, "price", 0) or 0)
+    normalized_available = max(int(available_percent or 0), 0)
+    eligible = bool(
+        getattr(plan, "code", "") in REFERRAL_ELIGIBLE_PLAN_CODES
+        and base_price > 0
+    )
+    applied_percent = normalized_available if eligible else 0
+    discount_amount = (base_price * applied_percent) // 100 if applied_percent else 0
+    return {
+        "eligible": eligible,
+        "base_price": base_price,
+        "discount_percent": applied_percent,
+        "discount_amount": discount_amount,
+        "final_price": max(base_price - discount_amount, 0),
+    }
+
+
+@transaction.atomic
+def apply_referral_discount_to_subscription(subscription):
+    if not subscription.plan_id or subscription.referral_discount_percent_applied:
+        return 0
+    if subscription.source not in {"purchase", "manual"}:
+        subscription.price_before_discount = int(subscription.plan.price or 0)
+        subscription.final_price = int(subscription.plan.price or 0)
+        subscription.save(update_fields=["price_before_discount", "final_price", "updated_at"])
+        return 0
+
+    profile = Profile.objects.select_for_update().get(user=subscription.user)
+    normalize_referral_wallet(profile, save=True)
+    quote = get_referral_plan_quote(subscription.plan, profile.referral_discount_available_percent)
+
+    subscription.price_before_discount = quote["base_price"]
+    subscription.referral_discount_percent_applied = quote["discount_percent"]
+    subscription.referral_discount_amount = quote["discount_amount"]
+    subscription.final_price = quote["final_price"]
+    applied_percent = quote["discount_percent"]
+    if applied_percent:
+        consume_referral_discount(profile)
+    subscription.save(
+        update_fields=[
+            "price_before_discount",
+            "referral_discount_percent_applied",
+            "referral_discount_amount",
+            "final_price",
+            "updated_at",
+        ]
+    )
+    return applied_percent
+
+
+def get_referral_summary(user):
+    profile = get_or_sync_profile(user)
+    ensure_profile_referral_code(profile, save=True)
+    event = evaluate_referral_qualification(user)
+    normalize_referral_wallet(profile, save=True)
+
+    sent_events = ReferralEvent.objects.filter(inviter=user)
+    completion_count = get_total_referral_completion_count(user)
+    qualification_progress = None
+    if event is not None:
+        qualification_progress = {
+            "status": event.status,
+            "status_label": event.get_status_display(),
+            "inviter_name": (
+                getattr(getattr(event.inviter, "profile", None), "full_name", "")
+                or event.inviter.first_name
+                or event.inviter.username
+            ),
+            "free_subject_selected": bool(profile.free_subject_id),
+            "completion_count": completion_count,
+            "completion_target": REFERRAL_REQUIRED_COMPLETIONS,
+            "completion_remaining": max(REFERRAL_REQUIRED_COMPLETIONS - completion_count, 0),
+            "reward_percent": int(event.reward_percent or 0),
+        }
+
+    return {
+        "referral_code": profile.referral_code,
+        "available_percent": int(profile.referral_discount_available_percent or 0),
+        "used_percent": int(profile.referral_discount_used_percent or 0),
+        "total_percent": int(profile.referral_discount_percent or 0),
+        "qualified_count": sent_events.filter(status="qualified").count(),
+        "pending_count": sent_events.filter(status="pending").count(),
+        "sent_count": sent_events.count(),
+        "qualification_progress": qualification_progress,
+        "required_completions": REFERRAL_REQUIRED_COMPLETIONS,
+        "reward_percent": REFERRAL_REWARD_PERCENT,
+        "max_percent": REFERRAL_MAX_AVAILABLE_PERCENT,
+        "eligible_plan_names": ["SINGLE", "PRO", "PREMIUM"],
+        "stacks_with_promo": REFERRAL_DISCOUNT_STACKS_WITH_PROMO,
+    }
 
 
 def rebuild_user_statistics(user):
@@ -319,15 +717,21 @@ def get_user_stat_summary(user):
 
 
 def record_test_completion_stats(user_test):
-    return rebuild_user_statistics(user_test.user)
+    result = rebuild_user_statistics(user_test.user)
+    evaluate_referral_qualification(user_test.user)
+    return result
 
 
 def record_practice_session_completion_stats(practice_session):
-    return rebuild_user_statistics(practice_session.user)
+    result = rebuild_user_statistics(practice_session.user)
+    evaluate_referral_qualification(practice_session.user)
+    return result
 
 
 def record_single_practice_attempt_stats(attempt):
-    return rebuild_user_statistics(attempt.user)
+    result = rebuild_user_statistics(attempt.user)
+    evaluate_referral_qualification(attempt.user)
+    return result
 
 
 def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
@@ -392,27 +796,21 @@ def trim_user_assessment_history(user, keep_recent=ASSESSMENT_HISTORY_LIMIT):
 
 
 def ensure_default_subscription_plans():
-    defaults = [
-        {"code": "single-subject", "name": "1 fan", "subject_limit": 1, "is_all_access": False, "price": 30000, "duration_days": 30},
-        {"code": "double-subject", "name": "2 fan", "subject_limit": 2, "is_all_access": False, "price": 55000, "duration_days": 30},
-        {"code": "triple-subject", "name": "3 fan", "subject_limit": 3, "is_all_access": False, "price": 75000, "duration_days": 30},
-        {"code": "all-access", "name": "All access", "subject_limit": None, "is_all_access": True, "price": 90000, "duration_days": 30},
-        {"code": "beta-trial-all-access", "name": "Beta trial", "subject_limit": None, "is_all_access": True, "price": 0, "duration_days": 14},
-    ]
     plans = {}
-    for item in defaults:
+    for item in DEFAULT_SUBSCRIPTION_PLAN_CATALOG:
         plan, _ = SubscriptionPlan.objects.update_or_create(
             code=item["code"],
-            defaults={
-                "name": item["name"],
-                "subject_limit": item["subject_limit"],
-                "is_all_access": item["is_all_access"],
-                "price": item["price"],
-                "duration_days": item["duration_days"],
-                "is_active": True,
-            },
+            defaults=item,
         )
         plans[item["code"]] = plan
+
+    SubscriptionPlan.objects.filter(code="double-subject").update(
+        name="Legacy 2 fan",
+        is_active=False,
+        is_public=False,
+        is_featured=False,
+        display_order=80,
+    )
     return plans
 
 
@@ -446,6 +844,108 @@ def cleanup_empty_user_subscriptions(subscription_ids=None):
         UserSubscription.objects.filter(id__in=empty_ids).delete()
 
     return empty_ids
+
+
+def get_free_plan():
+    return ensure_default_subscription_plans()["free"]
+
+
+def assign_free_subject(user, subject):
+    profile = get_or_sync_profile(user)
+    subject_obj = subject if hasattr(subject, "id") else Subject.objects.get(id=int(subject))
+
+    if profile.free_subject_id and profile.free_subject_id != subject_obj.id:
+        raise ValidationError("Free fan allaqachon tanlangan va o'zgarmaydi.")
+
+    if not profile.free_subject_id:
+        profile.free_subject = subject_obj
+        profile.free_subject_locked_at = timezone.now()
+        profile.save(update_fields=["free_subject", "free_subject_locked_at"])
+        evaluate_referral_qualification(user)
+
+    return profile
+
+
+def user_requires_free_subject_selection(user):
+    profile = get_or_sync_profile(user)
+    if profile.free_subject_id:
+        return False
+    return not bool(get_user_subject_access_rows(user, active_only=True))
+
+
+def _append_free_subject_access_row(access_map, user):
+    now = timezone.now()
+    profile = Profile.objects.filter(user=user).select_related("free_subject").first()
+    if not profile or not profile.free_subject_id:
+        return
+    existing = access_map.get(profile.free_subject_id)
+    if existing and existing.get("is_permanent"):
+        return
+    if existing and existing.get("end_at") and existing["end_at"] >= now:
+        return
+
+    access_map[profile.free_subject_id] = {
+        "subject": profile.free_subject,
+        "subject_id": profile.free_subject_id,
+        "end_at": None,
+        "source": "free",
+        "is_permanent": True,
+    }
+
+
+def get_current_subscription_plan(user):
+    now = timezone.now()
+    active_plan = (
+        UserSubscription.objects.filter(
+            user=user,
+            status="active",
+            end_at__gte=now,
+            plan__isnull=False,
+        )
+        .select_related("plan")
+        .order_by("-plan__is_all_access", "-plan__subject_limit", "-plan__price", "plan__display_order")
+        .first()
+    )
+    if active_plan and active_plan.plan:
+        return active_plan.plan
+    if Subscription.objects.filter(user=user, end_date__gte=now).exists():
+        return None
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        profile = Profile.objects.filter(user=user).only("free_subject_id").first()
+    if profile and profile.free_subject_id:
+        return get_free_plan()
+    return None
+
+
+def get_daily_quota_usage(user, current_date=None):
+    current_date = current_date or timezone.localdate()
+    usage, _ = UserDailyQuotaUsage.objects.get_or_create(user=user, date=current_date)
+    return usage
+
+
+def get_daily_assessment_limit(user):
+    plan = get_current_subscription_plan(user)
+    if not plan:
+        return None
+    return plan.daily_test_limit
+
+
+def ensure_daily_assessment_quota_available(user):
+    limit = get_daily_assessment_limit(user)
+    if limit is None:
+        return None
+    usage = get_daily_quota_usage(user)
+    if usage.tests_started >= limit:
+        raise ValidationError(f"Bugungi limit tugadi. Free rejada kuniga {limit} ta assessment ishlash mumkin.")
+    return usage
+
+
+def register_daily_assessment_start(user):
+    usage = get_daily_quota_usage(user)
+    usage.tests_started += 1
+    usage.save(update_fields=["tests_started", "updated_at"])
+    return usage
 
 
 def revoke_subject_access(user, subject, include_legacy=True, include_bundle=True):
@@ -491,25 +991,30 @@ def get_user_subject_access_rows(user, active_only=False):
                 all_subjects_cache = list(Subject.objects.all())
             for subject in all_subjects_cache:
                 existing = access_map.get(subject.id)
-                if existing is None or subscription.end_at > existing["end_at"]:
+                existing_end_at = existing["end_at"] if existing else None
+                if existing is None or existing_end_at is None or subscription.end_at > existing_end_at:
                     access_map[subject.id] = {
                         "subject": subject,
                         "subject_id": subject.id,
                         "end_at": subscription.end_at,
                         "source": "bundle",
+                        "is_permanent": False,
                     }
             continue
 
         for item in subscription.subjects.all():
             existing = access_map.get(item.subject_id)
-            if existing is None or subscription.end_at > existing["end_at"]:
+            existing_end_at = existing["end_at"] if existing else None
+            if existing is None or existing_end_at is None or subscription.end_at > existing_end_at:
                 access_map[item.subject_id] = {
                     "subject": item.subject,
                     "subject_id": item.subject_id,
                     "end_at": subscription.end_at,
                     "source": "bundle",
+                    "is_permanent": False,
                 }
 
+    _append_free_subject_access_row(access_map, user)
     if has_bundle_rows:
         rows = list(access_map.values())
         rows.sort(key=lambda item: item["subject"].name)
@@ -521,14 +1026,17 @@ def get_user_subject_access_rows(user, active_only=False):
 
     for row in legacy_rows:
         existing = access_map.get(row.subject_id)
-        if existing is None or row.end_date > existing["end_at"]:
+        existing_end_at = existing["end_at"] if existing else None
+        if existing is None or existing_end_at is None or row.end_date > existing_end_at:
             access_map[row.subject_id] = {
                 "subject": row.subject,
                 "subject_id": row.subject_id,
                 "end_at": row.end_date,
                 "source": "legacy",
+                "is_permanent": False,
             }
 
+    _append_free_subject_access_row(access_map, user)
     rows = list(access_map.values())
     rows.sort(key=lambda item: item["subject"].name)
     return rows
@@ -593,7 +1101,7 @@ def get_subject_theme(subject_name):
         ],
         "extra_sections": [
             {"key": "problems", "label": "Mashqlar"},
-            {"key": "grammar", "label": "Gramatika"},
+            {"key": "grammar", "label": "Grammatika"},
             {"key": "rules", "label": "Qoidalar"},
             {"key": "essay", "label": "Esse"},
             {"key": "extras", "label": "Qo'shimcha ma'lumotlar"},
@@ -1229,6 +1737,8 @@ def get_or_sync_profile(user: User):
         fields_to_update.append("level")
     if fields_to_update:
         profile.save(update_fields=fields_to_update)
+    ensure_profile_referral_code(profile, save=True)
+    normalize_referral_wallet(profile, save=True)
     return profile
 
 

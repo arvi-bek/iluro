@@ -32,6 +32,7 @@ urlpatterns = [
     path("books/<int:book_id>/read/", views.book_read_view, name="book-read"),
     path("books/<int:book_id>/pdf/", views.book_pdf_view, name="book-pdf"),
     path("ranking/", views.ranking_view, name="ranking"),
+    path("ref/<str:referral_code>/", views.referral_entry_view, name="referral-entry"),
     path("register/", views.register_view, name="register"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),

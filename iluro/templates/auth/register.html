@@ -14,6 +14,13 @@
         <h2>Hisob yaratish</h2>
     </div>
 
+    {% if active_referral_code %}
+    <p class="auth-switch">
+        Referral code qabul qilindi:
+        <strong>{{ active_referral_code }}</strong>
+    </p>
+    {% endif %}
+
     <form class="auth-form" method="post">
         {% csrf_token %}
         <input type="hidden" name="role" value="student">

@@ -21,10 +21,12 @@ from .models import (
     Question, Choice, UserTest,
     UserAnswer, Profile, UserSubjectPreference, Book, SubjectSectionEntry, EssayTopic,
     PracticeSet, PracticeExercise, PracticeChoice, UserPracticeAttempt, PracticeSetAttempt, BookView,
-    GrammarLessonQuestion, GrammarLessonProgress, UserStatSummary,
+    GrammarLessonQuestion, GrammarLessonProgress, ReferralEvent, UserStatSummary,
 )
 from .services import (
+    apply_referral_discount_to_subscription,
     cleanup_empty_user_subscriptions,
+    consume_referral_discount,
     revoke_subject_access,
     import_assessment_from_payload,
     import_essay_topics_from_payload,
@@ -41,7 +43,7 @@ EssayTopic._meta.verbose_name_plural = "Esse mavzulari"
 
 IMPORT_KIND_CHOICES = [
     ("assessment", "Mashqlar"),
-    ("grammar", "Gramatika"),
+    ("grammar", "Grammatika"),
     ("terms", "Atamalar"),
     ("chronology", "Xronologiya"),
     ("events", "Sanalar / Voqealar"),
@@ -154,7 +156,7 @@ def import_center_view(request):
                     messages.success(
                         request,
                         (
-                            f"Gramatika import tugadi: {result['created_count']} ta yangi, "
+                            f"Grammatika import tugadi: {result['created_count']} ta yangi, "
                             f"{result['updated_count']} ta yangilandi, {result['question_count']} ta savol qo'shildi."
                         ),
                     )
@@ -459,6 +461,11 @@ class ProfileAdminForm(forms.ModelForm):
         required=False,
         help_text="Darajani tez almashtirish uchun tanlang. XP o'zgarmasa, shu bosqichning minimal XP qiymati qo'llanadi.",
     )
+    mark_referral_discount_used = forms.BooleanField(
+        label="Referral balansini ishlatilgan deb belgilash",
+        required=False,
+        help_text="Joriy available referral foizini 0 ga tushiradi va used ga o'tkazadi. Keyin user yana qayta yig'a oladi.",
+    )
 
     class Meta:
         model = Profile
@@ -552,12 +559,59 @@ class UserSubscriptionSubjectInline(admin.TabularInline):
     verbose_name_plural = "Ochiq fanlar"
 
 
+def _plan_scope_label(plan):
+    if not plan:
+        return "-"
+    if plan.is_all_access:
+        return "Barcha fanlar"
+    if plan.code == "single-subject":
+        return "Free + 1 fan"
+    if plan.subject_limit:
+        return f"{plan.subject_limit} ta fan"
+    return "Cheklangan fanlar"
+
+
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "code", "subject_limit", "is_all_access", "price", "duration_days", "is_active")
-    list_filter = ("is_all_access", "is_active", "duration_days")
+    list_display = (
+        "display_order",
+        "name",
+        "code",
+        "scope_preview",
+        "price",
+        "duration_days",
+        "stack_mode",
+        "is_featured",
+        "is_public",
+        "is_active",
+    )
+    list_filter = ("is_all_access", "is_public", "is_featured", "is_active", "stack_mode", "duration_days")
     search_fields = ("name", "code")
-    ordering = ("price", "name")
+    ordering = ("display_order", "price", "name")
+    list_display_links = ("name",)
+    list_editable = ("display_order", "is_featured", "is_public", "is_active")
+    fieldsets = (
+        ("Asosiy", {"fields": ("name", "code", "display_order", "price", "duration_days")}),
+        ("Qamrov", {"fields": ("subject_limit", "is_all_access", "stack_mode", "is_public", "is_featured", "is_active")}),
+        ("Limitlar", {"fields": ("daily_test_limit", "daily_ai_limit")}),
+        (
+            "Imkoniyatlar",
+            {
+                "fields": (
+                    "can_use_ai",
+                    "can_use_full_content",
+                    "can_use_advanced_content",
+                    "can_use_mock_exam",
+                    "can_use_progress_recommendations",
+                    "can_use_advanced_stats",
+                )
+            },
+        ),
+    )
+
+    @admin.display(description="Qamrov")
+    def scope_preview(self, obj):
+        return _plan_scope_label(obj)
 
 
 @admin.register(UserSubscription)
@@ -576,12 +630,28 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
     autocomplete_fields = ("user", "plan")
     inlines = [UserSubscriptionSubjectInline]
     ordering = ("-end_at", "-created_at")
-    fields = ("user", "plan", "title", "source", "status", "is_all_access", "started_at", "end_at")
+    readonly_fields = ("pricing_summary",)
+    fields = (
+        "user",
+        "plan",
+        "title",
+        "source",
+        "status",
+        "is_all_access",
+        "started_at",
+        "end_at",
+        "pricing_summary",
+    )
     list_per_page = 25
     search_help_text = "Username, to'liq ism, email yoki obuna nomi bo'yicha qidiring"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("plan", "user").prefetch_related("subjects__subject")
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "plan":
+            kwargs["queryset"] = SubscriptionPlan.objects.filter(is_active=True, is_public=True).order_by("display_order", "price", "name")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def get_changeform_initial_data(self, request):
         initial = super().get_changeform_initial_data(request)
@@ -595,13 +665,15 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
         if obj.is_all_access:
             return mark_safe(
                 '<span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;'
-                'background:rgba(168,106,51,0.12);color:#8a5425;font-weight:700;">All access</span>'
+                'background:rgba(168,106,51,0.12);color:#8a5425;font-weight:700;">Barcha fanlar</span>'
             )
         subjects = [item.subject.name for item in obj.subjects.all()]
         if not subjects:
-            return mark_safe(
+            plan_label = _plan_scope_label(obj.plan)
+            return format_html(
                 '<span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;'
-                'background:rgba(176,87,67,0.10);color:#b05743;font-weight:700;">Fan biriktirilmagan</span>'
+                'background:rgba(176,87,67,0.10);color:#b05743;font-weight:700;">Fan biriktirilmagan ({})</span>',
+                plan_label,
             )
         preview = ", ".join(subjects[:3])
         if len(subjects) > 3:
@@ -645,9 +717,9 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
 
     def source_badge(self, obj):
         palette = {
-            "purchase": ("rgba(73,123,86,0.10)", "#497b56", "Purchase"),
+            "purchase": ("rgba(73,123,86,0.10)", "#497b56", "Sotib olish"),
             "beta_trial": ("rgba(168,106,51,0.12)", "#8a5425", "Beta trial"),
-            "manual": ("rgba(54,103,171,0.10)", "#3667ab", "Manual"),
+            "manual": ("rgba(54,103,171,0.10)", "#3667ab", "Admin"),
             "legacy_import": ("rgba(112,112,112,0.10)", "#6d6d6d", "Legacy"),
         }
         bg, color, label = palette.get(obj.source, ("rgba(112,112,112,0.10)", "#6d6d6d", obj.get_source_display()))
@@ -661,9 +733,30 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
     source_badge.short_description = "Manba"
     source_badge.admin_order_field = "source"
 
+    @admin.display(description="Narx")
+    def pricing_summary(self, obj):
+        if not obj.plan_id:
+            return "-"
+        base_price = int(obj.price_before_discount or obj.plan.price or 0)
+        if obj.referral_discount_percent_applied:
+            return (
+                f"Base: {base_price:,} so'm | Referral: {obj.referral_discount_percent_applied}% "
+                f"(-{int(obj.referral_discount_amount or 0):,} so'm) | Final: {int(obj.final_price or 0):,} so'm"
+            ).replace(",", " ")
+        final_price = int(obj.final_price or base_price or 0)
+        return f"Base: {base_price:,} so'm | Final: {final_price:,} so'm".replace(",", " ")
+
     def save_model(self, request, obj, form, change):
-        if obj.plan and not obj.title:
+        if obj.plan:
             obj.title = obj.plan.name
+            obj.is_all_access = obj.plan.is_all_access
+            if not obj.price_before_discount:
+                obj.price_before_discount = int(obj.plan.price or 0)
+            if not obj.final_price:
+                obj.final_price = int(obj.plan.price or 0)
+            if not change:
+                started_at = obj.started_at or timezone.now()
+                obj.end_at = obj.end_at or (started_at + timedelta(days=obj.plan.duration_days))
         super().save_model(request, obj, form, change)
 
     def save_related(self, request, form, formsets, change):
@@ -695,6 +788,33 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
                 "Bu obunaga hali fan biriktirilmagan. Access ochilishi uchun kamida bitta fan qo'shing.",
                 level=messages.WARNING,
             )
+            return
+
+        if subscription.plan and not subscription.is_all_access and subscription.plan.subject_limit:
+            subject_count = subscription.subjects.count()
+            if subject_count > subscription.plan.subject_limit:
+                self.message_user(
+                    request,
+                    (
+                        f"Tanlangan plan '{subscription.plan.name}' uchun limit {subscription.plan.subject_limit} ta fan. "
+                        f"Hozir {subject_count} ta fan biriktirilgan."
+                    ),
+                    level=messages.WARNING,
+                )
+
+        if not change and subscription.plan_id:
+            applied_percent = apply_referral_discount_to_subscription(subscription)
+            if applied_percent:
+                subscription.refresh_from_db()
+                self.message_user(
+                    request,
+                    (
+                        f"Referral chegirma qo'llandi: {applied_percent}% "
+                        f"(-{int(subscription.referral_discount_amount or 0):,} so'm). "
+                        f"Final narx: {int(subscription.final_price or 0):,} so'm."
+                    ).replace(",", " "),
+                    level=messages.SUCCESS,
+                )
 
     def delete_model(self, request, obj):
         subject_ids = list(obj.subjects.values_list("subject_id", flat=True))
@@ -829,14 +949,17 @@ class UserAnswerAdmin(admin.ModelAdmin):
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     form = ProfileAdminForm
+    actions = ("mark_referral_discount_as_used",)
     list_display = (
         "id",
         "user",
         "full_name",
+        "referral_code",
         "role_badge",
         "theme",
         "level_badge",
         "xp_badge",
+        "referral_wallet_badge",
         "subject_count",
         "premium_until",
         "created_at",
@@ -844,14 +967,26 @@ class ProfileAdmin(admin.ModelAdmin):
     list_filter = ("role", "theme", "premium_until", "created_at")
     search_fields = ("user__username", "full_name")
     autocomplete_fields = ("user",)
-    readonly_fields = ("purchased_subjects_summary",)
+    readonly_fields = (
+        "referral_code",
+        "referral_wallet_badge",
+        "referred_by",
+        "purchased_subjects_summary",
+    )
     fieldsets = (
-        ("Asosiy", {"fields": ("user", "full_name", "role", "theme", "photo")}),
+        ("Asosiy", {"fields": ("user", "full_name", "role", "theme", "photo", "referral_code", "referred_by")}),
         (
             "Progress",
             {
                 "fields": ("xp", "level_override", "premium_until"),
                 "description": "XP ni qo'lda kiriting yoki daraja tanlab tez o'tkazing. Agar ikkalasi ham o'zgarsa, XP ustun turadi.",
+            },
+        ),
+        (
+            "Referral",
+            {
+                "fields": ("referral_wallet_badge", "mark_referral_discount_used"),
+                "description": "Checkbox saqlanganda available referral balansini 0 ga tushiradi. Foydalanuvchi keyin yana 50% gacha qayta yig'a oladi.",
             },
         ),
         ("Obuna", {"fields": ("purchased_subjects_summary",)}),
@@ -891,6 +1026,18 @@ class ProfileAdmin(admin.ModelAdmin):
             info["range_text"],
         )
 
+    @admin.display(description="Referral wallet")
+    def referral_wallet_badge(self, obj):
+        return format_html(
+            '<div style="display:grid;gap:3px;">'
+            '<strong style="font-size:0.95rem;color:#24160d;">Available: {}%</strong>'
+            '<span style="font-size:0.78rem;color:#8f735c;">Earned: {}% · Used: {}%</span>'
+            "</div>",
+            obj.referral_discount_available_percent,
+            obj.referral_discount_percent,
+            obj.referral_discount_used_percent,
+        )
+
     def subject_count(self, obj):
         return len(get_user_subject_access_rows(obj.user, active_only=False))
     subject_count.short_description = "Fanlar"
@@ -903,15 +1050,17 @@ class ProfileAdmin(admin.ModelAdmin):
         lines = []
         now = timezone.now()
         for subscription in subscriptions:
-            status = "Faol" if subscription["end_at"] >= now else "Tugagan"
+            status = "Faol" if subscription["is_permanent"] or (subscription["end_at"] and subscription["end_at"] >= now) else "Tugagan"
+            expiry_label = "Doimiy" if subscription["is_permanent"] else f"{subscription['end_at']:%d.%m.%Y %H:%M}"
             lines.append(
-                f"{subscription['subject'].name} - {status} - {subscription['end_at']:%d.%m.%Y %H:%M}"
+                f"{subscription['subject'].name} - {status} - {expiry_label}"
             )
         return "\n".join(lines)
     purchased_subjects_summary.short_description = "Sotib olingan fanlar"
 
     def save_model(self, request, obj, form, change):
         level_override = form.cleaned_data.get("level_override")
+        should_mark_referral_used = bool(form.cleaned_data.get("mark_referral_discount_used"))
         xp_changed = "xp" in form.changed_data
         level_changed = "level_override" in form.changed_data
 
@@ -938,6 +1087,61 @@ class ProfileAdmin(admin.ModelAdmin):
                 "Daraja XP bo'yicha qayta hisoblandi. Agar aniq darajani xohlasangiz, XP ni o'zgartirmasdan darajani tanlang.",
                 level=messages.WARNING,
             )
+
+        if should_mark_referral_used:
+            consumed_percent = consume_referral_discount(obj)
+            if consumed_percent:
+                self.message_user(
+                    request,
+                    (
+                        f"{obj.user.username} uchun {consumed_percent}% referral balans ishlatilgan deb belgilandi. "
+                        "User endi yana qayta referral yig'a oladi."
+                    ),
+                    level=messages.SUCCESS,
+                )
+            else:
+                self.message_user(
+                    request,
+                    f"{obj.user.username} uchun ishlatishga referral balans topilmadi.",
+                    level=messages.WARNING,
+                )
+
+    @admin.action(description="Tanlangan profillarda referral balansni ishlatilgan deb belgilash")
+    def mark_referral_discount_as_used(self, request, queryset):
+        updated_count = 0
+        zero_count = 0
+
+        for profile in queryset.select_related("user"):
+            consumed_percent = consume_referral_discount(profile)
+            if consumed_percent:
+                updated_count += 1
+            else:
+                zero_count += 1
+
+        if updated_count:
+            self.message_user(
+                request,
+                (
+                    f"{updated_count} ta profil uchun referral balans ishlatilgan deb belgilandi. "
+                    "Bu userlar 0 dan yana qayta yig'a oladi."
+                ),
+                level=messages.SUCCESS,
+            )
+        if zero_count:
+            self.message_user(
+                request,
+                f"{zero_count} ta profilda available referral balans yo'q edi.",
+                level=messages.WARNING,
+            )
+
+
+@admin.register(ReferralEvent)
+class ReferralEventAdmin(admin.ModelAdmin):
+    list_display = ("id", "inviter", "invited_user", "status", "reward_percent", "qualified_at", "created_at")
+    list_filter = ("status", "qualified_at", "created_at")
+    search_fields = ("inviter__username", "invited_user__username", "inviter__profile__full_name", "invited_user__profile__full_name")
+    autocomplete_fields = ("inviter", "invited_user")
+    ordering = ("-created_at",)
 
 
 @admin.register(UserSubjectPreference)
