@@ -35,7 +35,7 @@
             <div class="subject-mobile-meta">
                 <div class="subject-mobile-copy">
                     <strong>{{ profile.full_name|default:request.user.username }}</strong>
-                    <span>{{ subject.name }} · {{ subject_level }}</span>
+                    <span>{{ subject.name }}</span>
                 </div>
                 <div class="subject-mobile-links">
                     <a href="{% url 'settings' %}">Sozlama</a>
@@ -52,7 +52,6 @@
 
             <div class="subject-sidebar-user">
                 <strong>{{ profile.full_name|default:request.user.username }}</strong>
-                <span>{{ subject_level }}</span>
                 <a href="{% url 'settings' %}">Sozlama</a>
                 <a href="{% url 'logout' %}">Chiqish</a>
             </div>
@@ -70,7 +69,6 @@
                 </div>
                 <div class="workspace-topbar-status">
                     <span>{{ profile.xp }} XP</span>
-                    <span>{{ subject_level }}</span>
                 </div>
             </section>
 
@@ -102,7 +100,7 @@
                     <div class="workspace-hero-notes">
                         <span>{{ workspace_available_modules }} ta aktiv modul</span>
                         <span>{{ workspace_ready_resources }} ta tayyor resurs va mashq</span>
-                        <span>{{ subject_level }} daraja bo'yicha yo'naltirilgan</span>
+                        <span>Darajalar badge bilan ko'rsatiladi</span>
                     </div>
                 </div>
                 <article class="workspace-focus-card">
@@ -132,7 +130,7 @@
                             </div>
                             <div class="workspace-section-meta">
                                 <span class="workspace-section-pill">{{ workspace_available_modules }} ta modul tayyor</span>
-                                <span class="workspace-section-pill is-soft">{{ subject_level }} daraja</span>
+                                <span class="workspace-section-pill is-soft">Barcha darajalar ochiq</span>
                             </div>
                         </div>
 
@@ -251,7 +249,7 @@
                             </div>
                             <div class="workspace-section-meta">
                                 <span class="workspace-section-pill">{{ tests|length }} ta test</span>
-                                <span class="workspace-section-pill is-soft">{{ subject_level }} daraja</span>
+                                <span class="workspace-section-pill is-soft">Darajalar badge bilan</span>
                             </div>
                         </div>
                         {% if subject_theme.key == "history" %}
@@ -499,7 +497,7 @@
                             </div>
                             <div class="workspace-section-meta">
                                 <span class="workspace-section-pill">{{ combined_problem_items|length }} ta blok</span>
-                                <span class="workspace-section-pill is-soft">{% if show_language_problem_filters %}Grammatika / Adabiyot{% else %}{{ subject_level }} daraja{% endif %}</span>
+                                <span class="workspace-section-pill is-soft">{% if show_language_problem_filters %}Grammatika / Adabiyot{% else %}Daraja bo'yicha saralangan{% endif %}</span>
                             </div>
                         </div>
                         {% if show_language_problem_filters %}
@@ -620,7 +618,7 @@
                                 <div class="grammar-sidebar-head">
                                     <p class="eyebrow">Gramatika</p>
                                     <h2>Mavzular</h2>
-                                    <p>{{ grammar_total_count }} ta dars · {{ grammar_selected_level }} daraja</p>
+                                    <p>{{ grammar_total_count }} ta dars · barcha darajalar ochiq</p>
                                 </div>
 
                                 <div class="grammar-overview-strip">

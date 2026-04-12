@@ -26,13 +26,12 @@ from .models import (
     UserTest,
 )
 from .services import (
-    filter_by_allowed_level,
     get_active_subscription_ids,
     get_effective_subject_level,
     get_user_stat_summary,
     get_user_subject_access_rows,
 )
-from .utils import normalize_difficulty_label
+from .utils import build_difficulty_order_expression, normalize_difficulty_label
 
 
 LANGUAGE_BOOK_GENRE_FILTERS = [
@@ -648,9 +647,11 @@ def get_subject_tests(user, subject, profile_level, limit=6, category_filter="al
         tests_queryset = tests_queryset.filter(category=category_filter)
     tests_queryset = apply_language_problem_filter(tests_queryset, subject, content_filter, ["title"])
     tests = list(
-        filter_by_allowed_level(tests_queryset, "difficulty", profile_level)
-        .annotate(question_count=Count("question"))
-        .order_by("-created_at")[:limit]
+        tests_queryset.annotate(
+            question_count=Count("question"),
+            difficulty_sort=build_difficulty_order_expression("difficulty"),
+        )
+        .order_by("difficulty_sort", "-created_at", "-id")[:limit]
     )
     test_attempt_stats = {
         row["test_id"]: row
@@ -683,12 +684,10 @@ def get_subject_practice_sets(user, subject, profile_level, limit=12, content_fi
         ["title", "topic", "description", "source_book"],
     )
     practice_sets = list(
-        filter_by_allowed_level(
-            practice_queryset,
-            "difficulty",
-            profile_level,
+        practice_queryset.annotate(
+            difficulty_sort=build_difficulty_order_expression("difficulty"),
         )
-        .order_by("-is_featured", "-created_at")[:limit]
+        .order_by("difficulty_sort", "-is_featured", "-created_at", "-id")[:limit]
     )
     practice_set_attempt_rows = (
         PracticeSetAttempt.objects.filter(user=user, practice_set__subject=subject)
@@ -718,9 +717,12 @@ def get_subject_practice_sets(user, subject, profile_level, limit=12, content_fi
 def get_tests_listing(user, profile_level):
     subscribed_subject_ids = get_active_subscription_ids(user)
     test_queryset = (
-        filter_by_allowed_level(Test.objects.select_related("subject"), "difficulty", profile_level)
-        .annotate(question_count=Count("question"))
-        .order_by("-created_at")
+        Test.objects.select_related("subject")
+        .annotate(
+            question_count=Count("question"),
+            difficulty_sort=build_difficulty_order_expression("difficulty"),
+        )
+        .order_by("difficulty_sort", "-created_at", "-id")
     )
     if not subscribed_subject_ids:
         test_queryset = test_queryset.none()
@@ -976,13 +978,11 @@ def get_math_formula_quiz_payload(subject, *, max_questions=10):
 
 def get_math_topic_quiz_groups(subject, profile_level, *, max_questions=8):
     exercises = (
-        filter_by_allowed_level(
-            PracticeExercise.objects.filter(subject=subject, answer_mode="choice").select_related("practice_set"),
-            "difficulty",
-            profile_level,
-        )
+        PracticeExercise.objects.filter(subject=subject, answer_mode="choice")
+        .select_related("practice_set")
         .prefetch_related("choices")
-        .order_by("-is_featured", "-created_at", "-id")
+        .annotate(difficulty_sort=build_difficulty_order_expression("difficulty"))
+        .order_by("difficulty_sort", "-is_featured", "-created_at", "-id")
     )
 
     grouped = {}

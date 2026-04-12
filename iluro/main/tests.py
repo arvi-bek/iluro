@@ -92,6 +92,24 @@ class MainSmokeTests(TestCase):
         )
         Choice.objects.create(question=self.question, text="5", is_correct=False)
 
+        self.advanced_test = Test.objects.create(
+            subject=self.math,
+            title="Advanced Math Flow Test",
+            duration=15,
+            difficulty="A+",
+        )
+        self.advanced_question = Question.objects.create(
+            test=self.advanced_test,
+            text="x^2 = 16 bo'lsa, musbat ildizni toping.",
+            difficulty="A+",
+        )
+        self.advanced_correct_choice = Choice.objects.create(
+            question=self.advanced_question,
+            text="4",
+            is_correct=True,
+        )
+        Choice.objects.create(question=self.advanced_question, text="8", is_correct=False)
+
         self.practice_set = PracticeSet.objects.create(
             subject=self.math,
             title="Natural sonlar mashqi",
@@ -123,6 +141,41 @@ class MainSmokeTests(TestCase):
         )
         PracticeChoice.objects.create(
             exercise=self.practice_exercise,
+            text="9",
+            is_correct=False,
+        )
+
+        self.advanced_practice_set = PracticeSet.objects.create(
+            subject=self.math,
+            title="Funksiya va grafik mashqi",
+            source_book="IDC 1",
+            topic="Funksiya",
+            difficulty="A+",
+        )
+        self.advanced_practice_exercise = PracticeExercise.objects.create(
+            subject=self.math,
+            practice_set=self.advanced_practice_set,
+            prompt="y = 2x + 1 funksiyada x = 3 bo'lsa, y ni toping.",
+            answer_mode="choice",
+            difficulty="A+",
+        )
+        self.advanced_practice_choice = PracticeChoice.objects.create(
+            exercise=self.advanced_practice_exercise,
+            text="7",
+            is_correct=True,
+        )
+        PracticeChoice.objects.create(
+            exercise=self.advanced_practice_exercise,
+            text="6",
+            is_correct=False,
+        )
+        PracticeChoice.objects.create(
+            exercise=self.advanced_practice_exercise,
+            text="8",
+            is_correct=False,
+        )
+        PracticeChoice.objects.create(
+            exercise=self.advanced_practice_exercise,
             text="9",
             is_correct=False,
         )
@@ -248,6 +301,29 @@ class MainSmokeTests(TestCase):
         self.assertContains(mistakes_response, "Mening xatolarim")
         self.assertContains(mistakes_response, self.practice_exercise.prompt)
 
+    def test_workspace_and_assessment_show_all_difficulty_levels(self):
+        problems_response = self.client.get(reverse("subject-workspace-section", args=[self.math.id, "problems"]))
+        self.assertContains(problems_response, self.test.title)
+        self.assertContains(problems_response, self.advanced_test.title)
+        self.assertContains(problems_response, self.practice_set.title)
+        self.assertContains(problems_response, self.advanced_practice_set.title)
+
+    def test_high_difficulty_test_and_practice_are_accessible_without_manual_level_setting(self):
+        test_start_response = self.client.get(reverse("test-start", args=[self.advanced_test.id]))
+        self.assertEqual(test_start_response.status_code, 200)
+        self.assertContains(test_start_response, self.advanced_test.title)
+
+        practice_response = self.client.get(reverse("practice-set-solve", args=[self.advanced_practice_set.id]))
+        self.assertEqual(practice_response.status_code, 200)
+        self.assertContains(practice_response, self.advanced_practice_set.title)
+
+    def test_settings_page_no_longer_shows_per_subject_level_controls(self):
+        response = self.client.get(reverse("settings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Kerakli daraja")
+        self.assertNotContains(response, "subject_level_")
+
     def test_math_formula_quiz_payload_builds_multiple_question_types(self):
         payload = get_math_formula_quiz_payload(self.math, max_questions=6)
 
@@ -310,6 +386,7 @@ class MainSmokeTests(TestCase):
         self.assertContains(result_response, subject_problems_url)
 
     def test_register_rejects_non_latin_username_characters(self):
+        self.client.logout()
         response = self.client.post(
             reverse("register"),
             {
@@ -326,11 +403,12 @@ class MainSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Username faqat lotin harflari, raqamlar va pastki chiziq (_) dan iborat bo'lishi kerak.",
+            "Username faqat lotin harflari, raqamlar va pastki chiziq (_)",
         )
         self.assertFalse(User.objects.filter(email="newuser@example.com").exists())
 
     def test_register_accepts_latin_username_with_digits_and_underscore(self):
+        self.client.logout()
         response = self.client.post(
             reverse("register"),
             {

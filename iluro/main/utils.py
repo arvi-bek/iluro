@@ -1,3 +1,5 @@
+from django.db.models import Case, IntegerField, Value, When
+
 XP_PER_CORRECT_TEST_ANSWER = 6
 XP_PER_CORRECT_PRACTICE_ANSWER = 5
 
@@ -17,6 +19,7 @@ DIFFICULTY_ALIAS_MAP = {
 }
 
 LEVEL_ORDER = ["C", "C+", "B", "B+", "A", "A+"]
+DIFFICULTY_ORDER_MAP = {label: index for index, label in enumerate(LEVEL_ORDER)}
 
 XP_LEVEL_RULES = [
     {"label": "✨ Yangi User", "min_xp": 0, "max_xp": 200},
@@ -117,6 +120,22 @@ def get_level_choices() -> list[tuple[str, str]]:
 def normalize_difficulty_label(value: str | None) -> str:
     normalized = (value or "").strip().lower()
     return DIFFICULTY_ALIAS_MAP.get(normalized, (value or "B").strip().upper())
+
+
+def get_difficulty_rank(value: str | None) -> int:
+    normalized = normalize_difficulty_label(value)
+    return DIFFICULTY_ORDER_MAP.get(normalized, len(LEVEL_ORDER))
+
+
+def build_difficulty_order_expression(field_name: str = "difficulty"):
+    return Case(
+        *[
+            When(**{field_name: label}, then=Value(index))
+            for index, label in enumerate(LEVEL_ORDER)
+        ],
+        default=Value(len(LEVEL_ORDER)),
+        output_field=IntegerField(),
+    )
 
 
 def calculate_score_percent(correct_count: int | None, total_count: int | None) -> int:

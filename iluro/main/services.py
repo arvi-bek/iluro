@@ -29,7 +29,6 @@ from .models import (
     UserSubscriptionSubject,
     UserStatSummary,
     UserSubjectStat,
-    UserSubjectPreference,
     UserPracticeAttempt,
     UserTest,
 )
@@ -41,6 +40,7 @@ from .utils import (
     calculate_test_xp,
     get_allowed_level_labels,
     get_level_info,
+    get_subject_level_info,
     normalize_difficulty_label,
 )
 
@@ -1233,16 +1233,16 @@ def get_or_sync_profile(user: User):
 
 
 def get_effective_subject_level(user: User, subject_id: int | None = None, profile: Profile | None = None):
-    fallback_level = (profile.level if profile else None) or get_or_sync_profile(user).level
     if not subject_id:
-        return normalize_difficulty_label(fallback_level)
+        summary = get_user_stat_summary(user)
+        return get_subject_level_info(summary.best_test_score)["label"]
 
-    preferred_level = (
-        UserSubjectPreference.objects.filter(user=user, subject_id=subject_id)
-        .values_list("preferred_level", flat=True)
+    subject_best_score = (
+        UserSubjectStat.objects.filter(user=user, subject_id=subject_id)
+        .values_list("best_score", flat=True)
         .first()
     )
-    return normalize_difficulty_label(preferred_level or fallback_level)
+    return get_subject_level_info(subject_best_score or 0)["label"]
 
 
 def sidebar_context(user):

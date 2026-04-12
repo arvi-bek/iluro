@@ -39,7 +39,6 @@ from .selectors import (
     get_user_subject_best_score,
 )
 from .services import (
-    filter_by_allowed_level as _filter_by_allowed_level,
     get_active_subscription_ids as _get_active_subscription_ids,
     get_effective_subject_level as _get_effective_subject_level,
     get_or_sync_profile as _get_or_sync_profile,
@@ -54,7 +53,6 @@ from .utils import (
     LEVEL_ORDER,
     calculate_essay_topic_xp,
     calculate_grammar_lesson_xp,
-    get_allowed_level_labels,
     get_level_info,
 )
 
@@ -609,24 +607,16 @@ def subject_workspace_view(request, subject_id, section=None):
         item["is_active"] = item["key"] == current_section
 
     user_subject_best = get_user_subject_best_score(request.user, subject)
-    accessible_test_count = _filter_by_allowed_level(
-        Test.objects.filter(subject=subject),
-        "difficulty",
-        subject_level,
-    ).count()
+    accessible_test_count = Test.objects.filter(subject=subject).count()
     total_books_count = Book.objects.filter(subject=subject).count()
-    accessible_practice_count = _filter_by_allowed_level(
-        PracticeSet.objects.filter(subject=subject),
-        "difficulty",
-        subject_level,
-    ).count()
+    accessible_practice_count = PracticeSet.objects.filter(subject=subject).count()
     combined_problem_count = accessible_practice_count + accessible_test_count
     home_metrics = [
-        {"label": "Joriy daraja", "value": subject_level, "hint": "Shu fan uchun tanlangan joriy daraja"},
+        {"label": "Joriy daraja", "value": subject_level, "hint": "Shu fan bo'yicha hozirgi bosqich"},
         {
-            "label": "Ochiq assessment",
+            "label": "Assessment bloklari",
             "value": f"{combined_problem_count} ta",
-            "hint": "Misol, masala va nazorat bloklari bitta bo'limda ko'rsatiladi.",
+            "hint": "Barcha darajadagi test va mashqlar bitta bo'limda ko'rinadi.",
         },
         {
             "label": "Eng yaxshi natija",
@@ -663,7 +653,7 @@ def subject_workspace_view(request, subject_id, section=None):
     grammar_progress = None
     grammar_quiz_result = None
     grammar_selected_level = subject_level
-    grammar_allowed_levels = get_allowed_level_labels(subject_level)
+    grammar_available_levels = []
     selected_reference_entry = None
     reference_page_obj = None
     reference_entries = []
@@ -671,14 +661,7 @@ def subject_workspace_view(request, subject_id, section=None):
     selected_essay_progress = None
 
     base_section_entries_queryset = SubjectSectionEntry.objects.filter(subject=subject, section_key=current_section)
-    if current_section == "grammar":
-        section_entries_queryset = base_section_entries_queryset
-    else:
-        section_entries_queryset = _filter_by_allowed_level(
-            base_section_entries_queryset,
-            "access_level",
-            subject_level,
-        )
+    section_entries_queryset = base_section_entries_queryset
     if current_section in {"terms", "events", "chronology"} and history_query:
         section_entries_queryset = section_entries_queryset.filter(
             Q(title__icontains=history_query)
@@ -721,18 +704,18 @@ def subject_workspace_view(request, subject_id, section=None):
             selected_reference_entry = reference_entries[0] if reference_entries else None
     if current_section == "grammar" and section_entries:
         requested_grammar_level = (request.GET.get("grammar_level") or "").strip().replace(" ", "+")
-        available_grammar_levels = [
+        grammar_available_levels = [
             level
-            for level in grammar_allowed_levels
+            for level in LEVEL_ORDER
             if any(entry.access_level == level for entry in section_entries)
         ]
-        if available_grammar_levels:
-            if requested_grammar_level in available_grammar_levels:
+        if grammar_available_levels:
+            if requested_grammar_level in grammar_available_levels:
                 grammar_selected_level = requested_grammar_level
-            elif subject_level in available_grammar_levels:
+            elif subject_level in grammar_available_levels:
                 grammar_selected_level = subject_level
             else:
-                grammar_selected_level = available_grammar_levels[0]
+                grammar_selected_level = grammar_available_levels[0]
 
         grammar_progress_map = {
             progress.lesson_id: progress
@@ -842,15 +825,11 @@ def subject_workspace_view(request, subject_id, section=None):
     grammar_groups = _build_grammar_groups(
         section_entries,
         grammar_progress_map,
-        grammar_allowed_levels,
+        grammar_available_levels,
         grammar_selected_level,
     ) if current_section == "grammar" else []
     grammar_points = _build_grammar_points(selected_grammar_entry) if current_section == "grammar" else []
-    essay_queryset = _filter_by_allowed_level(
-        EssayTopic.objects.filter(subject=subject),
-        "access_level",
-        subject_level,
-    )
+    essay_queryset = EssayTopic.objects.filter(subject=subject)
     essay_topics = []
     selected_essay_topic = None
     essay_page_obj = None
@@ -1034,6 +1013,13 @@ def subject_workspace_view(request, subject_id, section=None):
                 "cta": "Boshlash",
             }
         )
+    combined_problem_items.sort(
+        key=lambda item: (
+            LEVEL_ORDER.index(item["level"]) if item["level"] in LEVEL_ORDER else len(LEVEL_ORDER),
+            item["badge"] != "Mashq",
+            item["title"].lower(),
+        )
+    )
     section_catalog = _get_workspace_section_catalog(subject_theme["key"])
     section_totals = {
         "books": total_books_count,
@@ -1042,37 +1028,13 @@ def subject_workspace_view(request, subject_id, section=None):
         "formula-quiz": len(math_formula_quiz) if is_math_subject else 0,
         "problems": combined_problem_count,
         "mistakes": len(math_mistake_items) if is_math_subject else 0,
-        "terms": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
-            "access_level",
-            subject_level,
-        ).count(),
-        "events": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="events"),
-            "access_level",
-            subject_level,
-        ).count(),
-        "chronology": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology"),
-            "access_level",
-            subject_level,
-        ).count(),
-        "grammar": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="grammar"),
-            "access_level",
-            subject_level,
-        ).count(),
-        "rules": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="rules"),
-            "access_level",
-            subject_level,
-        ).count(),
+        "terms": SubjectSectionEntry.objects.filter(subject=subject, section_key="terms").count(),
+        "events": SubjectSectionEntry.objects.filter(subject=subject, section_key="events").count(),
+        "chronology": SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology").count(),
+        "grammar": SubjectSectionEntry.objects.filter(subject=subject, section_key="grammar").count(),
+        "rules": SubjectSectionEntry.objects.filter(subject=subject, section_key="rules").count(),
         "essay": essay_queryset.count(),
-        "extras": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="extras"),
-            "access_level",
-            subject_level,
-        ).count(),
+        "extras": SubjectSectionEntry.objects.filter(subject=subject, section_key="extras").count(),
         "ai": 0,
         "chat": 0,
     }
@@ -1087,57 +1049,33 @@ def subject_workspace_view(request, subject_id, section=None):
         "formula-quiz": math_formula_quiz[0]["answer_title"] if math_formula_quiz else "",
         "problems": practice_sets[0].title if practice_sets else (tests[0].title if tests else ""),
         "mistakes": math_mistake_items[0]["title"] if math_mistake_items else "",
-        "terms": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="terms"),
-            "access_level",
-            subject_level,
-        )
+        "terms": SubjectSectionEntry.objects.filter(subject=subject, section_key="terms")
         .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
-        "events": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="events"),
-            "access_level",
-            subject_level,
-        )
+        "events": SubjectSectionEntry.objects.filter(subject=subject, section_key="events")
         .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
-        "chronology": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology"),
-            "access_level",
-            subject_level,
-        )
+        "chronology": SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology")
         .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
-        "grammar": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="grammar"),
-            "access_level",
-            subject_level,
-        )
+        "grammar": SubjectSectionEntry.objects.filter(subject=subject, section_key="grammar")
         .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
-        "rules": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="rules"),
-            "access_level",
-            subject_level,
-        )
+        "rules": SubjectSectionEntry.objects.filter(subject=subject, section_key="rules")
         .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
         or "",
         "essay": essay_queryset.values_list("title", flat=True).first() or "",
-        "extras": _filter_by_allowed_level(
-            SubjectSectionEntry.objects.filter(subject=subject, section_key="extras"),
-            "access_level",
-            subject_level,
-        )
+        "extras": SubjectSectionEntry.objects.filter(subject=subject, section_key="extras")
         .order_by("created_at", "id")
         .values_list("title", flat=True)
         .first()
@@ -1247,17 +1185,12 @@ def chronology_detail_view(request, subject_id, entry_id):
     profile = _get_or_sync_profile(request.user)
     level_info = get_level_info(profile.xp)
     subject = get_object_or_404(Subject, id=subject_id)
-    subject_level = _get_effective_subject_level(request.user, subject_id=subject.id, profile=profile)
 
     if not _user_can_access_subject(request.user, subject.id):
         messages.error(request, "Bu fan siz uchun hali aktiv emas.")
         return redirect("subject-selection")
 
-    entry_queryset = _filter_by_allowed_level(
-        SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology"),
-        "access_level",
-        subject_level,
-    )
+    entry_queryset = SubjectSectionEntry.objects.filter(subject=subject, section_key="chronology")
     entries = list(entry_queryset)
     entry = get_object_or_404(entry_queryset, id=entry_id)
     entry_index = next((index for index, item in enumerate(entries) if item.id == entry.id), 0)
