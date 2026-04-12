@@ -45,6 +45,7 @@ from .services import (
     get_active_subscription_ids as _get_active_subscription_ids,
     get_effective_subject_level as _get_effective_subject_level,
     get_or_sync_profile as _get_or_sync_profile,
+    get_safe_profile_photo_url as _get_safe_profile_photo_url,
     get_referral_plan_quote as _get_referral_plan_quote,
     get_referral_summary as _get_referral_summary,
     rebuild_user_statistics as _rebuild_user_statistics,
@@ -1263,6 +1264,7 @@ def profile_view(request):
     premium_is_active = bool(profile.premium_until and profile.premium_until >= timezone.now())
     context = {
         "profile": profile,
+        "profile_photo_url": _get_safe_profile_photo_url(profile),
         "level_info": level_info,
         "subject_statuses": profile_summary["subject_statuses"],
         "rank_position": profile_summary["rank_position"],
@@ -1365,8 +1367,8 @@ def subject_selection_view(request):
             "theme": "free",
             "price_label": "0 so'm",
             "coverage_label": "1 ta fan",
-            "status_text": "1 ta fan tanlanadi va keyin o'zgarmaydi",
-            "description": "Platformaga kirish, odat hosil qilish va foydalanuvchini ichkariga olib kirish uchun.",
+            "status_text": "1 ta fan tanlanadi",
+            "description": "Boshlash uchun bepul reja.",
             "features": [
                 "1 ta fan ochiladi",
                 "Kuniga 3 ta mashq",
@@ -1379,7 +1381,7 @@ def subject_selection_view(request):
                 "To'liq AI analiz yo'q",
                 "Advanced content yopiq",
             ],
-            "note": "Maqsad: userni ichkariga olib kirish",
+            "note": "",
             "is_featured": False,
             "is_current": not has_paid_access,
             "cta_label": "Default reja",
@@ -1394,8 +1396,8 @@ def subject_selection_view(request):
             "theme": "single",
             "price_label": "30,000 so'm",
             "coverage_label": "Free + 1",
-            "status_text": "User tanlagan 1 ta qo'shimcha fan ochiladi",
-            "description": "Faqat 1-2 ta fan kerak bo'lganlar uchun eng sodda pullik paket.",
+            "status_text": "1 ta qo'shimcha fan ochiladi",
+            "description": "1 ta qo'shimcha fan kerak bo'lganlar uchun qulay reja.",
             "features": [
                 "1 ta qo'shimcha fan ochiladi",
                 "Cheksiz mashqlar",
@@ -1403,7 +1405,7 @@ def subject_selection_view(request):
                 "AI o'rtacha darajada",
             ],
             "limits": [],
-            "note": "Kim uchun: faqat 1-2 fan kerak bo'lganlar",
+            "note": "",
             "is_featured": False,
             "is_current": False,
             "cta_label": "Sotib olish",
@@ -1418,7 +1420,7 @@ def subject_selection_view(request):
             "theme": "pro",
             "price_label": "70,000 so'm",
             "coverage_label": "3 ta fan",
-            "status_text": "Asosiy daromad modeli sifatida 3 ta fan tanlab olinadi",
+            "status_text": "3 ta fan ochiladi",
             "description": "Ko'pchilik uchun asosiy paket: keng content, kuchli AI va progress tracking.",
             "features": [
                 "3 ta fan ochiladi",
@@ -1428,7 +1430,7 @@ def subject_selection_view(request):
                 "Progress tracking va tavsiyalar",
             ],
             "limits": [],
-            "note": "Maqsad: asosiy daromad shu yerda",
+            "note": "",
             "is_featured": True,
             "is_current": False,
             "cta_label": "Sotib olish",
@@ -1443,7 +1445,7 @@ def subject_selection_view(request):
             "theme": "premium",
             "price_label": "100,000 - 120,000 so'm",
             "coverage_label": "Barcha fanlar",
-            "status_text": "Eng katta revenue uchun maksimal kirish va AI tahlil",
+            "status_text": "Barcha fanlar ochiq",
             "description": "Barcha fanlar, mock exam, to'liq AI analiz va advanced statistika bitta rejada.",
             "features": [
                 "Barcha fanlar ochiq",
@@ -1453,7 +1455,7 @@ def subject_selection_view(request):
                 "Yangi materiallarga early access",
             ],
             "limits": [],
-            "note": "Maqsad: eng katta revenue shu plan",
+            "note": "",
             "is_featured": True,
             "is_current": available_count > 0 and active_count >= available_count,
             "cta_label": "Sotib olish",
@@ -1480,20 +1482,18 @@ def subject_selection_view(request):
         plan["referral_note"] = (
             f"Taklif chegirmasi bilan keyingi xarid {plan['referral_final_price_label']} bo'ladi."
             if quote["discount_percent"]
-            else "Taklif chegirmasi promo kod bilan qo'shilmaydi."
-            if quote["eligible"]
             else ""
         )
 
     if active_count == 0:
-        access_title = "Fan tanlanmagan"
-        access_hint = "Yangi obuna modeli tayyorlandi. Hozircha mavjud foydalanuvchilar obunasi saqlanadi va yangi xaridlar Telegram orqali qabul qilinadi."
+        access_title = "Obuna tanlanmagan"
+        access_hint = "Kerakli rejani tanlab, fanlarni ochishingiz mumkin."
     elif active_count >= available_count and available_count > 0:
-        access_title = "All access ochiq"
-        access_hint = "Sizdagi hozirgi kirish saqlanadi. Yangi rejalarga o'tish keyingi bosqichda ehtiyotkorlik bilan ulanadi."
+        access_title = "Barcha fanlar ochiq"
+        access_hint = "Sizda barcha fanlar uchun kirish mavjud."
     else:
         access_title = f"{active_count} ta fan ochiq"
-        access_hint = "Amaldagi fan kirishlari saqlanadi. Yangi planlar hozircha sotuv ko'rinishi sifatida qo'shildi."
+        access_hint = "Qo'shimcha fanlarni xohlagan payt ochishingiz mumkin."
 
     context = {
         **sidebar,
@@ -1508,7 +1508,7 @@ def subject_selection_view(request):
         "access_hint": access_hint,
         "purchase_contact_url": purchase_contact_url,
         "referral_summary": referral_summary,
-        "current_subscription_notice": "Mavjud userlar obunasi saqlanadi. Yangi xaridlar va qo'shimcha fan ochish hozircha Telegram orqali boshqariladi.",
+        "current_subscription_notice": "Mavjud obunalar saqlanadi. Yangi xaridlar va qo'shimcha fan ochish hozircha Telegram orqali boshqariladi.",
     }
     return render(request, "subject_selection.html", context)
 

@@ -38,8 +38,8 @@
             <section class="profile-spotlight">
                 <article class="spotlight-card">
                     <div class="spotlight-avatar">
-                        {% if profile.photo %}
-                        <img src="{{ profile.photo.url }}" alt="{{ profile.full_name }}">
+                        {% if profile_photo_url %}
+                        <img src="{{ profile_photo_url }}" alt="{{ profile.full_name }}">
                         {% else %}
                         <div class="spotlight-fallback">{{ profile.full_name|default:request.user.username|first|upper }}</div>
                         {% endif %}

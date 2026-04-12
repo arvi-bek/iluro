@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .models import PracticeExercise, PracticeSet, PracticeSetAttempt, Question, Test, UserAnswer, UserPracticeAttempt, UserTest
-from .selectors import get_practice_review_items, get_test_answer_review
+from .selectors import get_practice_review_items, get_test_attempt_answer_review
 from .services import get_or_sync_profile as _get_or_sync_profile
 from .services import ensure_daily_assessment_quota_available as _ensure_daily_assessment_quota_available
 from .services import register_daily_assessment_start as _register_daily_assessment_start
@@ -177,7 +177,7 @@ def test_result_view(request, user_test_id):
     total_questions = user_test.snapshot_json.get("question_count", 0)
     profile = _get_or_sync_profile(request.user)
     level_info = get_level_info(profile.xp)
-    answer_review = get_test_answer_review(request.user, user_test.test)
+    answer_review = get_test_attempt_answer_review(user_test)
     context = {
         "user_test": user_test,
         "test": user_test.test,

@@ -40,7 +40,7 @@
         <section class="review-list">
             {% for item in review_items %}
             <article class="review-card {% if item.is_correct %}correct{% else %}wrong{% endif %}">
-                <p class="question-index">{{ forloop.counter }}-topshiriq</p>
+                <p class="question-index">{{ item.question_number }}-topshiriq</p>
                 <h2>{{ item.prompt }}</h2>
                 <div class="review-meta">
                     {% if item.title %}<p><strong>Ichki nom:</strong> {{ item.title }}</p>{% endif %}

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/index.css' %}?v=20260408-faq1">
+    <link rel="stylesheet" href="{% static 'css/index.css' %}?v=20260412-team1">
 </head>
 <body>
     <div class="landing-page">
@@ -23,6 +23,7 @@
                     <a href="#home">Asosiy</a>
                     <a href="#subjects">Fanlar</a>
                     <a href="#modules">Modullar</a>
+                    <a href="#team">Jamoa</a>
                     <a href="#pricing">Obuna</a>
                     {% if request.user.is_authenticated %}
                     <a href="{% url 'dashboard' %}">Kirish</a>
@@ -187,6 +188,28 @@
                         </div>
                         <strong>{{ module.title }}</strong>
                         <p>{{ module.text }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="section section--team reveal" id="team">
+                <div class="section-heading section-heading--center">
+                    <h2>Jamoa</h2>
+                    <p>Platformani qurayotgan odamlar, ularning tajribasi va ishonch beradigan product yo'nalishi shu yerda ko'rinadi.</p>
+                </div>
+                <div class="team-grid">
+                    {% for member in team_members %}
+                    <article class="team-card {% if member.is_placeholder %}team-card--placeholder{% endif %} reveal" style="--delay: {{ forloop.counter0 }};">
+                        <div class="team-card__avatar">{{ member.initials }}</div>
+                        <strong>{{ member.name }}</strong>
+                        <p class="team-card__role">{{ member.role }}</p>
+                        <p class="team-card__bio">{{ member.bio }}</p>
+                        <div class="team-card__tags">
+                            {% for item in member.stats %}
+                            <span>{{ item }}</span>
+                            {% endfor %}
+                        </div>
                     </article>
                     {% endfor %}
                 </div>

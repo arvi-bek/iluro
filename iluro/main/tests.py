@@ -3,6 +3,7 @@ import os
 import shutil
 import uuid
 from io import BytesIO
+from unittest.mock import PropertyMock, patch
 from urllib.parse import quote
 
 from django.contrib.auth.models import User
@@ -50,7 +51,12 @@ from .services import (
     revoke_subject_access,
     trim_user_assessment_history,
 )
-from .selectors import get_math_formula_quiz_payload, get_user_math_mistake_items
+from .selectors import (
+    get_math_formula_quiz_payload,
+    get_practice_review_items,
+    get_test_attempt_answer_review,
+    get_user_math_mistake_items,
+)
 from .utils import (
     calculate_essay_topic_xp,
     calculate_grammar_lesson_xp,
@@ -454,6 +460,17 @@ class MainSmokeTests(TestCase):
             html.unescape(response.content.decode("utf-8", errors="ignore")),
         )
 
+    def test_settings_page_stays_open_when_profile_photo_url_lookup_fails(self):
+        self.profile.photo = self._make_test_image(name="broken-url.png", color=(90, 110, 140))
+        self.profile.save()
+
+        with patch("django.db.models.fields.files.FieldFile.url", new_callable=PropertyMock) as mocked_url:
+            mocked_url.side_effect = ValueError("broken media url")
+            response = self.client.get(reverse("settings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sozlamalar")
+
     def test_math_formula_quiz_payload_builds_multiple_question_types(self):
         payload = get_math_formula_quiz_payload(self.math, max_questions=6)
 
@@ -740,6 +757,149 @@ class XPEconomyTests(TestCase):
         self.assertEqual(mistakes[0]["source_label"], "Test")
         self.assertEqual(mistakes[0]["your_answer"], "3/4")
         self.assertEqual(mistakes[0]["correct_answer"], "2/4")
+
+    def test_math_mistakes_keep_original_question_numbers(self):
+        user = User.objects.create_user(username="mistakepositionuser", password="StrongPass123")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+
+        practice_set = PracticeSet.objects.create(
+            subject=subject,
+            title="Tartib testi",
+            topic="Aralash mashqlar",
+            difficulty="C",
+        )
+        wrong_practice_positions = set()
+        for index in range(1, 16):
+            exercise = PracticeExercise.objects.create(
+                subject=subject,
+                practice_set=practice_set,
+                prompt=f"{index}-mashq",
+                answer_mode="choice",
+                difficulty="C",
+            )
+            correct_choice = PracticeChoice.objects.create(exercise=exercise, text="To'g'ri", is_correct=True)
+            wrong_choice = PracticeChoice.objects.create(exercise=exercise, text="Noto'g'ri", is_correct=False)
+            if index in {11, 15}:
+                wrong_practice_positions.add(index)
+                UserPracticeAttempt.objects.create(
+                    user=user,
+                    exercise=exercise,
+                    selected_choice=wrong_choice,
+                    is_correct=False,
+                )
+            else:
+                UserPracticeAttempt.objects.create(
+                    user=user,
+                    exercise=exercise,
+                    selected_choice=correct_choice,
+                    is_correct=True,
+                )
+
+        test = Test.objects.create(subject=subject, title="Tartib testi 2", duration=10, difficulty="C")
+        answers = []
+        wrong_test_positions = set()
+        for index in range(1, 16):
+            question = Question.objects.create(test=test, text=f"{index}-savol", difficulty="C")
+            wrong_choice = Choice.objects.create(question=question, text="Noto'g'ri", is_correct=False)
+            correct_choice = Choice.objects.create(question=question, text="To'g'ri", is_correct=True)
+            is_correct = index not in {11, 15}
+            if not is_correct:
+                wrong_test_positions.add(index)
+            answers.append(
+                {
+                    "question_id": question.id,
+                    "selected_choice_id": correct_choice.id if is_correct else wrong_choice.id,
+                    "is_correct": is_correct,
+                }
+            )
+
+        UserTest.objects.create(
+            user=user,
+            test=test,
+            score=87,
+            correct_count=13,
+            started_at=timezone.now(),
+            finished_at=timezone.now(),
+            snapshot_json={
+                "status": "completed",
+                "question_count": 15,
+                "answers": answers,
+            },
+        )
+
+        mistakes = get_user_math_mistake_items(user, subject, limit=10)
+
+        practice_numbers = {item["question_number"] for item in mistakes if item["kind"] == "practice"}
+        test_numbers = {item["question_number"] for item in mistakes if item["kind"] == "test"}
+        self.assertEqual(practice_numbers, wrong_practice_positions)
+        self.assertEqual(test_numbers, wrong_test_positions)
+
+    def test_result_review_keeps_original_question_numbers(self):
+        user = User.objects.create_user(username="reviewpositionuser", password="StrongPass123")
+        subject = Subject.objects.create(name="Matematika", price=30000)
+
+        practice_set = PracticeSet.objects.create(subject=subject, title="Natija tartibi", difficulty="C")
+        practice_session = PracticeSetAttempt.objects.create(
+            user=user,
+            practice_set=practice_set,
+            total_count=15,
+            correct_count=13,
+            score=87,
+        )
+        for index in range(1, 16):
+            exercise = PracticeExercise.objects.create(
+                subject=subject,
+                practice_set=practice_set,
+                prompt=f"{index}-topshiriq matni",
+                answer_mode="choice",
+                difficulty="C",
+            )
+            correct_choice = PracticeChoice.objects.create(exercise=exercise, text="To'g'ri", is_correct=True)
+            wrong_choice = PracticeChoice.objects.create(exercise=exercise, text="Noto'g'ri", is_correct=False)
+            UserPracticeAttempt.objects.create(
+                user=user,
+                exercise=exercise,
+                practice_session=practice_session,
+                selected_choice=correct_choice if index not in {11, 15} else wrong_choice,
+                is_correct=index not in {11, 15},
+            )
+
+        practice_review = get_practice_review_items(practice_session)
+        wrong_practice_numbers = {item["question_number"] for item in practice_review if not item["is_correct"]}
+        self.assertEqual(wrong_practice_numbers, {11, 15})
+
+        test = Test.objects.create(subject=subject, title="Review test", duration=10, difficulty="C")
+        answers = []
+        for index in range(1, 16):
+            question = Question.objects.create(test=test, text=f"{index}-savol matni", difficulty="C")
+            wrong_choice = Choice.objects.create(question=question, text="Noto'g'ri", is_correct=False)
+            correct_choice = Choice.objects.create(question=question, text="To'g'ri", is_correct=True)
+            is_correct = index not in {11, 15}
+            answers.append(
+                {
+                    "question_id": question.id,
+                    "selected_choice_id": correct_choice.id if is_correct else wrong_choice.id,
+                    "is_correct": is_correct,
+                }
+            )
+
+        user_test = UserTest.objects.create(
+            user=user,
+            test=test,
+            score=87,
+            correct_count=13,
+            started_at=timezone.now(),
+            finished_at=timezone.now(),
+            snapshot_json={
+                "status": "completed",
+                "question_count": 15,
+                "answers": answers,
+            },
+        )
+
+        test_review = get_test_attempt_answer_review(user_test)
+        wrong_test_numbers = {item["question_number"] for item in test_review if not item["is_correct"]}
+        self.assertEqual(wrong_test_numbers, {11, 15})
 
     def test_trim_history_removes_test_attempts_older_than_week(self):
         user = User.objects.create_user(username="weektrim", password="StrongPass123")

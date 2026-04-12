@@ -12,6 +12,7 @@ from .models import PROFILE_PHOTO_MAX_BYTES, Profile
 from .services import clear_pending_referral_code as _clear_pending_referral_code
 from .services import get_pending_referral_code as _get_pending_referral_code
 from .services import get_or_sync_profile as _get_or_sync_profile
+from .services import get_safe_profile_photo_url as _get_safe_profile_photo_url
 from .services import register_referral_for_user as _register_referral_for_user
 from .services import sidebar_context as _sidebar_context
 from .services import stash_pending_referral_code as _stash_pending_referral_code
@@ -210,8 +211,12 @@ def settings_view(request):
         messages.success(request, "Настройка saqlandi.")
         return redirect("settings")
 
+    sidebar = _sidebar_context(request.user)
     context = {
-        **_sidebar_context(request.user),
+        **sidebar,
+        "profile": profile,
+        "profile_photo_url": _get_safe_profile_photo_url(profile),
+        "level_info": sidebar["level_info"],
         "role_choices": [choice for choice in Profile.ROLE_CHOICES if choice[0] != "admin"],
         "theme_choices": Profile.THEME_CHOICES,
         "profile_photo_max_mb": PROFILE_PHOTO_MAX_BYTES // (1024 * 1024),

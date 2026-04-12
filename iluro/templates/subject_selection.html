@@ -120,7 +120,9 @@
                             </div>
                             {% endif %}
 
+                            {% if plan.note %}
                             <small>{{ plan.note }}</small>
+                            {% endif %}
                             {% if plan.referral_note %}
                             <small class="bundle-referral-note">
                                 {% if plan.referral_discount_percent %}

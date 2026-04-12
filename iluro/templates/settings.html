@@ -85,8 +85,8 @@
                             </div>
                             <div class="settings-photo-grid">
                                 <div class="settings-photo-preview">
-                                    {% if profile.photo %}
-                                    <img src="{{ profile.photo.url }}" alt="{{ profile.full_name }}">
+                                    {% if profile_photo_url %}
+                                    <img src="{{ profile_photo_url }}" alt="{{ profile.full_name }}">
                                     {% else %}
                                     <div class="settings-photo-fallback" aria-hidden="true">
                                         {{ profile.full_name|default:request.user.username|first|upper }}

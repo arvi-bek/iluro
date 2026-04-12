@@ -51,7 +51,7 @@
         <section class="review-list">
             {% for item in answer_review %}
             <article class="review-card {% if item.is_correct %}correct{% else %}wrong{% endif %}">
-                <p class="question-index">Savol {{ forloop.counter }}</p>
+                <p class="question-index">Savol {{ item.question_number }}</p>
                 <h2>{{ item.question }}</h2>
                 <div class="review-meta">
                     <p><strong>Sizning javob:</strong> {{ item.selected }}</p>

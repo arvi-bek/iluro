@@ -31,8 +31,8 @@
             <section class="profile-hero-wrap-v2">
                 <article class="profile-hero-card-v2">
                     <div class="profile-hero-avatar-v2">
-                        {% if profile.photo %}
-                        <img src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+                        {% if profile_photo_url %}
+                        <img src="{{ profile_photo_url }}" alt="{{ profile.full_name|default:request.user.username }}">
                         {% else %}
                         <div class="profile-hero-fallback-v2">{{ profile.full_name|default:request.user.username|first|upper }}</div>
                         {% endif %}

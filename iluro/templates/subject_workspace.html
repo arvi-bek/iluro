@@ -558,7 +558,7 @@
                             {% for item in math_mistake_items %}
                             <article class="math-mistake-card">
                                 <div class="mini-card-top">
-                                    <span>{{ item.topic }}</span>
+                                    <span>{{ item.question_label }}{% if item.topic %} · {{ item.topic }}{% endif %}</span>
                                     <strong class="card-state">{{ item.source_label }}</strong>
                                 </div>
                                 <h3>{{ item.title }}</h3>

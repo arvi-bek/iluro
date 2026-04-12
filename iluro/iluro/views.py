@@ -238,6 +238,41 @@ def index(request: HttpRequest):
         "practice": 134,
         "levels": ["C", "C+", "B", "B+", "A", "A+"],
     }
+    team_members = [
+        {
+            "name": "Shohinur Umarov",
+            "role": "Founder & Full-Stack Developer",
+            "bio": (
+                "2 yillik tajriba davomida backend tizimlar, Telegram botlar, ma'lumotlar bazasi "
+                "va product logikasini qurish ustida ishlagan. Murakkab g'oyalarni barqaror va "
+                "tushunarli raqamli mahsulotga aylantirishga ixtisoslashgan."
+            ),
+            "stats": [
+                "Experience: 2+ years",
+                "Projects: 100+",
+                "Payme",
+                "Majestic RP",
+                "Ibrat Farzandlari",
+            ],
+            "initials": "SU",
+            "is_placeholder": False,
+        },
+        {
+            "name": "Asadbek Tohirov",
+            "role": "CMO",
+            "bio": (
+                ""
+            ),
+            "stats": [
+                "SAT Score: 1200+",
+                "Najot Ta'lim Fergana",
+                "Graphic Designer",
+                "Marketing & Growth",
+            ],
+            "initials": "AT",
+            "is_placeholder": False,
+        },
+    ]
     context = {
         "subjects": subjects,
         "resource_metrics": resource_metrics,
@@ -256,6 +291,7 @@ def index(request: HttpRequest):
         "product_flow": product_flow,
         "subject_details": subject_details,
         "progress_snapshot": progress_snapshot,
+        "team_members": team_members,
     }
     return render(request, "index.html", context)
 

@@ -19,7 +19,6 @@ from .models import (
     SubjectSectionEntry,
     Subscription,
     Test,
-    UserAnswer,
     UserStatSummary,
     UserSubjectStat,
     UserPracticeAttempt,
@@ -1052,6 +1051,7 @@ def get_math_topic_quiz_groups(subject, profile_level, *, max_questions=8):
 
 def get_user_math_mistake_items(user, subject, *, limit=12):
     items = []
+    practice_order_cache = {}
 
     practice_attempts = (
         UserPracticeAttempt.objects.filter(user=user, exercise__subject=subject, is_correct=False)
@@ -1066,11 +1066,27 @@ def get_user_math_mistake_items(user, subject, *, limit=12):
         seen_exercise_ids.add(attempt.exercise_id)
 
         correct_choice = next((choice for choice in attempt.exercise.choices.all() if choice.is_correct), None)
+        question_number = None
+        practice_set_id = attempt.exercise.practice_set_id
+        if practice_set_id:
+            if practice_set_id not in practice_order_cache:
+                practice_order_cache[practice_set_id] = {
+                    exercise_id: index
+                    for index, exercise_id in enumerate(
+                        PracticeExercise.objects.filter(practice_set_id=practice_set_id)
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        start=1,
+                    )
+                }
+            question_number = practice_order_cache[practice_set_id].get(attempt.exercise_id)
         items.append(
             {
                 "kind": "practice",
                 "occurred_at": attempt.created_at,
                 "title": attempt.exercise.title or attempt.exercise.topic or "Mashq savoli",
+                "question_number": question_number,
+                "question_label": f"{question_number}-topshiriq" if question_number else "Mashq savoli",
                 "topic": _normalize_math_topic_label(
                     attempt.exercise.topic,
                     getattr(attempt.exercise.practice_set, "topic", ""),
@@ -1127,10 +1143,21 @@ def get_user_math_mistake_items(user, subject, *, limit=12):
         question.id: question
         for question in Question.objects.filter(id__in=question_ids).select_related("test").prefetch_related("choice_set")
     }
+    test_order_cache = {}
     for answer in latest_wrong_answers:
         question = question_map.get(answer["question_id"])
         if not question:
             continue
+        test_id = question.test_id
+        if test_id not in test_order_cache:
+            test_order_cache[test_id] = {
+                current_question_id: index
+                for index, current_question_id in enumerate(
+                    Question.objects.filter(test_id=test_id).order_by("id").values_list("id", flat=True),
+                    start=1,
+                )
+            }
+        question_number = test_order_cache[test_id].get(question.id)
 
         selected_choice = next(
             (choice for choice in question.choice_set.all() if choice.id == answer["selected_choice_id"]),
@@ -1142,6 +1169,8 @@ def get_user_math_mistake_items(user, subject, *, limit=12):
                 "kind": "test",
                 "occurred_at": answer["occurred_at"],
                 "title": question.test.title,
+                "question_number": question_number,
+                "question_label": f"Savol {question_number}" if question_number else "Test savoli",
                 "topic": normalize_difficulty_label(question.difficulty),
                 "prompt": question.text,
                 "your_answer": selected_choice.text if selected_choice else "Javob tanlanmagan",
@@ -1257,29 +1286,32 @@ def get_statistics_payload(user, profile_xp, current_level_label):
     }
 
 
-def get_test_answer_review(user, test):
+def get_test_attempt_answer_review(user_test):
     questions = list(
-        Question.objects.filter(test=test)
+        Question.objects.filter(test=user_test.test)
         .prefetch_related("choice_set")
         .order_by("id")
     )
-    user_answers = {
-        answer.question_id: answer
-        for answer in UserAnswer.objects.select_related("selected_choice").filter(
-            user=user,
-            question__test=test,
-        )
+    snapshot_answers = {
+        answer.get("question_id"): answer
+        for answer in user_test.snapshot_json.get("answers", [])
+        if answer.get("question_id")
     }
     answer_review = []
-    for question in questions:
+    for question_number, question in enumerate(questions, start=1):
         correct_choice = next((choice for choice in question.choice_set.all() if choice.is_correct), None)
-        user_answer = user_answers.get(question.id)
+        answer_payload = snapshot_answers.get(question.id, {})
+        selected_choice = next(
+            (choice for choice in question.choice_set.all() if choice.id == answer_payload.get("selected_choice_id")),
+            None,
+        )
         answer_review.append(
             {
                 "question": question.text,
-                "selected": user_answer.selected_choice.text if user_answer and user_answer.selected_choice else "Javob tanlanmagan",
+                "question_number": question_number,
+                "selected": selected_choice.text if selected_choice else "Javob tanlanmagan",
                 "correct": correct_choice.text if correct_choice else "To'g'ri javob belgilanmagan",
-                "is_correct": bool(user_answer and user_answer.is_correct),
+                "is_correct": bool(answer_payload.get("is_correct")),
             }
         )
     return answer_review
@@ -1292,15 +1324,28 @@ def get_practice_review_items(practice_session):
         .prefetch_related("exercise__choices")
         .order_by("exercise_id")
     )
+    exercise_order_map = {}
+    if practice_session.practice_set_id:
+        exercise_order_map = {
+            exercise_id: index
+            for index, exercise_id in enumerate(
+                PracticeExercise.objects.filter(practice_set_id=practice_session.practice_set_id)
+                .order_by("id")
+                .values_list("id", flat=True),
+                start=1,
+            )
+        }
     review_items = []
-    for answer in answers:
+    for fallback_number, answer in enumerate(answers, start=1):
         correct_choice = None
         if answer.exercise.answer_mode == "choice":
             correct_choice = answer.exercise.choices.filter(is_correct=True).first()
+        question_number = exercise_order_map.get(answer.exercise_id, fallback_number)
         review_items.append(
             {
                 "title": answer.exercise.title,
                 "prompt": answer.exercise.prompt,
+                "question_number": question_number,
                 "is_correct": answer.is_correct,
                 "selected": answer.selected_choice.text if answer.selected_choice else (answer.answer_text or "Javob kiritilmagan"),
                 "correct": correct_choice.text if correct_choice else (answer.exercise.correct_text or "Ko'rsatilmagan"),

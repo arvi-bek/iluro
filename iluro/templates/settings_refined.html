@@ -47,8 +47,8 @@
                                 <input class="settings-avatar-input-v3" id="profile-photo-input" type="file" name="photo" accept="image/*">
                                 <label class="settings-avatar-trigger-v3" for="profile-photo-input">
                                     <div class="settings-avatar-frame-v3">
-                                        {% if profile.photo %}
-                                        <img id="settings-avatar-preview" src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+                                        {% if profile_photo_url %}
+                                        <img id="settings-avatar-preview" src="{{ profile_photo_url }}" alt="{{ profile.full_name|default:request.user.username }}">
                                         <div id="settings-avatar-fallback" class="settings-avatar-fallback-v3 is-hidden">{{ profile.full_name|default:request.user.username|first|upper }}</div>
                                         {% else %}
                                         <img id="settings-avatar-preview" class="is-hidden" src="" alt="{{ profile.full_name|default:request.user.username }}">

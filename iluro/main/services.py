@@ -1755,10 +1755,21 @@ def get_effective_subject_level(user: User, subject_id: int | None = None, profi
     return get_subject_level_info(subject_best_score or 0)["label"]
 
 
+def get_safe_profile_photo_url(profile):
+    photo = getattr(profile, "photo", None)
+    if not photo:
+        return ""
+    try:
+        return photo.url
+    except Exception:
+        return ""
+
+
 def sidebar_context(user):
     profile = get_or_sync_profile(user)
     return {
         "profile": profile,
+        "profile_photo_url": get_safe_profile_photo_url(profile),
         "level_info": get_level_info(profile.xp),
         "xp_summary": get_user_progress_summary(user),
     }
