@@ -150,6 +150,10 @@ body {
     align-items: center;
 }
 
+.app-sidebar-user-top > div:last-child {
+    min-width: 0;
+}
+
 .app-sidebar-avatar {
     width: 44px;
     height: 44px;
@@ -162,13 +166,17 @@ body {
     color: #fff8f0;
     font-size: 0.94rem;
     font-weight: 800;
+    line-height: 1;
 }
 
-.app-sidebar-avatar img {
+.app-sidebar-avatar img,
+.app-sidebar-avatar-media {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    object-position: center;
+    flex: 0 0 auto;
 }
 
 .app-sidebar-user strong {

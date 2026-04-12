@@ -61,7 +61,7 @@
     <div class="app-mobile-meta">
         <div class="app-sidebar-avatar" aria-hidden="true">
             {% if profile.photo %}
-            <img src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+            <img class="app-sidebar-avatar-media" src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}" loading="lazy" decoding="async">
             {% else %}
             {{ profile.full_name|default:request.user.username|first|upper }}
             {% endif %}
@@ -129,7 +129,7 @@
         <div class="app-sidebar-user-top">
             <div class="app-sidebar-avatar" aria-hidden="true">
                 {% if profile.photo %}
-                <img src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}">
+                <img class="app-sidebar-avatar-media" src="{{ profile.photo.url }}" alt="{{ profile.full_name|default:request.user.username }}" loading="lazy" decoding="async">
                 {% else %}
                 {{ profile.full_name|default:request.user.username|first|upper }}
                 {% endif %}
