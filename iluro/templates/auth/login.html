@@ -17,8 +17,8 @@
     <form class="auth-form" method="post">
         {% csrf_token %}
         <label>
-            <span>Username</span>
-            <input type="text" name="username" placeholder="Username kiriting" autocomplete="username" required>
+            <span>Username yoki email</span>
+            <input type="text" name="username" placeholder="Username yoki email kiriting" value="{{ login_identifier|default:'' }}" autocomplete="username" required>
         </label>
         <label>
             <span>Parol</span>

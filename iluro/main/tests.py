@@ -643,6 +643,34 @@ class MainSmokeTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(User.objects.filter(username="latin_user01").exists())
 
+    def test_login_accepts_username(self):
+        self.client.logout()
+        response = self.client.post(
+            reverse("login"),
+            {
+                "username": "flowuser",
+                "password": "StrongPass123",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("dashboard"))
+
+    def test_login_accepts_email(self):
+        self.client.logout()
+        response = self.client.post(
+            reverse("login"),
+            {
+                "username": "flow@example.com",
+                "password": "StrongPass123",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("dashboard"))
+
 
 class XPEconomyTests(TestCase):
     def test_harder_test_awards_more_xp_for_same_result(self):

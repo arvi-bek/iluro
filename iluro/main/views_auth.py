@@ -142,9 +142,16 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
 
+    login_identifier = ""
     if request.method == "POST":
-        username = request.POST.get("username")
+        login_identifier = (request.POST.get("username") or "").strip()
         password = request.POST.get("password")
+
+        username = login_identifier
+        if "@" in login_identifier:
+            matched_user = User.objects.filter(email__iexact=login_identifier).only("username").first()
+            if matched_user:
+                username = matched_user.username
 
         user = authenticate(request, username=username, password=password)
 
@@ -154,7 +161,7 @@ def login_view(request):
 
         messages.error(request, "Login yoki parol noto'g'ri.")
 
-    return render(request, "auth/login.html")
+    return render(request, "auth/login.html", {"login_identifier": login_identifier})
 
 
 def logout_view(request):
