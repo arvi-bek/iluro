@@ -7,15 +7,18 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from .models import PROFILE_PHOTO_MAX_BYTES, Profile
 from .services import clear_pending_referral_code as _clear_pending_referral_code
+from .services import get_current_subscription_plan as _get_current_subscription_plan
 from .services import get_pending_referral_code as _get_pending_referral_code
 from .services import get_or_sync_profile as _get_or_sync_profile
 from .services import get_safe_profile_photo_url as _get_safe_profile_photo_url
 from .services import register_referral_for_user as _register_referral_for_user
 from .services import sidebar_context as _sidebar_context
 from .services import stash_pending_referral_code as _stash_pending_referral_code
+from .services import user_can_upload_profile_photo as _user_can_upload_profile_photo
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 
@@ -163,6 +166,8 @@ def logout_view(request):
 @login_required
 def settings_view(request):
     profile = _get_or_sync_profile(request.user)
+    profile_photo_upload_allowed = _user_can_upload_profile_photo(request.user)
+    current_plan = _get_current_subscription_plan(request.user)
 
     if request.method == "POST":
         full_name = request.POST.get("full_name", "").strip() or request.user.username
@@ -178,6 +183,9 @@ def settings_view(request):
             return redirect("settings")
         if theme not in allowed_themes:
             messages.error(request, "Theme noto'g'ri tanlandi.")
+            return redirect("settings")
+        if uploaded_photo and not profile_photo_upload_allowed:
+            messages.error(request, "Profil rasmi faqat PRO yoki PREMIUM obunada yoqiladi.")
             return redirect("settings")
         try:
             _validate_profile_photo(uploaded_photo)
@@ -222,5 +230,8 @@ def settings_view(request):
         "profile_photo_max_mb": PROFILE_PHOTO_MAX_BYTES // (1024 * 1024),
         "member_since": profile.created_at,
         "premium_is_active": bool(profile.premium_until and profile.premium_until >= timezone.now()),
+        "profile_photo_upload_allowed": profile_photo_upload_allowed,
+        "profile_photo_feature_label": "Profil rasmi faqat PRO yoki PREMIUM rejalarda mavjud.",
+        "current_plan_name": current_plan.name if current_plan else "FREE",
     }
-    return render(request, "settings_refined.html", context)
+    return render(request, "settings_refined_limited.html", context)

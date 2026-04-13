@@ -312,6 +312,39 @@ class MainSmokeTests(TestCase):
         Image.new("RGB", size, color).save(buffer, format="PNG")
         return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
 
+    def _grant_profile_photo_plan(self, code="triple-subject", *, name="PRO", price=70000, is_all_access=False, subject_limit=3):
+        plan, _ = SubscriptionPlan.objects.update_or_create(
+            code=code,
+            defaults={
+                "name": name,
+                "subject_limit": subject_limit,
+                "is_all_access": is_all_access,
+                "price": price,
+                "duration_days": 30,
+                "display_order": 30 if code == "triple-subject" else 40,
+                "stack_mode": "additive",
+                "is_public": True,
+                "is_featured": code in {"triple-subject", "all-access"},
+                "can_use_ai": True,
+                "can_use_full_content": True,
+                "can_use_advanced_content": True,
+                "can_use_mock_exam": is_all_access,
+                "can_use_progress_recommendations": True,
+                "can_use_advanced_stats": is_all_access,
+                "is_active": True,
+            },
+        )
+        return UserSubscription.objects.create(
+            user=self.user,
+            plan=plan,
+            title=plan.name,
+            source="manual",
+            status="active",
+            is_all_access=is_all_access,
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=30),
+        )
+
     def test_core_authenticated_pages_render(self):
         urls = [
             reverse("dashboard"),
@@ -366,6 +399,8 @@ class MainSmokeTests(TestCase):
         self.assertNotContains(response, "subject_level_")
 
     def test_settings_accepts_profile_photo_and_optimizes_it(self):
+        self._grant_profile_photo_plan()
+
         response = self.client.post(
             reverse("settings"),
             {
@@ -385,6 +420,8 @@ class MainSmokeTests(TestCase):
             self.assertLessEqual(max(image.size), 600)
 
     def test_replacing_profile_photo_updates_to_new_file_without_error(self):
+        self._grant_profile_photo_plan()
+
         self.client.post(
             reverse("settings"),
             {
@@ -413,6 +450,8 @@ class MainSmokeTests(TestCase):
         self.assertTrue(os.path.exists(self.profile.photo.path))
 
     def test_settings_rejects_oversized_profile_photo(self):
+        self._grant_profile_photo_plan()
+
         oversized_photo = SimpleUploadedFile(
             "big.jpg",
             b"x" * (PROFILE_PHOTO_MAX_BYTES + 1),
@@ -437,6 +476,8 @@ class MainSmokeTests(TestCase):
         )
 
     def test_settings_rejects_invalid_image_payload(self):
+        self._grant_profile_photo_plan()
+
         invalid_photo = SimpleUploadedFile(
             "fake.png",
             b"not-a-real-image",
@@ -470,6 +511,26 @@ class MainSmokeTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Sozlamalar")
+
+    def test_settings_blocks_profile_photo_upload_without_pro_or_premium(self):
+        response = self.client.post(
+            reverse("settings"),
+            {
+                "full_name": "Flow User",
+                "role": self.profile.role,
+                "theme": self.profile.theme,
+                "photo": self._make_test_image(),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.profile.refresh_from_db()
+        self.assertFalse(bool(self.profile.photo))
+        self.assertIn(
+            "Profil rasmi faqat PRO yoki PREMIUM obunada yoqiladi.",
+            html.unescape(response.content.decode("utf-8", errors="ignore")),
+        )
 
     def test_math_formula_quiz_payload_builds_multiple_question_types(self):
         payload = get_math_formula_quiz_payload(self.math, max_questions=6)

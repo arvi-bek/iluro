@@ -149,6 +149,10 @@ body {
     cursor: pointer;
 }
 
+.settings-avatar-trigger-v3--locked {
+    cursor: default;
+}
+
 .settings-avatar-frame-v3 {
     position: relative;
     width: 168px;
@@ -197,6 +201,11 @@ body {
 .settings-avatar-trigger-v3:hover .settings-avatar-overlay-v3,
 .settings-avatar-trigger-v3:focus-visible .settings-avatar-overlay-v3 {
     opacity: 1;
+}
+
+.settings-avatar-trigger-v3--locked .settings-avatar-overlay-v3 {
+    opacity: 1;
+    background: linear-gradient(180deg, rgba(25, 18, 12, 0.18), rgba(25, 18, 12, 0.62));
 }
 
 .settings-avatar-overlay-icon-v3 {
@@ -286,6 +295,12 @@ body {
     font-weight: 800;
     cursor: pointer;
     width: fit-content;
+}
+
+.settings-inline-upload-v3--locked {
+    cursor: default;
+    color: var(--settings-muted);
+    background: rgba(255, 248, 240, 0.6);
 }
 
 .settings-checkbox-row-v3 {

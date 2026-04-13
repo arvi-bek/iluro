@@ -3,6 +3,7 @@ Django settings for iluro.
 """
 
 import os
+import sys
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -270,5 +271,41 @@ JAZZMIN_UI_TWEAKS = {
         "warning": "btn btn-warning",
         "danger": "btn btn-outline-danger",
         "success": "btn btn-outline-success",
+    },
+}
+
+LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "iluro.request_errors": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "main.views_auth": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
     },
 }

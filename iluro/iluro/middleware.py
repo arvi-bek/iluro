@@ -1,4 +1,9 @@
+import logging
+
 from django.shortcuts import render
+
+
+logger = logging.getLogger("iluro.request_errors")
 
 
 class FriendlyErrorPagesMiddleware:
@@ -11,7 +16,24 @@ class FriendlyErrorPagesMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        response = self.get_response(request)
+        try:
+            response = self.get_response(request)
+        except Exception:
+            logger.exception(
+                "Unhandled request error",
+                extra={
+                    "request_path": request.path,
+                    "request_method": request.method,
+                    "user_id": getattr(getattr(request, "user", None), "id", None),
+                    "username": getattr(getattr(request, "user", None), "username", ""),
+                    "post_keys": sorted(request.POST.keys()) if request.method == "POST" else [],
+                    "has_photo_upload": bool(getattr(request, "FILES", {}).get("photo")),
+                    "remove_photo": request.POST.get("remove_photo") == "on" if request.method == "POST" else False,
+                    "remote_addr": request.META.get("REMOTE_ADDR", ""),
+                    "user_agent": request.META.get("HTTP_USER_AGENT", "")[:240],
+                },
+            )
+            raise
 
         if response.status_code == 404:
             content_type = response.headers.get("Content-Type", "")

@@ -56,6 +56,7 @@ REFERRAL_REWARD_PERCENT = 2
 REFERRAL_MAX_AVAILABLE_PERCENT = 50
 REFERRAL_REQUIRED_COMPLETIONS = 1
 REFERRAL_ELIGIBLE_PLAN_CODES = {"single-subject", "triple-subject", "all-access"}
+PROFILE_PHOTO_ELIGIBLE_PLAN_CODES = {"triple-subject", "all-access"}
 REFERRAL_DISCOUNT_STACKS_WITH_PROMO = False
 REFERRAL_CODE_ALPHABET = string.ascii_uppercase + string.digits
 DEFAULT_SUBSCRIPTION_PLAN_CATALOG = [
@@ -916,6 +917,11 @@ def get_current_subscription_plan(user):
     if profile and profile.free_subject_id:
         return get_free_plan()
     return None
+
+
+def user_can_upload_profile_photo(user):
+    plan = get_current_subscription_plan(user)
+    return bool(plan and getattr(plan, "code", "") in PROFILE_PHOTO_ELIGIBLE_PLAN_CODES)
 
 
 def get_daily_quota_usage(user, current_date=None):
