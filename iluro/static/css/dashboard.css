@@ -364,24 +364,26 @@ body {
         radial-gradient(circle at top left, rgba(250, 206, 135, 0.18), transparent 34%),
         radial-gradient(circle at bottom right, rgba(168, 106, 51, 0.12), transparent 28%),
         linear-gradient(135deg, rgba(255, 250, 242, 0.98), rgba(251, 241, 228, 0.94));
+    padding: 20px 22px;
+    border-radius: 24px;
 }
 
 .referral-banner-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .referral-banner-meta span {
-    min-height: 34px;
+    min-height: 32px;
     display: inline-flex;
     align-items: center;
-    padding: 0 12px;
+    padding: 0 11px;
     border-radius: 999px;
     background: rgba(168, 106, 51, 0.1);
     color: var(--accent-strong);
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 700;
 }
 
@@ -396,43 +398,48 @@ body {
 
 .referral-headline {
     max-width: 16ch;
+    font-size: clamp(1.45rem, 2vw, 1.9rem);
+    line-height: 1.06;
 }
 
 .referral-description {
     max-width: 44rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
 }
 
 .referral-footnote {
     display: block;
     margin-top: 2px;
     color: var(--muted);
-    line-height: 1.6;
+    font-size: 0.8rem;
+    line-height: 1.5;
     max-width: 48rem;
 }
 
 .referral-cta-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
 }
 
 .referral-copy-button {
-    min-height: 46px;
+    min-height: 42px;
     border: none;
-    border-radius: 16px;
+    border-radius: 14px;
     background: linear-gradient(135deg, var(--accent), var(--accent-strong));
     color: #fffaf4;
     font: inherit;
     font-weight: 800;
-    padding: 0 18px;
+    padding: 0 16px;
     cursor: pointer;
     transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
     box-shadow: 0 14px 30px rgba(138, 84, 37, 0.18);
 }
 
 .referral-copy-button--primary {
-    min-width: 220px;
+    min-width: 200px;
 }
 
 .referral-copy-button:hover {
@@ -1763,47 +1770,62 @@ body {
     }
 
     .referral-banner {
-        gap: 12px;
-        padding: 14px;
-        border-radius: 20px;
+        gap: 10px;
+        padding: 11px;
+        border-radius: 16px;
     }
 
     .referral-copy {
-        gap: 8px;
+        gap: 5px;
+    }
+
+    .referral-copy .tiny-label {
+        margin-bottom: 2px;
+        font-size: 0.58rem;
+        letter-spacing: 0.14em;
     }
 
     .referral-headline {
-        font-size: 1rem;
+        max-width: none;
+        font-size: 0.82rem;
+        line-height: 1.22;
     }
 
     .referral-description {
-        font-size: 0.8rem;
-        line-height: 1.42;
+        font-size: 0.68rem;
+        line-height: 1.34;
     }
 
     .referral-footnote {
-        font-size: 0.76rem;
-        line-height: 1.45;
+        font-size: 0.65rem;
+        line-height: 1.34;
     }
 
     .referral-banner-meta {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
+        gap: 5px;
     }
 
     .referral-banner-meta span {
         width: 100%;
         justify-content: center;
-        min-height: 28px;
-        padding: 0 8px;
-        font-size: 0.7rem;
+        min-height: 24px;
+        padding: 0 6px;
+        font-size: 0.62rem;
+        letter-spacing: -0.01em;
+    }
+
+    .referral-cta-row {
+        gap: 8px;
     }
 
     .referral-copy-button,
     .referral-cta-row .card-link {
         min-height: 38px;
-        font-size: 0.8rem;
+        padding-inline: 11px;
+        font-size: 0.72rem;
+        border-radius: 12px;
     }
 
     .free-subject-modal {
@@ -1855,6 +1877,11 @@ body {
 
     .subject-strip-grid {
         grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
     }
 
@@ -1955,12 +1982,12 @@ body {
     .practice-card,
     .info-card,
     .action-panel {
-        padding: 16px;
+        padding: 14px;
     }
 
     .stat-card strong {
-        margin: 10px 0 6px;
-        font-size: 1.45rem;
+        margin: 8px 0 4px;
+        font-size: 1.26rem;
     }
 
     .subject-card h4,
@@ -1974,7 +2001,27 @@ body {
     .practice-card span,
     .card-mini-pill,
     .stat-card-head p {
-        font-size: 0.72rem;
+        font-size: 0.68rem;
+    }
+
+    .stat-card {
+        min-height: 136px;
+        border-radius: 18px;
+    }
+
+    .stat-card-head {
+        gap: 8px;
+    }
+
+    .stat-card span {
+        font-size: 0.74rem;
+        line-height: 1.32;
+    }
+
+    .stat-dot {
+        width: 10px;
+        height: 10px;
+        box-shadow: 0 0 0 4px rgba(168, 106, 51, 0.08);
     }
 
     .subject-card small {

@@ -951,9 +951,37 @@ body {
         padding: 22px 18px;
     }
 
-    .profile-stat-grid-v2,
+    .profile-stat-grid-v2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
     .profile-detail-list-v2--compact {
         grid-template-columns: 1fr;
+    }
+
+    .profile-stat-card-v2 {
+        min-height: 126px;
+        padding: 14px 12px;
+        gap: 8px;
+        border-radius: 18px;
+    }
+
+    .profile-stat-icon-v2 {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        font-size: 0.72rem;
+    }
+
+    .profile-stat-copy-v2 strong {
+        font-size: 1.28rem;
+    }
+
+    .profile-stat-copy-v2 span {
+        margin-top: 4px;
+        font-size: 0.74rem;
+        line-height: 1.28;
     }
 
     .profile-hero-avatar-v2,

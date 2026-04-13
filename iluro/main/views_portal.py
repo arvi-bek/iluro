@@ -446,7 +446,7 @@ def _build_workspace_mobile_shortcuts(module_cards, primary_key):
             {
                 "key": card["key"],
                 "label": card["label"],
-                "status": card["status"],
+                "status": "Ochish",
                 "cta": card["cta"],
                 "is_primary": card["key"] == primary_key,
             }

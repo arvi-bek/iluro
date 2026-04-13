@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260412-modal2">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260413-referral-mini">
 </head>
 <body>
     <div class="dashboard-shell">
@@ -25,44 +25,6 @@
                 {% endfor %}
             </section>
             {% endif %}
-
-            <section class="beta-trial-banner referral-banner" aria-label="Taklif dasturi">
-                <div class="beta-trial-copy referral-copy">
-                    <p class="tiny-label">Taklif Dasturi</p>
-                    <h2 class="referral-headline">Sizda keyingi obuna uchun {{ referral_summary.available_percent }}% chegirma bor.</h2>
-                    <p class="referral-description">
-                        Do'stingiz free fan tanlab {{ referral_summary.required_completions }} ta mashq yoki test tugatsa = +{{ referral_summary.reward_percent }}%.
-                        Birinchi pullik obuna olsa = yana +{{ referral_summary.purchase_reward_percent }}%.
-                    </p>
-                    <div class="referral-banner-meta">
-                        <span>Kod: {{ referral_summary.referral_code }}</span>
-                        <span>Tasdiqlangan: {{ referral_summary.qualified_count }}</span>
-                        <span>Sotib olgan: {{ referral_summary.purchased_count }}</span>
-                        <span>Kutilayotgan: {{ referral_summary.pending_count }}</span>
-                    </div>
-                    <div class="referral-cta-row">
-                        <button
-                            type="button"
-                            class="referral-copy-button referral-copy-button--primary"
-                            data-copy-text="{{ referral_summary.share_url }}"
-                            data-default-label="Do'stni taklif qilish"
-                            data-success-label="Taklif havolasi nusxalandi"
-                        >
-                            Do'stni taklif qilish
-                        </button>
-                        <a class="card-link" href="{% url 'subject-selection' %}">Obuna sahifasini ochish</a>
-                    </div>
-                    {% if referral_summary.qualification_progress %}
-                    <small class="referral-footnote">
-                        Siz {{ referral_summary.qualification_progress.inviter_name }} taklif havolasi orqali kirgansiz.
-                        Bepul fanni tanlang, {{ referral_summary.required_completions }} ta mashq yoki testni tugating.
-                        Keyin birinchi pullik obunada do'stingizga yana bonus yoziladi.
-                    </small>
-                    {% else %}
-                    <small class="referral-footnote">Taklif chegirmasi promo kod bilan qo'shilmaydi va keyingi bitta xaridda to'liq ishlatiladi.</small>
-                    {% endif %}
-                </div>
-            </section>
 
             <section class="subject-strip" aria-label="Fanlar navigatsiyasi">
                 <div class="subject-strip-head">
@@ -103,6 +65,44 @@
                         <small>Admin paneldan fanlar qo'shilgach shu yerda chiqadi</small>
                     </div>
                     {% endfor %}
+                </div>
+            </section>
+
+            <section class="beta-trial-banner referral-banner" aria-label="Taklif dasturi">
+                <div class="beta-trial-copy referral-copy">
+                    <p class="tiny-label">Taklif Dasturi</p>
+                    <h2 class="referral-headline">Sizda keyingi obuna uchun {{ referral_summary.available_percent }}% chegirma bor.</h2>
+                    <p class="referral-description">
+                        Do'stingiz free fan tanlab {{ referral_summary.required_completions }} ta mashq yoki test tugatsa = +{{ referral_summary.reward_percent }}%.
+                        Birinchi pullik obuna olsa = yana +{{ referral_summary.purchase_reward_percent }}%.
+                    </p>
+                    <div class="referral-banner-meta">
+                        <span>Kod: {{ referral_summary.referral_code }}</span>
+                        <span>Tasdiqlangan: {{ referral_summary.qualified_count }}</span>
+                        <span>Sotib olgan: {{ referral_summary.purchased_count }}</span>
+                        <span>Kutilayotgan: {{ referral_summary.pending_count }}</span>
+                    </div>
+                    <div class="referral-cta-row">
+                        <button
+                            type="button"
+                            class="referral-copy-button referral-copy-button--primary"
+                            data-copy-text="{{ referral_summary.share_url }}"
+                            data-default-label="Do'stni taklif qilish"
+                            data-success-label="Taklif havolasi nusxalandi"
+                        >
+                            Do'stni taklif qilish
+                        </button>
+                        <a class="card-link" href="{% url 'subject-selection' %}">Obuna sahifasini ochish</a>
+                    </div>
+                    {% if referral_summary.qualification_progress %}
+                    <small class="referral-footnote">
+                        Siz {{ referral_summary.qualification_progress.inviter_name }} taklif havolasi orqali kirgansiz.
+                        Bepul fanni tanlang, {{ referral_summary.required_completions }} ta mashq yoki testni tugating.
+                        Keyin birinchi pullik obunada do'stingizga yana bonus yoziladi.
+                    </small>
+                    {% else %}
+                    <small class="referral-footnote">Taklif chegirmasi promo kod bilan qo'shilmaydi va keyingi bitta xaridda to'liq ishlatiladi.</small>
+                    {% endif %}
                 </div>
             </section>
 
@@ -152,53 +152,6 @@
                 {% endfor %}
             </section>
 
-            <section class="subject-panel" id="subjects">
-                <div class="section-head">
-                    <div>
-                        <p class="tiny-label">Tanlangan yo'nalishlar</p>
-                        <h3>Har bir fan uchun alohida ritm va tayyorlov bloki.</h3>
-                    </div>
-                    <a href="{% url 'subject-selection' %}" class="inline-link">Fan tanlash sahifasi</a>
-                </div>
-
-                <div class="subject-grid">
-                    {% for subject in subjects %}
-                    <article class="subject-card {% if subject.is_owned %}is-owned{% else %}is-locked{% endif %}">
-                        <div class="subject-card-top">
-                            <span>{{ subject.status }}</span>
-                            <strong>{{ subject.test_count }} ta test</strong>
-                        </div>
-                        <h4>{{ subject.name }}</h4>
-                        <p>{{ subject.meta }}</p>
-                        <small>{% if subject.is_owned %}Ish maydoni ochiq{% else %}Obuna kerak bo'ladi{% endif %}</small>
-                    </article>
-                    {% endfor %}
-                </div>
-            </section>
-
-            <section class="subject-panel" id="hub">
-                <div class="section-head">
-                    <div>
-                        <p class="tiny-label">Asosiy bo'limlar</p>
-                        <h3>Dashboard endi yo'naltiruvchi markaz. Har bir modul alohida sahifada ishlaydi.</h3>
-                    </div>
-                </div>
-
-                <div class="practice-grid">
-                    {% for item in hub_cards %}
-                    <article class="practice-card">
-                        <div class="practice-card-top">
-                            <span>{{ item.meta }}</span>
-                            <span class="card-mini-pill">Modul</span>
-                        </div>
-                        <h4>{{ item.title }}</h4>
-                        <p>{{ item.description }}</p>
-                        <a class="card-link" href="{% url item.href %}">Ochish</a>
-                    </article>
-                    {% endfor %}
-                </div>
-            </section>
-
             <section class="double-grid">
                 <article class="info-card" id="ai-lab">
                     <p class="tiny-label">AI mutaxasis</p>
@@ -219,19 +172,6 @@
                     </p>
                     <span class="soon-pill">Coming Soon</span>
                 </article>
-            </section>
-
-            <section class="action-panel">
-                <div class="action-panel-copy">
-                    <p class="tiny-label">Tezkor amallar</p>
-                    <h3>Daraja tizimi endi avtomatik. Keyingi bosqichlarni shu dashboard ustiga ulaymiz.</h3>
-                    <p>Bir necha qadamda o'zingizga kerakli fan, mashq va resursga o'tib, tayyorlovni uzluksiz davom ettiring.</p>
-                </div>
-                <div class="action-list">
-                    {% for action in quick_actions %}
-                    <span>{{ action }}</span>
-                    {% endfor %}
-                </div>
             </section>
 
             {% if free_selection_required %}
