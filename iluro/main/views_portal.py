@@ -438,8 +438,9 @@ def _build_workspace_module_cards(section_items, section_catalog, section_totals
 
 @login_required
 def dashboard_view(request):
-    profile = _get_or_sync_profile(request.user)
-    xp_summary = _get_user_progress_summary(request.user)
+    sidebar = _sidebar_context(request.user)
+    profile = sidebar["profile"]
+    xp_summary = sidebar["xp_summary"]
     referral_summary = _get_referral_summary(request.user)
     referral_summary["share_url"] = request.build_absolute_uri(
         reverse("referral-entry", args=[referral_summary["referral_code"]])
@@ -468,7 +469,7 @@ def dashboard_view(request):
         return redirect("dashboard")
 
     latest_test, featured_book = get_latest_dashboard_resources()
-    level_info = get_level_info(profile.xp)
+    level_info = sidebar["level_info"]
     if profile.level != level_info["label"]:
         profile.level = level_info["label"]
         profile.save(update_fields=["level"])
@@ -529,13 +530,11 @@ def dashboard_view(request):
     ]
     free_subject_choices = [subject for subject in subjects if not subject["is_owned"]]
     context = {
-        "profile": profile,
+        **sidebar,
         "stats": stats,
         "subjects": subjects,
         "hub_cards": hub_cards,
         "quick_actions": quick_actions,
-        "level_info": level_info,
-        "xp_summary": xp_summary,
         "referral_summary": referral_summary,
         "free_selection_required": free_selection_required,
         "free_subject_choices": free_subject_choices,

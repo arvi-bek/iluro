@@ -532,6 +532,16 @@ class MainSmokeTests(TestCase):
             html.unescape(response.content.decode("utf-8", errors="ignore")),
         )
 
+    def test_dashboard_sidebar_shows_profile_photo_when_available(self):
+        self._grant_profile_photo_plan()
+        self.profile.photo = self._make_test_image(name="dashboard-avatar.png", color=(120, 90, 140))
+        self.profile.save()
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="app-sidebar-avatar-media"', html=False)
+
     def test_math_formula_quiz_payload_builds_multiple_question_types(self):
         payload = get_math_formula_quiz_payload(self.math, max_questions=6)
 
