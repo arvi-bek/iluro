@@ -1252,6 +1252,100 @@ body {
     font-weight: 700;
 }
 
+.workspace-mobile-start,
+.workspace-mobile-grid-note {
+    display: none;
+}
+
+.workspace-mobile-start {
+    padding: 20px;
+    border-radius: 24px;
+    background: rgba(255, 251, 245, 0.92);
+    border: 1px solid rgba(138, 84, 37, 0.12);
+    box-shadow: var(--shadow);
+    gap: 14px;
+}
+
+.workspace-mobile-start-head {
+    display: grid;
+    gap: 8px;
+}
+
+.workspace-mobile-start-head h2 {
+    margin: 0;
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.workspace-mobile-start-head p:last-child,
+.workspace-mobile-start-note {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.58;
+}
+
+.workspace-mobile-shortcuts {
+    display: grid;
+    gap: 10px;
+}
+
+.workspace-mobile-shortcut {
+    min-height: 72px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-decoration: none;
+    background: linear-gradient(180deg, rgba(249, 239, 226, 0.96), rgba(243, 229, 210, 0.98));
+    color: #7f4f25;
+    border: 1px solid rgba(160, 103, 54, 0.14);
+    box-shadow: 0 12px 22px rgba(124, 78, 38, 0.08);
+}
+
+.workspace-mobile-shortcut.is-primary {
+    background: linear-gradient(180deg, rgba(243, 223, 198, 0.98), rgba(235, 210, 179, 1));
+    border-color: rgba(160, 103, 54, 0.2);
+}
+
+.workspace-mobile-shortcut-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.workspace-mobile-shortcut-copy strong,
+.workspace-mobile-shortcut-copy small,
+.workspace-mobile-shortcut-meta {
+    color: inherit;
+}
+
+.workspace-mobile-shortcut-copy strong {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.1;
+}
+
+.workspace-mobile-shortcut-copy small {
+    font-size: 0.76rem;
+    opacity: 0.92;
+}
+
+.workspace-mobile-shortcut-meta {
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 251, 246, 0.72);
+    border: 1px solid rgba(160, 103, 54, 0.12);
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .workspace-filter-strip {
     margin-top: 18px;
     margin-bottom: 24px;
@@ -4434,11 +4528,32 @@ body {
 }
 
 @media (max-width: 760px) {
+    .workspace-mobile-start {
+        display: grid;
+    }
+
+    .workspace-hero,
+    .workspace-focus-card {
+        display: none;
+    }
+
     .workspace-route-panel {
         display: none;
     }
 
     .workspace-module-panel .workspace-route-head p:last-child {
+        display: none;
+    }
+
+    .workspace-hero-notes span:last-child,
+    .workspace-home-panel .workspace-section-copy .eyebrow,
+    .workspace-home-panel .workspace-section-copy .workspace-section-text,
+    .workspace-home-panel .workspace-section-meta,
+    .workspace-home-note,
+    .workspace-home-layout,
+    .workspace-module-card.is-coming-soon,
+    .workspace-module-card:not(.is-mobile-priority),
+    .workspace-route-step.is-mobile-secondary {
         display: none;
     }
 
@@ -4493,6 +4608,11 @@ body {
         padding: 8px 10px;
         border-radius: 12px;
         font-size: 0.72rem;
+    }
+
+    .workspace-home-panel .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
     }
 
     .subject-sidebar-toggle-input {
@@ -5201,6 +5321,48 @@ body {
     .workspace-focus-meta {
         padding: 10px 11px;
         border-radius: 14px;
+    }
+
+    .workspace-mobile-start {
+        padding: 14px 12px;
+        border-radius: 18px;
+        gap: 10px;
+    }
+
+    .workspace-mobile-start-head h2 {
+        font-size: 0.98rem;
+        line-height: 1.14;
+    }
+
+    .workspace-mobile-start-head p:last-child,
+    .workspace-mobile-start-note {
+        font-size: 0.74rem;
+        line-height: 1.48;
+    }
+
+    .workspace-mobile-shortcuts {
+        gap: 8px;
+    }
+
+    .workspace-mobile-shortcut {
+        min-height: 64px;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .workspace-mobile-shortcut-copy strong {
+        font-size: 0.88rem;
+    }
+
+    .workspace-mobile-shortcut-copy small,
+    .workspace-mobile-shortcut-meta {
+        font-size: 0.68rem;
+    }
+
+    .workspace-mobile-shortcut-meta {
+        min-height: 28px;
+        padding: 0 10px;
     }
 
     .metric-grid,

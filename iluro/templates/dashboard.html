@@ -31,13 +31,13 @@
                     <p class="tiny-label">Taklif Dasturi</p>
                     <h2 class="referral-headline">Sizda keyingi obuna uchun {{ referral_summary.available_percent }}% chegirma bor.</h2>
                     <p class="referral-description">
-                        1 ta Taklif qilgan do'stingiz uchun = {{ referral_summary.reward_percent }}% chegirma.
-                        Maksimal limit {{ referral_summary.max_percent }}%.
-                        Chegirma faqat PRO va PREMIUM rejalari uchun ishlaydi.
+                        Do'stingiz free fan tanlab {{ referral_summary.required_completions }} ta mashq yoki test tugatsa = +{{ referral_summary.reward_percent }}%.
+                        Birinchi pullik obuna olsa = yana +{{ referral_summary.purchase_reward_percent }}%.
                     </p>
                     <div class="referral-banner-meta">
                         <span>Kod: {{ referral_summary.referral_code }}</span>
                         <span>Tasdiqlangan: {{ referral_summary.qualified_count }}</span>
+                        <span>Sotib olgan: {{ referral_summary.purchased_count }}</span>
                         <span>Kutilayotgan: {{ referral_summary.pending_count }}</span>
                     </div>
                     <div class="referral-cta-row">
@@ -55,8 +55,8 @@
                     {% if referral_summary.qualification_progress %}
                     <small class="referral-footnote">
                         Siz {{ referral_summary.qualification_progress.inviter_name }} taklif havolasi orqali kirgansiz.
-                        Bepul fanni tanlang va kamida {{ referral_summary.required_completions }} ta mashq yoki testni tugating.
-                        Shunda taklif chegirmasi yoziladi.
+                        Bepul fanni tanlang, {{ referral_summary.required_completions }} ta mashq yoki testni tugating.
+                        Keyin birinchi pullik obunada do'stingizga yana bonus yoziladi.
                     </small>
                     {% else %}
                     <small class="referral-footnote">Taklif chegirmasi promo kod bilan qo'shilmaydi va keyingi bitta xaridda to'liq ishlatiladi.</small>

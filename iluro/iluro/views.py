@@ -257,21 +257,6 @@ def index(request: HttpRequest):
             "initials": "SU",
             "is_placeholder": False,
         },
-        {
-            "name": "Asadbek Tohirov",
-            "role": "CMO",
-            "bio": (
-                ""
-            ),
-            "stats": [
-                "SAT Score: 1200+",
-                "Najot Ta'lim Fergana",
-                "Graphic Designer",
-                "Marketing & Growth",
-            ],
-            "initials": "AT",
-            "is_placeholder": False,
-        },
     ]
     context = {
         "subjects": subjects,

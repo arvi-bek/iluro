@@ -40,6 +40,7 @@ from .models import (
 from .services import (
     assign_free_subject,
     apply_referral_discount_to_subscription,
+    apply_referral_purchase_reward,
     consume_referral_discount,
     evaluate_referral_qualification,
     get_active_subscription_ids,
@@ -381,6 +382,71 @@ class MainSmokeTests(TestCase):
         self.assertContains(problems_response, self.advanced_test.title)
         self.assertContains(problems_response, self.practice_set.title)
         self.assertContains(problems_response, self.advanced_practice_set.title)
+
+    def test_subject_workspace_home_includes_mobile_quick_start_copy(self):
+        response = self.client.get(reverse("subject-workspace", args=[self.math.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Qayerdan boshlash kerak")
+        self.assertContains(response, "Kerakli bo'limni tanlang")
+        self.assertContains(response, "Qolgan bo'limlar menyuda turadi.")
+
+    def test_subject_workspace_section_keeps_mobile_shortcuts_visible(self):
+        response = self.client.get(reverse("subject-workspace-section", args=[self.math.id, "problems"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Qayerdan boshlash kerak")
+        self.assertContains(response, "Kerakli bo'limni tanlang")
+
+    def test_subject_selection_uses_updated_plan_prices_and_badges(self):
+        response = self.client.get(reverse("subject-selection"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "30,000 so&#x27;m", html=True)
+        self.assertContains(response, "49,000 so&#x27;m", html=True)
+        self.assertContains(response, "60,000 so&#x27;m", html=True)
+        self.assertContains(response, "Tavsiya qilamiz")
+        self.assertNotContains(response, "Hozirgi userlar uchun xavfsiz holat")
+        self.assertNotContains(response, "AI kuniga 2-3 marta")
+
+    def test_subscription_plan_builtin_scope_syncs_automatically(self):
+        plan, _ = SubscriptionPlan.objects.update_or_create(
+            code="all-access",
+            defaults={
+                "name": "Premium",
+                "subject_limit": 3,
+                "is_all_access": False,
+                "price": 60000,
+            },
+        )
+
+        self.assertTrue(plan.is_all_access)
+        self.assertIsNone(plan.subject_limit)
+
+    def test_user_subscription_inherits_scope_and_title_from_plan(self):
+        plan, _ = SubscriptionPlan.objects.update_or_create(
+            code="all-access",
+            defaults={
+                "name": "PREMIUM",
+                "subject_limit": 3,
+                "is_all_access": False,
+                "price": 60000,
+                "duration_days": 30,
+            },
+        )
+        subscription = UserSubscription.objects.create(
+            user=self.user,
+            plan=plan,
+            source="manual",
+            status="active",
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=30),
+        )
+
+        self.assertEqual(subscription.title, "PREMIUM")
+        self.assertTrue(subscription.is_all_access)
+        self.assertEqual(subscription.price_before_discount, 60000)
+        self.assertEqual(subscription.final_price, 60000)
 
     def test_high_difficulty_test_and_practice_are_accessible_without_manual_level_setting(self):
         test_start_response = self.client.get(reverse("test-start", args=[self.advanced_test.id]))
@@ -1170,23 +1236,23 @@ class FreeAccessFlowTests(TestCase):
         self.assertContains(response, "Qal&#x27;a o&#x27;yini", html=True)
         self.assertContains(response, "Imlo dueli")
 
-    def test_free_user_can_start_only_three_assessments_per_day(self):
+    def test_free_user_can_start_only_five_assessments_per_day(self):
         assign_free_subject(self.user, self.math)
-        tests = [self._create_basic_test(self.math, f"Math test {index}") for index in range(1, 5)]
+        tests = [self._create_basic_test(self.math, f"Math test {index}") for index in range(1, 7)]
 
-        for test in tests[:3]:
+        for test in tests[:5]:
             response = self.client.post(reverse("test-start", args=[test.id]))
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response["Location"].startswith("/tests/session/"))
 
-        fourth_response = self.client.post(reverse("test-start", args=[tests[3].id]))
+        sixth_response = self.client.post(reverse("test-start", args=[tests[5].id]))
 
-        self.assertEqual(fourth_response.status_code, 302)
-        self.assertEqual(fourth_response["Location"], f"/subjects/{self.math.id}/problems/")
-        self.assertEqual(UserTest.objects.filter(user=self.user).count(), 3)
+        self.assertEqual(sixth_response.status_code, 302)
+        self.assertEqual(sixth_response["Location"], f"/subjects/{self.math.id}/problems/")
+        self.assertEqual(UserTest.objects.filter(user=self.user).count(), 5)
 
         usage = UserDailyQuotaUsage.objects.get(user=self.user, date=timezone.localdate())
-        self.assertEqual(usage.tests_started, 3)
+        self.assertEqual(usage.tests_started, 5)
 
     def test_free_subject_stays_active_after_bundle_subscription_expires(self):
         assign_free_subject(self.user, self.math)
@@ -1270,18 +1336,18 @@ class ReferralProgramTests(TestCase):
         self.inviter_profile.refresh_from_db()
 
         self.assertEqual(event.status, "qualified")
-        self.assertEqual(event.reward_percent, 2)
-        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 2)
-        self.assertEqual(self.inviter_profile.referral_discount_percent, 2)
+        self.assertEqual(event.reward_percent, 3)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 3)
+        self.assertEqual(self.inviter_profile.referral_discount_percent, 3)
 
         event = evaluate_referral_qualification(referred_user)
         self.inviter_profile.refresh_from_db()
-        self.assertEqual(event.reward_percent, 2)
-        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 2)
+        self.assertEqual(event.reward_percent, 3)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 3)
 
-    def test_referral_reward_respects_fifty_percent_cap(self):
-        self.inviter_profile.referral_discount_percent = 50
-        self.inviter_profile.referral_discount_available_percent = 50
+    def test_referral_reward_respects_hundred_percent_cap(self):
+        self.inviter_profile.referral_discount_percent = 100
+        self.inviter_profile.referral_discount_available_percent = 100
         self.inviter_profile.save(update_fields=["referral_discount_percent", "referral_discount_available_percent"])
 
         referred_user = User.objects.create_user(username="cap_ref", password="StrongPass123")
@@ -1307,7 +1373,7 @@ class ReferralProgramTests(TestCase):
 
         self.assertEqual(event.status, "qualified")
         self.assertEqual(event.reward_percent, 0)
-        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 50)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 100)
 
     def test_next_paid_subscription_consumes_full_referral_wallet(self):
         self.inviter_profile.referral_discount_percent = 12
@@ -1338,16 +1404,16 @@ class ReferralProgramTests(TestCase):
         self.assertEqual(self.inviter_profile.referral_discount_used_percent, 12)
 
     def test_user_can_start_collecting_referral_discount_again_after_balance_is_used(self):
-        self.inviter_profile.referral_discount_percent = 50
-        self.inviter_profile.referral_discount_available_percent = 50
+        self.inviter_profile.referral_discount_percent = 100
+        self.inviter_profile.referral_discount_available_percent = 100
         self.inviter_profile.save(update_fields=["referral_discount_percent", "referral_discount_available_percent"])
 
         consumed_percent = consume_referral_discount(self.inviter_profile)
         self.inviter_profile.refresh_from_db()
 
-        self.assertEqual(consumed_percent, 50)
+        self.assertEqual(consumed_percent, 100)
         self.assertEqual(self.inviter_profile.referral_discount_available_percent, 0)
-        self.assertEqual(self.inviter_profile.referral_discount_used_percent, 50)
+        self.assertEqual(self.inviter_profile.referral_discount_used_percent, 100)
 
         referred_user = User.objects.create_user(username="recollect_ref", password="StrongPass123")
         Profile.objects.create(user=referred_user, full_name="Recollect Referral")
@@ -1371,10 +1437,10 @@ class ReferralProgramTests(TestCase):
         self.inviter_profile.refresh_from_db()
 
         self.assertEqual(event.status, "qualified")
-        self.assertEqual(event.reward_percent, 2)
-        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 2)
-        self.assertEqual(self.inviter_profile.referral_discount_used_percent, 50)
-        self.assertEqual(self.inviter_profile.referral_discount_percent, 52)
+        self.assertEqual(event.reward_percent, 3)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 3)
+        self.assertEqual(self.inviter_profile.referral_discount_used_percent, 100)
+        self.assertEqual(self.inviter_profile.referral_discount_percent, 103)
 
     def test_referral_summary_reports_progress_for_referred_user(self):
         referred_user = User.objects.create_user(username="progress_ref", password="StrongPass123")
@@ -1400,3 +1466,68 @@ class ReferralProgramTests(TestCase):
         self.assertIsNotNone(summary["qualification_progress"])
         self.assertEqual(summary["qualification_progress"]["completion_remaining"], 0)
         self.assertTrue(summary["qualification_progress"]["free_subject_selected"])
+
+    def test_referral_purchase_reward_is_granted_once_for_first_purchase(self):
+        referred_user = User.objects.create_user(username="buyer_ref", password="StrongPass123")
+        Profile.objects.create(user=referred_user, full_name="Buyer Referral")
+        register_referral_for_user(referred_user, self.inviter_profile.referral_code)
+
+        plan = SubscriptionPlan.objects.get(code="single-subject")
+        subscription = UserSubscription.objects.create(
+            user=referred_user,
+            plan=plan,
+            title=plan.name,
+            source="purchase",
+            status="active",
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=30),
+        )
+
+        applied_percent = apply_referral_purchase_reward(subscription)
+        event = ReferralEvent.objects.get(invited_user=referred_user)
+        self.inviter_profile.refresh_from_db()
+
+        self.assertEqual(applied_percent, 20)
+        self.assertEqual(event.purchase_reward_percent, 20)
+        self.assertIsNotNone(event.purchased_at)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 20)
+
+        second_subscription = UserSubscription.objects.create(
+            user=referred_user,
+            plan=plan,
+            title=plan.name,
+            source="purchase",
+            status="active",
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=60),
+        )
+        second_applied_percent = apply_referral_purchase_reward(second_subscription)
+        self.inviter_profile.refresh_from_db()
+
+        self.assertEqual(second_applied_percent, 0)
+        self.assertEqual(self.inviter_profile.referral_discount_available_percent, 20)
+
+    def test_referral_summary_treats_pending_as_not_yet_purchased(self):
+        pending_user = User.objects.create_user(username="pending_ref", password="StrongPass123")
+        bought_user = User.objects.create_user(username="bought_ref", password="StrongPass123")
+        Profile.objects.create(user=pending_user, full_name="Pending Referral")
+        Profile.objects.create(user=bought_user, full_name="Bought Referral")
+        register_referral_for_user(pending_user, self.inviter_profile.referral_code)
+        register_referral_for_user(bought_user, self.inviter_profile.referral_code)
+
+        plan = SubscriptionPlan.objects.get(code="single-subject")
+        subscription = UserSubscription.objects.create(
+            user=bought_user,
+            plan=plan,
+            title=plan.name,
+            source="purchase",
+            status="active",
+            started_at=timezone.now(),
+            end_at=timezone.now() + timezone.timedelta(days=30),
+        )
+        apply_referral_purchase_reward(subscription)
+
+        summary = get_referral_summary(self.inviter)
+
+        self.assertEqual(summary["pending_count"], 1)
+        self.assertEqual(summary["purchased_count"], 1)

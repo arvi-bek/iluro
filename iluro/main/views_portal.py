@@ -90,7 +90,7 @@ def _build_grammar_groups(entries, progress_map, allowed_levels, selected_level)
 
 
 def _format_price_label(value):
-    return f"{int(value or 0):,}".replace(",", " ") + " so'm"
+    return f"{int(value or 0):,} so'm"
 
 
 def _build_grammar_points(entry):
@@ -434,6 +434,26 @@ def _build_workspace_module_cards(section_items, section_catalog, section_totals
         )
 
     return cards
+
+
+def _build_workspace_mobile_shortcuts(module_cards, primary_key):
+    shortcuts = []
+    for card in module_cards:
+        if card["is_coming_soon"] or card["status"].startswith("0 ta "):
+            continue
+
+        shortcuts.append(
+            {
+                "key": card["key"],
+                "label": card["label"],
+                "status": card["status"],
+                "cta": card["cta"],
+                "is_primary": card["key"] == primary_key,
+            }
+        )
+
+    shortcuts.sort(key=lambda item: (not item["is_primary"],))
+    return shortcuts[:5]
 
 
 @login_required
@@ -1132,6 +1152,10 @@ def subject_workspace_view(request, subject_id, section=None):
         section_previews,
         workspace_focus["key"],
     )
+    workspace_mobile_shortcuts = _build_workspace_mobile_shortcuts(
+        workspace_module_cards,
+        workspace_focus["key"],
+    )
     workspace_focus["status"] = (
         f"{workspace_focus['count']} ta ochiq blok"
         if workspace_focus["count"]
@@ -1209,6 +1233,7 @@ def subject_workspace_view(request, subject_id, section=None):
         "workspace_focus": workspace_focus,
         "workspace_flow_steps": workspace_flow_steps,
         "workspace_module_cards": workspace_module_cards,
+        "workspace_mobile_shortcuts": workspace_mobile_shortcuts,
         "workspace_available_modules": sum(
             1
             for item in section_items
@@ -1366,22 +1391,21 @@ def subject_selection_view(request):
             "theme": "free",
             "price_label": "0 so'm",
             "coverage_label": "1 ta fan",
-            "status_text": "1 ta fan tanlanadi",
-            "description": "Boshlash uchun bepul reja.",
+            "status_text": "1 ta fan tanlanadi va muddatsiz qoladi",
+            "description": "Boshlash uchun bepul va davomiy reja.",
             "features": [
                 "1 ta fan ochiladi",
-                "Kuniga 3 ta mashq",
+                "Kuniga 5 ta mashq",
                 "Basic statistika",
-                "AI kuniga 2-3 marta",
                 "O'yinlar",
             ],
             "limits": [
                 "Boshqa fanlar yopiq",
-                "To'liq AI analiz yo'q",
                 "Advanced content yopiq",
             ],
             "note": "",
             "is_featured": False,
+            "highlight_badge": "",
             "is_current": not has_paid_access,
             "cta_label": "Default reja",
             "cta_href": "",
@@ -1390,7 +1414,7 @@ def subject_selection_view(request):
         {
             "code": "single-subject",
             "catalog_code": "single-subject",
-            "name": "SINGLE SUBJECT",
+            "name": "SINGLE",
             "label": "1 ta qo'shimcha fan",
             "theme": "single",
             "price_label": "30,000 so'm",
@@ -1406,6 +1430,7 @@ def subject_selection_view(request):
             "limits": [],
             "note": "",
             "is_featured": False,
+            "highlight_badge": "",
             "is_current": False,
             "cta_label": "Sotib olish",
             "cta_href": purchase_contact_url,
@@ -1415,9 +1440,9 @@ def subject_selection_view(request):
             "code": "pro",
             "catalog_code": "triple-subject",
             "name": "PRO",
-            "label": "Eng ko'p sotiladigan",
+            "label": "Ko'pchilik tanlaydi",
             "theme": "pro",
-            "price_label": "70,000 so'm",
+            "price_label": "49,000 so'm",
             "coverage_label": "3 ta fan",
             "status_text": "3 ta fan ochiladi",
             "description": "Ko'pchilik uchun asosiy paket: keng content, kuchli AI va progress tracking.",
@@ -1431,6 +1456,7 @@ def subject_selection_view(request):
             "limits": [],
             "note": "",
             "is_featured": True,
+            "highlight_badge": "Tavsiya qilamiz",
             "is_current": False,
             "cta_label": "Sotib olish",
             "cta_href": purchase_contact_url,
@@ -1442,7 +1468,7 @@ def subject_selection_view(request):
             "name": "PREMIUM",
             "label": "Top reja",
             "theme": "premium",
-            "price_label": "100,000 - 120,000 so'm",
+            "price_label": "60,000 so'm",
             "coverage_label": "Barcha fanlar",
             "status_text": "Barcha fanlar ochiq",
             "description": "Barcha fanlar, mock exam, to'liq AI analiz va advanced statistika bitta rejada.",
@@ -1455,7 +1481,8 @@ def subject_selection_view(request):
             ],
             "limits": [],
             "note": "",
-            "is_featured": True,
+            "is_featured": False,
+            "highlight_badge": "",
             "is_current": available_count > 0 and active_count >= available_count,
             "cta_label": "Sotib olish",
             "cta_href": purchase_contact_url,

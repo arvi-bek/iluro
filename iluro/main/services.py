@@ -52,8 +52,9 @@ from .utils import (
 ASSESSMENT_HISTORY_LIMIT = 5
 TEST_ATTEMPT_RETENTION_DAYS = 7
 REFERRAL_SESSION_KEY = "pending_referral_code"
-REFERRAL_REWARD_PERCENT = 2
-REFERRAL_MAX_AVAILABLE_PERCENT = 50
+REFERRAL_REWARD_PERCENT = 3
+REFERRAL_PURCHASE_REWARD_PERCENT = 20
+REFERRAL_MAX_AVAILABLE_PERCENT = 100
 REFERRAL_REQUIRED_COMPLETIONS = 1
 REFERRAL_ELIGIBLE_PLAN_CODES = {"single-subject", "triple-subject", "all-access"}
 PROFILE_PHOTO_ELIGIBLE_PLAN_CODES = {"triple-subject", "all-access"}
@@ -69,11 +70,11 @@ DEFAULT_SUBSCRIPTION_PLAN_CATALOG = [
         "duration_days": 30,
         "display_order": 10,
         "stack_mode": "replace",
-        "daily_test_limit": 3,
-        "daily_ai_limit": 3,
+        "daily_test_limit": 5,
+        "daily_ai_limit": 0,
         "is_public": True,
         "is_featured": False,
-        "can_use_ai": True,
+        "can_use_ai": False,
         "can_use_full_content": False,
         "can_use_advanced_content": False,
         "can_use_mock_exam": False,
@@ -107,7 +108,7 @@ DEFAULT_SUBSCRIPTION_PLAN_CATALOG = [
         "name": "PRO",
         "subject_limit": 3,
         "is_all_access": False,
-        "price": 70000,
+        "price": 49000,
         "duration_days": 30,
         "display_order": 30,
         "stack_mode": "additive",
@@ -128,7 +129,7 @@ DEFAULT_SUBSCRIPTION_PLAN_CATALOG = [
         "name": "PREMIUM",
         "subject_limit": None,
         "is_all_access": True,
-        "price": 120000,
+        "price": 60000,
         "duration_days": 30,
         "display_order": 40,
         "stack_mode": "replace",
@@ -144,27 +145,7 @@ DEFAULT_SUBSCRIPTION_PLAN_CATALOG = [
         "can_use_advanced_stats": True,
         "is_active": True,
     },
-    {
-        "code": "beta-trial-all-access",
-        "name": "Beta trial",
-        "subject_limit": None,
-        "is_all_access": True,
-        "price": 0,
-        "duration_days": 14,
-        "display_order": 90,
-        "stack_mode": "replace",
-        "daily_test_limit": None,
-        "daily_ai_limit": None,
-        "is_public": False,
-        "is_featured": False,
-        "can_use_ai": True,
-        "can_use_full_content": True,
-        "can_use_advanced_content": True,
-        "can_use_mock_exam": True,
-        "can_use_progress_recommendations": True,
-        "can_use_advanced_stats": True,
-        "is_active": True,
-    },
+
 ]
 
 
@@ -355,6 +336,31 @@ def evaluate_referral_qualification(user):
     return event
 
 
+@transaction.atomic
+def apply_referral_purchase_reward(subscription):
+    if not getattr(subscription, "user_id", None) or getattr(subscription, "source", "") != "purchase":
+        return 0
+
+    event = (
+        ReferralEvent.objects.select_for_update()
+        .filter(invited_user_id=subscription.user_id)
+        .first()
+    )
+    if event is None or event.purchased_at is not None:
+        return 0
+
+    inviter_profile = getattr(event.inviter, "profile", None)
+    if inviter_profile is None:
+        inviter_profile = Profile.objects.select_for_update().get(user=event.inviter)
+    ensure_profile_referral_code(inviter_profile, save=True)
+
+    reward_percent = credit_referral_discount(inviter_profile, REFERRAL_PURCHASE_REWARD_PERCENT)
+    event.purchased_at = timezone.now()
+    event.purchase_reward_percent = reward_percent
+    event.save(update_fields=["purchased_at", "purchase_reward_percent", "updated_at"])
+    return reward_percent
+
+
 def get_referral_plan_quote(plan, available_percent=0):
     base_price = int(getattr(plan, "price", 0) or 0)
     normalized_available = max(int(available_percent or 0), 0)
@@ -437,11 +443,13 @@ def get_referral_summary(user):
         "used_percent": int(profile.referral_discount_used_percent or 0),
         "total_percent": int(profile.referral_discount_percent or 0),
         "qualified_count": sent_events.filter(status="qualified").count(),
-        "pending_count": sent_events.filter(status="pending").count(),
+        "pending_count": sent_events.filter(purchased_at__isnull=True).exclude(status="rejected").count(),
+        "purchased_count": sent_events.filter(purchased_at__isnull=False).count(),
         "sent_count": sent_events.count(),
         "qualification_progress": qualification_progress,
         "required_completions": REFERRAL_REQUIRED_COMPLETIONS,
         "reward_percent": REFERRAL_REWARD_PERCENT,
+        "purchase_reward_percent": REFERRAL_PURCHASE_REWARD_PERCENT,
         "max_percent": REFERRAL_MAX_AVAILABLE_PERCENT,
         "eligible_plan_names": ["SINGLE", "PRO", "PREMIUM"],
         "stacks_with_promo": REFERRAL_DISCOUNT_STACKS_WITH_PROMO,

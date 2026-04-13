@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260410-math-tools1">
+    <link rel="stylesheet" href="{% static 'css/subject_workspace.css' %}?v=20260413-mobile-workspace1">
 </head>
 <body>
     <div class="workspace-shell">
@@ -86,6 +86,26 @@
                 </div>
             </section>
 
+            <section class="workspace-mobile-start" aria-label="Mobil yo'nalish">
+                <div class="workspace-mobile-start-head">
+                    <p class="eyebrow">Qayerdan boshlash kerak</p>
+                    <h2>Kerakli bo'limni tanlang</h2>
+                    <p>{{ subject.name }} uchun eng kerakli bo'limlar pastda turibdi. Keraklisini bosing va davom eting.</p>
+                </div>
+                <div class="workspace-mobile-shortcuts" aria-label="Bo'limlar">
+                    {% for item in workspace_mobile_shortcuts %}
+                    <a class="workspace-mobile-shortcut {% if item.key == current_section or current_section == 'home' and item.is_primary %}is-primary{% endif %}" href="{% url 'subject-workspace-section' subject.id item.key %}">
+                        <span class="workspace-mobile-shortcut-copy">
+                            <strong>{{ item.label }}</strong>
+                            <small>{{ item.cta }}</small>
+                        </span>
+                        <span class="workspace-mobile-shortcut-meta">{{ item.status }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                <p class="workspace-mobile-start-note">Qolgan bo'limlar menyuda turadi.</p>
+            </section>
+
             {% if current_section == "home" %}
             <section class="workspace-hero theme-{{ subject_theme.key }}">
                 <div class="workspace-hero-copy">
@@ -156,7 +176,7 @@
                                 </div>
                                 <div class="workspace-route-steps">
                                     {% for step in workspace_flow_steps %}
-                                    <article class="workspace-route-step">
+                                    <article class="workspace-route-step {% if forloop.counter > 3 %}is-mobile-secondary{% endif %}">
                                         <span>{{ step.step }}</span>
                                         <div>
                                             <strong>{{ step.title }}</strong>
@@ -175,7 +195,7 @@
                                 </div>
                                 <div class="workspace-module-grid">
                                     {% for card in workspace_module_cards %}
-                                    <article class="workspace-module-card {% if card.is_primary %}is-primary{% endif %} {% if card.is_coming_soon %}is-coming-soon{% endif %}">
+                                    <article class="workspace-module-card {% if card.is_primary %}is-primary{% endif %} {% if card.is_coming_soon %}is-coming-soon{% endif %} {% if card.key == workspace_focus.key or card.key == 'problems' or card.key == 'tests' or card.key == 'books' or card.key == 'formulas' or card.key == 'formula-quiz' or card.key == 'grammar' or card.key == 'chronology' or card.key == 'essay' or card.key == 'mistakes' or card.key == 'terms' %}is-mobile-priority{% endif %}">
                                         <div class="workspace-module-top">
                                             <span>{{ card.label }}</span>
                                             <strong>{{ card.status }}</strong>

@@ -157,6 +157,31 @@ class SubscriptionPlan(models.Model):
         verbose_name = "Obuna rejasi"
         verbose_name_plural = "Obuna rejalari"
 
+    def _sync_scope_fields(self):
+        builtin_scope_map = {
+            "free": {"subject_limit": 1, "is_all_access": False},
+            "single-subject": {"subject_limit": 1, "is_all_access": False},
+            "triple-subject": {"subject_limit": 3, "is_all_access": False},
+            "all-access": {"subject_limit": None, "is_all_access": True},
+            "beta-trial-all-access": {"subject_limit": None, "is_all_access": True},
+        }
+        builtin_scope = builtin_scope_map.get(self.code)
+        if builtin_scope:
+            self.subject_limit = builtin_scope["subject_limit"]
+            self.is_all_access = builtin_scope["is_all_access"]
+            return
+
+        if self.is_all_access:
+            self.subject_limit = None
+        else:
+            self.is_all_access = self.subject_limit in (None, 0)
+            if self.is_all_access:
+                self.subject_limit = None
+
+    def save(self, *args, **kwargs):
+        self._sync_scope_fields()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -209,8 +234,16 @@ class UserSubscription(models.Model):
         return self.status == "active" and self.end_at >= timezone.now()
 
     def save(self, *args, **kwargs):
-        if not self.title and self.plan_id:
+        if self.plan_id:
             self.title = self.plan.name
+            self.is_all_access = self.plan.is_all_access
+            if not self.price_before_discount:
+                self.price_before_discount = int(self.plan.price or 0)
+            if not self.final_price:
+                self.final_price = int(self.plan.price or 0)
+            if not self.end_at:
+                started_at = self.started_at or timezone.now()
+                self.end_at = started_at + timedelta(days=self.plan.duration_days)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -456,6 +489,8 @@ class ReferralEvent(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     qualified_at = models.DateTimeField(null=True, blank=True)
     reward_percent = models.PositiveIntegerField(default=0)
+    purchased_at = models.DateTimeField(null=True, blank=True)
+    purchase_reward_percent = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

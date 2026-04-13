@@ -25,6 +25,7 @@ from .models import (
 )
 from .services import (
     apply_referral_discount_to_subscription,
+    apply_referral_purchase_reward,
     cleanup_empty_user_subscriptions,
     consume_referral_discount,
     revoke_subject_access,
@@ -558,6 +559,16 @@ class UserSubscriptionSubjectInline(admin.TabularInline):
     verbose_name = "Fan"
     verbose_name_plural = "Ochiq fanlar"
 
+    def has_add_permission(self, request, obj=None):
+        if obj and obj.is_all_access:
+            return False
+        return super().has_add_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if obj and obj.is_all_access:
+            return False
+        return super().has_change_permission(request, obj)
+
 
 def _plan_scope_label(plan):
     if not plan:
@@ -585,14 +596,15 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
         "is_public",
         "is_active",
     )
-    list_filter = ("is_all_access", "is_public", "is_featured", "is_active", "stack_mode", "duration_days")
+    list_filter = ("is_public", "is_featured", "is_active", "stack_mode", "duration_days")
     search_fields = ("name", "code")
     ordering = ("display_order", "price", "name")
     list_display_links = ("name",)
     list_editable = ("display_order", "is_featured", "is_public", "is_active")
+    readonly_fields = ("scope_preview",)
     fieldsets = (
         ("Asosiy", {"fields": ("name", "code", "display_order", "price", "duration_days")}),
-        ("Qamrov", {"fields": ("subject_limit", "is_all_access", "stack_mode", "is_public", "is_featured", "is_active")}),
+        ("Qamrov", {"fields": ("scope_preview", "subject_limit", "stack_mode", "is_public", "is_featured", "is_active")}),
         ("Limitlar", {"fields": ("daily_test_limit", "daily_ai_limit")}),
         (
             "Imkoniyatlar",
@@ -617,7 +629,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 @admin.register(UserSubscription)
 class UserSubscriptionAdmin(admin.ModelAdmin):
     list_display = ("id", "user_identity", "title", "coverage_preview", "source_badge", "status_badge", "started_at", "end_at")
-    list_filter = ("status", "is_all_access", "plan", "source", "end_at", "started_at")
+    list_filter = ("status", "plan", "source", "end_at", "started_at")
     search_fields = (
         "user__username",
         "user__email",
@@ -630,14 +642,14 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
     autocomplete_fields = ("user", "plan")
     inlines = [UserSubscriptionSubjectInline]
     ordering = ("-end_at", "-created_at")
-    readonly_fields = ("pricing_summary",)
+    readonly_fields = ("title", "coverage_preview", "pricing_summary")
     fields = (
         "user",
         "plan",
         "title",
+        "coverage_preview",
         "source",
         "status",
-        "is_all_access",
         "started_at",
         "end_at",
         "pricing_summary",
@@ -661,7 +673,14 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
         initial.setdefault("end_at", timezone.localtime(timezone.now() + timedelta(days=30)))
         return initial
 
+    def get_inline_instances(self, request, obj=None):
+        if obj and obj.is_all_access:
+            return []
+        return super().get_inline_instances(request, obj)
+
     def coverage_preview(self, obj):
+        if not obj:
+            return "Plan tanlangandan keyin qamrov shu yerda ko'rinadi."
         if obj.is_all_access:
             return mark_safe(
                 '<span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;'
@@ -735,7 +754,7 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
 
     @admin.display(description="Narx")
     def pricing_summary(self, obj):
-        if not obj.plan_id:
+        if not obj or not obj.plan_id:
             return "-"
         base_price = int(obj.price_before_discount or obj.plan.price or 0)
         if obj.referral_discount_percent_applied:
@@ -748,11 +767,9 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if obj.plan:
-            obj.title = obj.plan.name
-            obj.is_all_access = obj.plan.is_all_access
-            if not obj.price_before_discount:
+            if not obj.referral_discount_percent_applied:
                 obj.price_before_discount = int(obj.plan.price or 0)
-            if not obj.final_price:
+            if not obj.referral_discount_amount:
                 obj.final_price = int(obj.plan.price or 0)
             if not change:
                 started_at = obj.started_at or timezone.now()
@@ -769,8 +786,17 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
 
         current_subject_ids = set(subscription.subjects.values_list("subject_id", flat=True))
         removed_subject_ids = previous_subject_ids - current_subject_ids
-        for subject_id in removed_subject_ids:
-            revoke_subject_access(subscription.user_id, subject_id, include_legacy=True, include_bundle=False)
+        if not subscription.is_all_access:
+            for subject_id in removed_subject_ids:
+                revoke_subject_access(subscription.user_id, subject_id, include_legacy=True, include_bundle=False)
+
+        if subscription.is_all_access and subscription.subjects.exists():
+            subscription.subjects.all().delete()
+            self.message_user(
+                request,
+                "PREMIUM yoki all-access obunada fan biriktirish kerak emas. Fanlar avtomatik ochiladi.",
+                level=messages.INFO,
+            )
 
         removed_ids = cleanup_empty_user_subscriptions([subscription.id])
         if subscription.id in removed_ids:
@@ -815,6 +841,14 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
                     ).replace(",", " "),
                     level=messages.SUCCESS,
                 )
+
+        purchase_reward_percent = apply_referral_purchase_reward(subscription)
+        if purchase_reward_percent:
+            self.message_user(
+                request,
+                f"Taklif qilgan userga purchase referral bonusi yozildi: +{purchase_reward_percent}%.",
+                level=messages.SUCCESS,
+            )
 
     def delete_model(self, request, obj):
         subject_ids = list(obj.subjects.values_list("subject_id", flat=True))
@@ -986,7 +1020,7 @@ class ProfileAdmin(admin.ModelAdmin):
             "Referral",
             {
                 "fields": ("referral_wallet_badge", "mark_referral_discount_used"),
-                "description": "Checkbox saqlanganda available referral balansini 0 ga tushiradi. Foydalanuvchi keyin yana 50% gacha qayta yig'a oladi.",
+                "description": "Checkbox saqlanganda available referral balansini 0 ga tushiradi. Foydalanuvchi keyin yana 100% gacha qayta yig'a oladi.",
             },
         ),
         ("Obuna", {"fields": ("purchased_subjects_summary",)}),
@@ -1137,8 +1171,18 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(ReferralEvent)
 class ReferralEventAdmin(admin.ModelAdmin):
-    list_display = ("id", "inviter", "invited_user", "status", "reward_percent", "qualified_at", "created_at")
-    list_filter = ("status", "qualified_at", "created_at")
+    list_display = (
+        "id",
+        "inviter",
+        "invited_user",
+        "status",
+        "reward_percent",
+        "purchase_reward_percent",
+        "qualified_at",
+        "purchased_at",
+        "created_at",
+    )
+    list_filter = ("status", "qualified_at", "purchased_at", "created_at")
     search_fields = ("inviter__username", "invited_user__username", "inviter__profile__full_name", "invited_user__profile__full_name")
     autocomplete_fields = ("inviter", "invited_user")
     ordering = ("-created_at",)

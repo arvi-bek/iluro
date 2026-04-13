@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260412-subscription-final1">
+    <link rel="stylesheet" href="{% static 'css/subjects.css' %}?v=20260413-subscription-prices1">
 </head>
 <body>
     <div class="app-layout">
@@ -25,21 +25,15 @@
                     <a class="header-link secondary-link" href="{% url 'dashboard' %}">Dashboard</a>
                 </header>
 
-                <section class="migration-note">
-                    <strong>Hozirgi userlar uchun xavfsiz holat</strong>
-                    <p>{{ current_subscription_notice }}</p>
-                </section>
-
                 <section class="referral-panel">
                     <div>
                         <p class="eyebrow">Taklif Dasturi</p>
                         <h2>Keyingi obuna uchun {{ referral_summary.available_percent }}% chegirma tayyor.</h2>
                         <p>
-                            1 ta tasdiqlangan taklif = {{ referral_summary.reward_percent }}% chegirma.
-                            Maksimal limit {{ referral_summary.max_percent }}%.
-                            Taklif chegirmasi promo kod bilan birikmaydi.
+                            Do'stingiz free fan tanlab {{ referral_summary.required_completions }} ta mashq yoki test tugatsa = +{{ referral_summary.reward_percent }}%.
+                            Birinchi pullik obuna olsa = yana +{{ referral_summary.purchase_reward_percent }}%.
                         </p>
-                        <p>Shart: bepul fanni tanlang va kamida {{ referral_summary.required_completions }} ta mashq yoki testni tugating.</p>
+                        <p>Tasdiqlangan: {{ referral_summary.qualified_count }} · Sotib olgan: {{ referral_summary.purchased_count }} · Kutilayotgan: {{ referral_summary.pending_count }}</p>
                         <p>Taklif kodi: <strong>{{ referral_summary.referral_code }}</strong></p>
                     </div>
                     <div class="referral-panel-actions">
@@ -91,6 +85,9 @@
                     <div class="bundle-grid">
                         {% for plan in plan_cards %}
                         <article class="bundle-card bundle-card--{{ plan.theme }} {% if plan.is_featured %}is-featured{% endif %} {% if plan.is_current %}is-current{% endif %}">
+                            {% if plan.highlight_badge %}
+                            <div class="bundle-highlight-badge">{{ plan.highlight_badge }}</div>
+                            {% endif %}
                             <div class="bundle-card-top">
                                 <span class="plan-pill {% if plan.is_current %}plan-pill-accent{% endif %}">{{ plan.coverage_label }}</span>
                                 <strong>{{ plan.price_label }}</strong>
